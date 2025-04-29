@@ -110,12 +110,16 @@ const EditarProduccion = () => {
                 maquinaId = nuevaMaquina.data._id;
             }
 
+            // Ajustar la fecha para incluir la zona horaria local
+            const fechaLocal = new Date(fecha);
+            fechaLocal.setMinutes(fechaLocal.getMinutes() + fechaLocal.getTimezoneOffset());
+
             // Actualizar la producción con los IDs obtenidos o creados
             await axios.put(
                 `http://localhost:5000/api/produccion/${id}`,
                 {
                     oti: otiId,
-                    fecha,
+                    fecha: fechaLocal.toISOString(),
                     proceso: procesoId,
                     areaProduccion: areaProduccionId,
                     maquina: maquinaId,

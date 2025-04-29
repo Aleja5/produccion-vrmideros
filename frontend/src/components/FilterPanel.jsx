@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Button, Input, Label } from "./ui/index";
-import { Calendar } from "./ui/Calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/Popover";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/Card";
 import { CalendarIcon, ChevronDown, ChevronUp, Download, Search, X } from "lucide-react";
@@ -18,10 +17,16 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
     maquina: "",
     fechaInicio: undefined,
     fechaFin: undefined,
+    searchDate: "", // Nuevo estado para la búsqueda de fechas
   });
 
   const handleApplyFilters = () => {
-    onBuscar(filters);
+    const formattedFilters = {
+      ...filters,
+      fechaInicio: filters.fechaInicio ? filters.fechaInicio.toISOString() : undefined,
+      fechaFin: filters.fechaFin ? filters.fechaFin.toISOString() : undefined,
+    };
+    onBuscar(formattedFilters);
   };
 
   const handleClearFilters = () => {
@@ -33,8 +38,20 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
       maquina: "",
       fechaInicio: undefined,
       fechaFin: undefined,
+      searchDate: "", // Limpiar también el campo de búsqueda
     });
     onBuscar({});
+  };
+
+  const handleSearchDateChange = (e) => {
+    const value = e.target.value;
+    setFilters({ ...filters, searchDate: value });
+
+    // Intenta analizar la fecha ingresada
+    const parsedDate = new Date(value);
+    if (!isNaN(parsedDate.getTime())) {
+      setFilters({ ...filters, fechaInicio: parsedDate }); // Actualiza la fecha de inicio
+    }
   };
 
   return (
@@ -52,7 +69,8 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
         </CardHeader>
 
         <CollapsibleContent>
-          <CardContent className="grid gap-6 pb-4">
+          <CardContent className="p-0">
+
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
               {[
                 { id: "oti", label: "OTI" },
@@ -72,56 +90,31 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
                 </div>
               ))}
 
+              {/* Calendarios para fecha de inicio y fin */}
               <div className="space-y-2">
                 <Label>Desde</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !filters.fechaInicio && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filters.fechaInicio ? format(filters.fechaInicio, "PPP") : <span>Seleccionar</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={filters.fechaInicio}
-                      onSelect={(date) => setFilters({ ...filters, fechaInicio: date })}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  type="date"
+                  name="fechaInicio"
+                  value={filters.fechaInicio ? filters.fechaInicio.toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    setFilters({ ...filters, fechaInicio: date });
+                  }}
+                />
               </div>
 
               <div className="space-y-2">
                 <Label>Hasta</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !filters.fechaFin && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filters.fechaFin ? format(filters.fechaFin, "PPP") : <span>Seleccionar</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-gray-400">
-                    <Calendar
-                      mode="single"
-                      selected={filters.fechaFin}
-                      onSelect={(date) => setFilters({ ...filters, fechaFin: date })}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  type="date"
+                  name="fechaFin"
+                  value={filters.fechaFin ? filters.fechaFin.toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    setFilters({ ...filters, fechaFin: date });
+                  }}
+                />
               </div>
             </div>
           </CardContent>

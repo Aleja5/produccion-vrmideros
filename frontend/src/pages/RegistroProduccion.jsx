@@ -189,6 +189,13 @@ export default function RegistroPage() {
             tiempoOperacion: Number(formData.tiempoOperacion),
         };
 
+        // Ajustar la fecha para incluir la zona horaria local
+        if (datosAEnviar.fecha) {
+            const localDate = new Date(datosAEnviar.fecha);
+            localDate.setMinutes(localDate.getMinutes() + localDate.getTimezoneOffset());
+            datosAEnviar.fecha = localDate.toISOString();
+        }
+
         try {
             const response = await fetch("http://localhost:5000/api/produccion/registrar", {
                 method: "POST",

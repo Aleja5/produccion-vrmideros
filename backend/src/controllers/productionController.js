@@ -260,10 +260,14 @@ exports.actualizarProduccion = async (req, res) => {
             return res.status(400).json({ msg: "Fecha inválida" });
         }
 
+        // Ajustar la fecha para la zona horaria local
+        const fechaLocal = new Date(fecha);
+        fechaLocal.setMinutes(fechaLocal.getMinutes() + fechaLocal.getTimezoneOffset());
+        produccion.fecha = fechaLocal;
+
         // Actualizar los datos de la producción
         produccion.oti = otiExistente._id;
         produccion.operario = operarioDB._id;
-        produccion.fecha = fechaValida;
         produccion.proceso = procesoExistente._id;
         produccion.areaProduccion = areaExistente._id;
         produccion.maquina = maquinaExistente._id;
@@ -332,9 +336,15 @@ exports.buscarProduccion = async (req, res) => {
         }
 
         if (fechaInicio && fechaFin) {
+            const inicio = new Date(fechaInicio);
+            inicio.setHours(0, 0, 0, 0); // Inicio del día en hora local
+
+            const fin = new Date(fechaFin);
+            fin.setHours(23, 59, 59, 999); // Fin del día en hora local
+
             query.fecha = {
-                $gte: new Date(fechaInicio),
-                $lte: new Date(fechaFin),
+                $gte: inicio,
+                $lte: fin,
             };
         }
 
@@ -383,5 +393,46 @@ exports.buscarProduccion = async (req, res) => {
         console.error('Error al buscar producciones:', error);
         res.status(500).json({ msg: 'Error interno del servidor', error: error.message });
     }
+};
+
+// Nueva función para buscar registros por rango de fechas
+const buscarPorFechas = async (req, res) => {
+    try {
+        const { fechaInicio, fechaFin } = req.query;
+        // Ajustar las fechas para la zona horaria local
+        const inicio = new Date(fechaInicio);
+        inicio.setHours(0, 0, 0, 0); // Inicio del día en hora local
+
+        const fin = new Date(fechaFin);
+        fin.setHours(23, 59, 59, 999); // Fin del día en hora local
+
+        if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+            return res.status(400).json({ msg: "Fechas inválidas" });
+        }
+
+        // Buscar registros dentro del rango de fechas
+        const producciones = await Produccion.find({
+            fecha: {
+                $gte: inicio,
+                $lte: fin,
+            },
+        }).sort({ fecha: -1 });
+
+        res.status(200).json(producciones);
+    } catch (error) {
+        console.error("Error al buscar por fechas:", error);
+        res.status(500).json({ msg: "Error al buscar registros" });
+    }
+};
+
+module.exports = {
+    getAllProduccion: exports.getAllProduccion,
+    registrarProduccion: exports.registrarProduccion,
+    obtenerProducciones: exports.obtenerProducciones,
+    listarProduccion: exports.listarProduccion,
+    actualizarProduccion: exports.actualizarProduccion,
+    eliminarProduccion: exports.eliminarProduccion,
+    buscarProduccion: exports.buscarProduccion,
+    buscarPorFechas, // Exportar la nueva función
 };
 

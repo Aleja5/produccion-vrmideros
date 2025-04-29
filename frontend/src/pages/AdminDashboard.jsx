@@ -16,8 +16,16 @@ const AdminDashboard = () => {
 
   const handleBuscar = async (filtrosRecibidos) => {
     try {
+      const filtrosAjustados = { ...filtrosRecibidos };
+      if (filtrosRecibidos.fechaInicio) {
+        filtrosAjustados.fechaInicio = new Date(filtrosRecibidos.fechaInicio).toISOString();
+      }
+      if (filtrosRecibidos.fechaFin) {
+        filtrosAjustados.fechaFin = new Date(filtrosRecibidos.fechaFin).toISOString();
+      }
+
       const response = await axiosInstance.get('/produccion/buscar-produccion', {
-        params: filtrosRecibidos,
+        params: filtrosAjustados,
       });
 
       if (Array.isArray(response.data)) {
@@ -89,7 +97,7 @@ const AdminDashboard = () => {
                   <tr key={r._id} className="text-center border-b hover:bg-gray-50">
                     <td className="p-2">{r.oti?.numeroOti}</td>
                     <td className="p-2">{r.operario?.name}</td>
-                    <td className="p-2">{new Date(r.fecha).toLocaleDateString()}</td>
+                    <td className="p-2">{new Date(r.fecha).toISOString().split('T')[0]}</td>
                     <td className="p-2">{r.proceso?.nombre}</td>
                     <td className="p-2">{r.maquina?.nombre}</td>
                     <td className="p-2">{r.areaProduccion?.nombre}</td>
