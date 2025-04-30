@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Button, Input, Label } from "./ui/index";
+import { Calendar } from "./ui/Calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/Popover";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/Card";
 import { CalendarIcon, ChevronDown, ChevronUp, Download, Search, X } from "lucide-react";
@@ -17,16 +18,10 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
     maquina: "",
     fechaInicio: undefined,
     fechaFin: undefined,
-    searchDate: "", // Nuevo estado para la búsqueda de fechas
   });
 
   const handleApplyFilters = () => {
-    const formattedFilters = {
-      ...filters,
-      fechaInicio: filters.fechaInicio ? filters.fechaInicio.toISOString() : undefined,
-      fechaFin: filters.fechaFin ? filters.fechaFin.toISOString() : undefined,
-    };
-    onBuscar(formattedFilters);
+    onBuscar(filters);
   };
 
   const handleClearFilters = () => {
@@ -38,40 +33,27 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
       maquina: "",
       fechaInicio: undefined,
       fechaFin: undefined,
-      searchDate: "", // Limpiar también el campo de búsqueda
     });
     onBuscar({});
   };
 
-  const handleSearchDateChange = (e) => {
-    const value = e.target.value;
-    setFilters({ ...filters, searchDate: value });
-
-    // Intenta analizar la fecha ingresada
-    const parsedDate = new Date(value);
-    if (!isNaN(parsedDate.getTime())) {
-      setFilters({ ...filters, fechaInicio: parsedDate }); // Actualiza la fecha de inicio
-    }
-  };
-
   return (
-    <Card className="mb-6">
+    <Card className="mb-3">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-1">
           <div className="flex items-center justify-between">
             <CardTitle>Filtros</CardTitle>
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-9 p-0">
-                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              <Button variant="ghost" size="xs" className="w-7 p-0">
+                {isOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               </Button>
             </CollapsibleTrigger>
           </div>
         </CardHeader>
 
-        <CollapsibleContent>
-          <CardContent className="p-0">
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <CollapsibleContent className="p-1">
+          <CardContent className="grid gap-6 pb-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
               {[
                 { id: "oti", label: "OTI" },
                 { id: "operario", label: "Operario" },
@@ -79,55 +61,80 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
                 { id: "areaProduccion", label: "Área Producción" },
                 { id: "maquina", label: "Máquina" },
               ].map(({ id, label }) => (
-                <div key={id} className="space-y-2">
+                <div key={id} className="space-y-1">
                   <Label htmlFor={id}>{label}</Label>
                   <Input
                     id={id}
                     value={filters[id]}
                     onChange={(e) => setFilters({ ...filters, [id]: e.target.value })}
-                    placeholder={`Buscar por ${label.toLowerCase()}...`}
+                    placeholder={` ${label.toLowerCase()}...`}
                   />
                 </div>
               ))}
 
-              {/* Calendarios para fecha de inicio y fin */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label>Desde</Label>
-                <Input
-                  type="date"
-                  name="fechaInicio"
-                  value={filters.fechaInicio ? filters.fechaInicio.toISOString().split('T')[0] : ''}
-                  onChange={(e) => {
-                    const date = e.target.value ? new Date(e.target.value) : undefined;
-                    setFilters({ ...filters, fechaInicio: date });
-                  }}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !filters.fechaInicio && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-3 w-3" />
+                      {filters.fechaInicio ? format(filters.fechaInicio, "PPP") : <span>Seleccione</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-gray-100">
+                    <Calendar
+                      mode="single"
+                      selected={filters.fechaInicio}
+                      onSelect={(date) => setFilters({ ...filters, fechaInicio: date })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label>Hasta</Label>
-                <Input
-                  type="date"
-                  name="fechaFin"
-                  value={filters.fechaFin ? filters.fechaFin.toISOString().split('T')[0] : ''}
-                  onChange={(e) => {
-                    const date = e.target.value ? new Date(e.target.value) : undefined;
-                    setFilters({ ...filters, fechaFin: date });
-                  }}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !filters.fechaFin && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filters.fechaFin ? format(filters.fechaFin, "PPP") : <span>Seleccione</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-gray-100">
+                    <Calendar
+                      mode="single"
+                      selected={filters.fechaFin}
+                      onSelect={(date) => setFilters({ ...filters, fechaFin: date })}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </CardContent>
 
-          <CardFooter className="flex justify-between border-t pt-4">
-            <Button variant="outline" onClick={handleClearFilters}>
+          <CardFooter className="flex flex-col sm:flex-row sm:justify-between gap-2 border-t px-4 py-2">
+            <Button variant="outline" onClick={handleClearFilters} className="text-xs h-8 px-3 flex items-center gap-1">
               <X className="mr-2 h-4 w-4" /> Limpiar Filtros
             </Button>
             <div className="flex gap-2">
-              <Button onClick={handleApplyFilters}>
+              <Button onClick={handleApplyFilters} className="text-xs h-8 px-3 flex items-center gap-1">
                 <Search className="mr-2 h-4 w-4" /> Aplicar Filtros
               </Button>
-              <Button variant="outline" onClick={onExportar}>
+              <Button variant="outline" onClick={onExportar} className="text-xs h-8 px-3 flex items-center gap-1">
                 <Download className="mr-2 h-4 w-4" /> Exportar
               </Button>
             </div>

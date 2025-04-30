@@ -9,6 +9,7 @@ const axiosInstance = axios.create({
 axiosInstance.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token'); // Obtener el token del localStorage
+        console.log("Token recuperado de localStorage:", token);
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`; // Agregar el token al encabezado
         }

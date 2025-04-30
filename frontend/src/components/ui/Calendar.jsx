@@ -13,13 +13,14 @@ function Calendar({
   captionLayout = "dropdown-buttons",
   fromYear = 2020,
   toYear = 2030,
-  locale = es,
+  locale = {es},
   ...props
 }) {
   return (
+    <div className="flex flex-col items-start space-y-2 p-4">
     <DayPicker
       showOutsideDays={showOutsideDays}
-      locale={locale}
+      locale={es}
       captionLayout={captionLayout}
       fromYear={fromYear}
       toYear={toYear}
@@ -38,7 +39,7 @@ function Calendar({
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse",
         head_row: "",
-        head_cell: "w-9 h-9 text-center text-xs font-semibold text-gray-700 rdp-weekday:py-0 w-9",
+        head_cell: "w-10 h-10 text-center text-xs font-semibold text-gray-700 border-b",
         row: "",
         cell: "w-10 h-9 text-center text-sm p-0 relative",
         day: cn(
@@ -60,6 +61,7 @@ function Calendar({
       }}
       {...props}
     />
+    </div>
   );
 }
 
