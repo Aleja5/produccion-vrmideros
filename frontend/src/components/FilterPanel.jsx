@@ -34,13 +34,13 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
       fechaInicio: undefined,
       fechaFin: undefined,
     });
-    onBuscar({});
+    onBuscar({ page: 1, limit: 10 }); // Solicita todos los resultados al limpiar filtros
   };
 
   return (
     <Card className="mb-3">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="pb-1">
+        <CardHeader className="pb-0">
           <div className="flex items-center justify-between">
             <CardTitle>Filtros</CardTitle>
             <CollapsibleTrigger asChild>
@@ -51,9 +51,9 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
           </div>
         </CardHeader>
 
-        <CollapsibleContent className="p-1">
-          <CardContent className="grid gap-6 pb-4">
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <CollapsibleContent className="p-0">
+          <CardContent className="grid gap-4 pb-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 xl:grid-cols-7 gap-4"> {/* Disposición en columnas */}
               {[
                 { id: "oti", label: "OTI" },
                 { id: "operario", label: "Operario" },
@@ -61,7 +61,7 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
                 { id: "areaProduccion", label: "Área Producción" },
                 { id: "maquina", label: "Máquina" },
               ].map(({ id, label }) => (
-                <div key={id} className="space-y-1">
+                <div key={id} className="space-y-1"> {/* Disposición vertical label-input */}
                   <Label htmlFor={id}>{label}</Label>
                   <Input
                     id={id}
@@ -72,7 +72,7 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
                 </div>
               ))}
 
-              <div className="space-y-1">
+              <div className="space-y-1"> {/* Disposición vertical label-datepicker */}
                 <Label>Desde</Label>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -98,7 +98,7 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
                 </Popover>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1"> {/* Disposición vertical label-datepicker */}
                 <Label>Hasta</Label>
                 <Popover>
                   <PopoverTrigger asChild>
