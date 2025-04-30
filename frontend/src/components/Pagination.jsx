@@ -8,6 +8,7 @@ const Pagination = ({ currentPage, totalResults, itemsPerPage, onPageChange }) =
   for (let i = 1; i <= totalPages; i++) {
     pageNumbers.push(i);
   }
+  console.log('Pagination Component - totalResults:', totalResults, 'totalPages:', totalPages, 'currentPage:', currentPage);
 
   return (
     <div className="flex justify-center mt-4">

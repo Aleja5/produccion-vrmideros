@@ -1,4 +1,3 @@
-// ✅ AdminDashboard.jsx optimizado
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import FilterPanel from '../components/FilterPanel';
@@ -48,6 +47,7 @@ const AdminDashboard = () => {
       if (response.data.resultados && Array.isArray(response.data.resultados)) {
         setResultados(response.data.resultados);
         calcularTotalHoras(response.data.resultados);
+        console.log('AdminDashboard - Setting totalResults:', response.data.totalResults);
         setTotalResults(response.data.totalResults || 0);
       } else {
         setResultados([]);
@@ -73,10 +73,12 @@ const AdminDashboard = () => {
         limit: itemsPerPage,
       },
     }).then((res) => {
+      console.log('AdminDashboard - Backend Response:', res.data);
       if (res.data?.resultados && Array.isArray(res.data.resultados)) {
       setResultados(res.data.resultados);
       calcularTotalHoras(res.data.resultados);
-      setTotalResults(res.data.totalResults || 0);
+      console.log('AdminDashboard - Setting totalResults:', res.data.totalResults);
+      setTotalResults(res.data.totalResultados || 0);
       }else {
         setResultados([]);
         setTotalResults(0);
@@ -174,6 +176,7 @@ const AdminDashboard = () => {
               onPageChange={handlePageChange}
             />
           )}
+          {console.log('AdminDashboard - totalResults:', totalResults)}
         </div>
       </div>
         </div>
