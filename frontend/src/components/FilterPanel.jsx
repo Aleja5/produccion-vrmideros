@@ -40,7 +40,7 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
   return (
     <Card className="mb-3">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="pb-0">
+        <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle>Filtros</CardTitle>
             <CollapsibleTrigger asChild>
@@ -53,7 +53,7 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
 
         <CollapsibleContent className="p-0">
           <CardContent className="grid gap-4 pb-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 xl:grid-cols-7 gap-4"> {/* Disposición en columnas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 xl:grid-cols-7 gap-4"> 
               {[
                 { id: "oti", label: "OTI" },
                 { id: "operario", label: "Operario" },
