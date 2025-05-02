@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { cn } from "../utils/cn";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/Collapsible";
 
-const FilterPanel = ({ onBuscar, onExportar }) => {
+const FilterPanel = ({ onBuscar, onExportar, onClearFilters }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [filters, setFilters] = useState({
     oti: "",

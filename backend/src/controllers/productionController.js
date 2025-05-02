@@ -26,8 +26,8 @@ exports.getAllProduccion = async (req, res) => {
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         console.log(" ejecutando getAllProduccion con Page", page, "limit:", limit);
-        const totalResultados = await Produccion.countDocuments({});
-        console.log("Total de resultados:", totalResultados);
+        const totalResults = await Produccion.countDocuments({});
+        console.log("Total de resultados:", totalResults);
         
         const registros = await Produccion.find()
             .sort({ fecha: -1 })
@@ -41,10 +41,10 @@ exports.getAllProduccion = async (req, res) => {
 
         console.log("Registros encontrados", registros);
         
-        res.json({ totalResultados, resultados: registros });
+        res.json({ totalResults, resultados: registros });
     } catch (error) {
         console.error("error en getAllProduccion:", error);
-        res.status(500).json({ message: "Error obteniendo registros", error, totalResultados: 0, resultados: [] });
+        res.status(500).json({ message: "Error obteniendo registros", error, totalResults: 0, resultados: [] });
     }
 };
 

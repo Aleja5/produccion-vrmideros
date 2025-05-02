@@ -27,6 +27,8 @@ const AdminDashboard = () => {
   const handleBuscar = async (filtrosRecibidos) => {
     setLoading(true);
     setError(null);
+    setCurrentPage(1); // Reinicia a la primera página al buscar
+
     try {
       const filtrosAjustados = { ...filtrosRecibidos };
       if (filtrosRecibidos.fechaInicio) {
@@ -39,7 +41,7 @@ const AdminDashboard = () => {
       const response = await axiosInstance.get('/produccion/buscar-produccion', {
         params: {
           ...filtrosAjustados,
-          page: currentPage,
+          page: 1, // Siempre comienza desde la primera página
           limit: itemsPerPage,
         },
       });
@@ -47,17 +49,51 @@ const AdminDashboard = () => {
       if (response.data.resultados && Array.isArray(response.data.resultados)) {
         setResultados(response.data.resultados);
         calcularTotalHoras(response.data.resultados);
-        setTotalResults(response.data.totalResults || 0);
+        setTotalResults(response.data.totalResults || response.data.totalResultados || 0);
       } else {
         setResultados([]);
         setTotalHoras(0);
-        alert(response.data?.msg || 'Sin resultados');
+        setTotalResults(0); // Asegúrate de que la paginación no desaparezca
       }
     } catch (err) {
       console.error("❌ Error al buscar:", err);
       setError('Error al buscar los registros.');
       setResultados([]);
       setTotalHoras(0);
+      setTotalResults(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClearFilters = async () => {
+    setLoading(true);
+    setError(null);
+    setCurrentPage(1); // Reset to the first page
+
+    try {
+      const response = await axiosInstance.get('/admin/admin-producciones', {
+        params: {
+          page: 1, // Fetch the first page of results
+          limit: itemsPerPage,
+        },
+      });
+
+      if (response.data.resultados && Array.isArray(response.data.resultados)) {
+        setResultados(response.data.resultados);
+        calcularTotalHoras(response.data.resultados);
+        setTotalResults(response.data.totalResults || 0); // Update total results
+      } else {
+        setResultados([]);
+        setTotalHoras(0);
+        setTotalResults(0);
+      }
+    } catch (err) {
+      console.error("Error al limpiar filtros:", err);
+      setError('Error al limpiar los filtros.');
+      setResultados([]);
+      setTotalHoras(0);
+      setTotalResults(0);
     } finally {
       setLoading(false);
     }
@@ -124,7 +160,7 @@ const AdminDashboard = () => {
         <div className="flex-1 flex flex-col bg-white overflow-hidden">
           <div className="p-6 bg-gray-100 min-h-screen">
             <h1 className="text-xl font-bold mb-2">Consultas Produccion</h1>
-            <FilterPanel onBuscar={handleBuscar} onExportar={exportarExcel} />
+            <FilterPanel onBuscar={handleBuscar} onExportar={exportarExcel} onClearFilters={handleClearFilters} />
 
             <div className="flex flex-col h-full"> {/* Contenedor principal */}
               <div className="flex-1 overflow-y-auto"> {/* Contenedor scrollable para resultados */}
