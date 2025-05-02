@@ -24,7 +24,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         return children;
     }
 
-    if (!finalOperarioId) {
+    if (!finalOperarioId && currentPath !== '/validate-cedula') {
         debugLog("Redirigiendo a validación de cédula. No se encontró el operario.");
         return <Navigate to="/validate-cedula" />;
     }
@@ -40,11 +40,6 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     if (allowedRoles && !allowedRoles.includes(String(role).trim())) {
         debugLog("Redirigiendo al login por rol no autorizado.");
         return <Navigate to="/" />;
-    }
-
-    if (currentPath !== '/validate-cedula' && !storedOperario) {
-        debugLog("Redirigiendo a validación de cédula.");
-        return <Navigate to="/validate-cedula" />;
     }
 
     return children;
