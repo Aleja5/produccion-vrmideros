@@ -17,7 +17,10 @@
     "axios": "^1.7.9",
     "chart.js": "^4.4.8",
     "class-variance-authority": "^0.7.1",
+<<<<<<< HEAD
     "date-fns": "^4.1.0",
+=======
+>>>>>>> b12eafb66771a871647133da98bffaa1c3883a87
     "framer-motion": "^12.6.5",
     "lucide-react": "^0.487.0",
     "react": "^19.0.0",
@@ -47,6 +50,6 @@
     "globals": "^15.14.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.3",
-    "vite": "^6.1.0"
+    "vite": "^6.3.4"
   }
 }
