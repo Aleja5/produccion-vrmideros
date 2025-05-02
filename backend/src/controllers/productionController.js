@@ -22,16 +22,29 @@ const Operario = require("../models/Operario")
 // Obtener todos los registros de producción
 exports.getAllProduccion = async (req, res) => {
     try {
+        const { page = 1, limit = 10 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        console.log(" ejecutando getAllProduccion con Page", page, "limit:", limit);
+        const totalResultados = await Produccion.countDocuments({});
+        console.log("Total de resultados:", totalResultados);
+        
         const registros = await Produccion.find()
             .sort({ fecha: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
             .populate("oti", "numeroOti")
             .populate("operario", "name")
             .populate("proceso", "nombre")
             .populate("areaProduccion", "nombre")
             .populate("maquina", "nombre");
-        res.json(registros);
+
+        console.log("Registros encontrados", registros);
+        
+        res.json({ totalResultados, resultados: registros });
     } catch (error) {
-        res.status(500).json({ message: "Error obteniendo registros", error });
+        console.error("error en getAllProduccion:", error);
+        res.status(500).json({ message: "Error obteniendo registros", error, totalResultados: 0, resultados: [] });
     }
 };
 
@@ -260,10 +273,14 @@ exports.actualizarProduccion = async (req, res) => {
             return res.status(400).json({ msg: "Fecha inválida" });
         }
 
+        // Ajustar la fecha para la zona horaria local
+        const fechaLocal = new Date(fecha);
+        fechaLocal.setMinutes(fechaLocal.getMinutes() + fechaLocal.getTimezoneOffset());
+        produccion.fecha = fechaLocal;
+
         // Actualizar los datos de la producción
         produccion.oti = otiExistente._id;
         produccion.operario = operarioDB._id;
-        produccion.fecha = fechaValida;
         produccion.proceso = procesoExistente._id;
         produccion.areaProduccion = areaExistente._id;
         produccion.maquina = maquinaExistente._id;
@@ -309,8 +326,11 @@ exports.eliminarProduccion = async (req, res) => {
 // 📌 Buscar Producción con filtros dinámicos
 exports.buscarProduccion = async (req, res) => {
     try {
-        const { oti, operario, fechaInicio, fechaFin, proceso, areaProduccion, maquina } = req.query;
+        const { oti, operario, fechaInicio, fechaFin, proceso, areaProduccion, maquina, page = 1, limit = 10 } = req.query;
         const query = {};
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        console.log("📥 Filtros recibidos en el backend:", req.query); // Log para verificar los filtros recibidos
 
         // Ajustar lógica para aplicar solo los filtros proporcionados
         if (oti && oti.trim() !== '') {
@@ -318,6 +338,7 @@ exports.buscarProduccion = async (req, res) => {
             if (otiDoc) {
                 query.oti = otiDoc._id;
             } else {
+                console.log("❌ No se encontró una OTI con ese número:", oti); // Log para OTI no encontrada
                 return res.status(404).json({ msg: 'No se encontró una OTI con ese número' });
             }
         }
@@ -327,15 +348,23 @@ exports.buscarProduccion = async (req, res) => {
             if (operarioDoc) {
                 query.operario = operarioDoc._id;
             } else {
+                console.log("❌ No se encontró un operario con ese nombre:", operario); // Log para operario no encontrado
                 return res.status(404).json({ msg: 'No se encontró un operario con ese nombre' });
             }
         }
 
         if (fechaInicio && fechaFin) {
+            const inicio = new Date(fechaInicio);
+            inicio.setHours(0, 0, 0, 0); // Inicio del día en hora local
+
+            const fin = new Date(fechaFin);
+            fin.setHours(23, 59, 59, 999); // Fin del día en hora local
+
             query.fecha = {
-                $gte: new Date(fechaInicio),
-                $lte: new Date(fechaFin),
+                $gte: inicio,
+                $lte: fin,
             };
+            console.log("📅 Filtro de fechas aplicado:", query.fecha); // Log para rango de fechas
         }
 
         if (proceso && proceso.trim() !== '') {
@@ -343,16 +372,17 @@ exports.buscarProduccion = async (req, res) => {
             if (procesoDocs.length > 0) {
                 query.proceso = { $in: procesoDocs.map(p => p._id) };
             } else {
+                console.log("❌ No se encontraron procesos con ese nombre:", proceso); // Log para proceso no encontrado
                 return res.status(404).json({ msg: 'No se encontraron procesos con ese nombre' });
             }
         }
 
-        // Asegurar que los filtros se apliquen correctamente
         if (areaProduccion && areaProduccion.trim() !== '') {
             const areaDocs = await AreaProduccion.find({ nombre: { $regex: `^${areaProduccion}$`, $options: 'i' } });
             if (areaDocs.length > 0) {
                 query.areaProduccion = { $in: areaDocs.map(a => a._id) };
             } else {
+                console.log("❌ No se encontraron áreas de producción con ese nombre:", areaProduccion); // Log para área no encontrada
                 return res.status(404).json({ msg: 'No se encontraron áreas de producción con ese nombre' });
             }
         }
@@ -362,26 +392,67 @@ exports.buscarProduccion = async (req, res) => {
             if (maquinaDocs.length > 0) {
                 query.maquina = { $in: maquinaDocs.map(m => m._id) };
             } else {
+                console.log("❌ No se encontraron máquinas con ese nombre:", maquina); // Log para máquina no encontrada
                 return res.status(404).json({ msg: 'No se encontraron máquinas con ese nombre' });
             }
         }
 
+        console.log("🔍 Query final construida para la búsqueda:", query); // Log para la consulta final
+
+        // Obtener el total de resultados que coinciden con la consulta
+        const totalResultados = await Produccion.countDocuments(query);
+        console.log("📊 Total de resultados encontrados:", totalResultados); // Log para total de resultados
+
         // Buscar producciones con los filtros aplicados
         const producciones = await Produccion.find(query)
+            .skip(skip)
+            .limit(parseInt(limit))
             .populate('oti', 'numeroOti')
             .populate('operario', 'name')
             .populate('proceso', 'nombre')
             .populate('areaProduccion', 'nombre')
             .populate('maquina', 'nombre');
 
-        if (producciones.length === 0) {
-            return res.status(404).json({ msg: 'No se encontraron producciones con los filtros aplicados' });
+        console.log("📋 Resultados devueltos al frontend:", producciones); // Log para resultados devueltos
+
+        res.status(200).json({ totalResultados, resultados: producciones });
+    } catch (error) {
+        console.error('❌ Error al buscar producciones:', error);
+        res.status(500).json({ msg: 'Error interno del servidor', error: error.message });
+    }
+};
+
+exports.buscarPorFechas = async (req, res) => {
+    try {
+        const { fechaInicio, fechaFin } = req.query;
+
+        if (!fechaInicio || !fechaFin) {
+            return res.status(400).json({ msg: "Faltan parámetros requeridos: fechaInicio y fechaFin" });
         }
+
+        const inicio = new Date(fechaInicio);
+        const fin = new Date(fechaFin);
+
+        if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+            return res.status(400).json({ msg: "Fechas inválidas" });
+        }
+
+        const producciones = await Produccion.find({
+            fecha: {
+                $gte: inicio,
+                $lte: fin,
+            },
+        })
+            .populate("oti", "numeroOti")
+            .populate("operario", "name")
+            .populate("proceso", "nombre")
+            .populate("areaProduccion", "nombre")
+            .populate("maquina", "nombre");
 
         res.status(200).json(producciones);
     } catch (error) {
-        console.error('Error al buscar producciones:', error);
-        res.status(500).json({ msg: 'Error interno del servidor', error: error.message });
+        console.error("Error al buscar por fechas:", error);
+        res.status(500).json({ msg: "Error al buscar registros" });
     }
 };
 

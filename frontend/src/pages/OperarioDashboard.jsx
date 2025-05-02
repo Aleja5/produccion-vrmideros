@@ -487,7 +487,7 @@ const OperarioDashboard = () => {
               {produccionesPaginadas.map((prod) => (
                 <tr key={prod._id} className="text-center border-t">
                   <td className="p-2">{prod.oti?.numeroOti}</td>
-                  <td className="p-2">{new Date(prod.fecha).toLocaleDateString()}</td>
+                  <td className="p-2">{new Date(prod.fecha).toISOString().split('T')[0]}</td>
                   <td className="p-2">{prod.proceso?.nombre}</td>
                   <td className="p-2">{prod.maquina?.nombre}</td>
                   <td className="p-2">{prod.areaProduccion?.nombre}</td>

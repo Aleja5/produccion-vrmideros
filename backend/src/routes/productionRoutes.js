@@ -6,7 +6,8 @@ const {
     actualizarProduccion,
     eliminarProduccion,
     listarProduccion,
-    buscarProduccion 
+    buscarProduccion,
+    buscarPorFechas 
 } = require('../controllers/productionController');
 const AreaProduccion = require('../models/AreaProduccion');
 const Maquina = require('../models/Maquina');
@@ -32,6 +33,9 @@ router.delete('/eliminar/:id', eliminarProduccion);
 
 // 📌 Buscar producción
 router.get('/buscar-produccion', buscarProduccion);
+
+// 📌 Buscar registros por rango de fechas
+router.get('/buscar-por-fechas', buscarPorFechas);
 
 // Endpoint para obtener registros de producción de un operario en un rango de fechas
 router.get('/operario-produccion', async (req, res) => {

@@ -25,8 +25,12 @@ export default function RegistroPage() {
         observaciones: "",
     });
 
-    const [suggestions, setSuggestions] = useState({ oti: [], proceso: [], areaProduccion: [], maquina: [] });
+    const [suggestions, setSuggestions] = useState({ oti: [] });
     const [selectedIds, setSelectedIds] = useState({ oti: null, proceso: null, areaProduccion: null, maquina: null });
+    const [maquinasData, setMaquinasData] = useState([]);
+    const [areasProduccionData, setAreasProduccionData] = useState([]);
+    const [procesosData, setProcesosData] = useState([]);
+
 
     useEffect(() => {
         const operario = localStorage.getItem("operario");
@@ -46,6 +50,38 @@ export default function RegistroPage() {
         } catch (error) {
             console.error("❌ Error al leer datos del operario:", error);
         }
+
+        //cargar los datos para los selectores
+        const loadSelectporData = async () => {
+            try {
+                const maquinasRes = await fetch("http://localhost:5000/api/produccion/maquinas");
+                if (maquinasRes.ok) {
+                    const data = await maquinasRes.json();
+                    setMaquinasData(data);
+                }else {
+                    console.error("Error al cargar maquinas:", maquinasRes.status);
+                }
+
+                const areasRes = await fetch("http://localhost:5000/api/produccion/areas");
+                if (areasRes.ok) {
+                    const data = await areasRes.json();
+                    setAreasProduccionData(data);
+                }else {
+                    console.error("Error al cargar areas de produccion:", areasRes.status);
+                }
+
+                const procesosRes = await fetch("http://localhost:5000/api/produccion/procesos");
+                if (procesosRes.ok) {
+                    const data = await procesosRes.json();
+                    setProcesosData(data);
+                }else {
+                    console.error("Error al cargar procesos:", procesosRes.status);
+                }
+            } catch (error) {
+                console.error("Error al cargar datos de los selectores:", error);
+            }
+        };
+        loadSelectporData();
     }, [navigate]);
 
     const handleChange = async (e) => {
@@ -57,11 +93,10 @@ export default function RegistroPage() {
             [name]: name.includes("tiempo") ? Math.max(0, Number(value)) : value,
         }));
 
-        if (timeoutId.current) clearTimeout(timeoutId.current);
-
-        if (["oti", "proceso", "areaProduccion", "maquina"].includes(name) && sanitizedValue) {
+        if (name === "oti" && sanitizedValue) {
+            if (timeoutId.current) clearTimeout(timeoutId.current);
             timeoutId.current = setTimeout(() => fetchSuggestions(name, sanitizedValue), 500);
-        } else {
+        } else if (name === "oti" && !sanitizedValue) {
             setSuggestions((prev) => ({ ...prev, [name]: [] }));
         }
     };
@@ -93,10 +128,10 @@ export default function RegistroPage() {
         const { name, value } = e.target;
         debugLog(`📌 handleBlur: ${name} - Valor ingresado: ${value}`);
 
-        if (!value.trim() || !["oti", "proceso", "areaProduccion", "maquina"].includes(name)) return;
-
-        const id = await verificarYCrear(value, name);
-        setSelectedIds((prev) => ({ ...prev, [name]: id }));
+        if (name === "oti" && value.trim()) {
+            const id = await verificarYCrear(value, name);
+            setSelectedIds((prev) => ({ ...prev, [name]: id }));
+        }
     };
 
     const verificarYCrear = async (valor, nombreColeccion) => {
@@ -152,20 +187,11 @@ export default function RegistroPage() {
         e.preventDefault();
         setLoading(true);
 
-        if (!selectedIds.oti) {
+        if (!selectedIds.oti && !formData.oti.trim()) {
             toast.error("La OTI no ha sido validada o creada correctamente.");
             setLoading(false);
             return;
         }
-
-        const updatedIds = { ...selectedIds };
-        for (const key of ["oti", "proceso", "areaProduccion", "maquina"]) {
-            if (!updatedIds[key] && formData[key]) {
-                updatedIds[key] = await verificarYCrear(formData[key], key);
-            }
-        }
-
-        setSelectedIds(updatedIds);
 
         const storedOperator = localStorage.getItem("operario");
         const operario = storedOperator ? JSON.parse(storedOperator) : null;
@@ -181,13 +207,20 @@ export default function RegistroPage() {
             ...formData,
             cedula: cedulaOperario,
             operario: idOperario,
-            oti: updatedIds.oti || formData.oti,
-            proceso: updatedIds.proceso || formData.proceso,
-            areaProduccion: updatedIds.areaProduccion || formData.areaProduccion,
-            maquina: updatedIds.maquina || formData.maquina,
+            oti: selectedIds.oti ||(await verificarYCrear(formData.oti, "oti")) || formData.oti,
+            proceso: formData.proceso,
+            areaProduccion:  formData.areaProduccion,
+            maquina:  formData.maquina,
             tiempoPreparacion: Number(formData.tiempoPreparacion),
             tiempoOperacion: Number(formData.tiempoOperacion),
         };
+
+        // Ajustar la fecha para incluir la zona horaria local
+        if (datosAEnviar.fecha) {
+            const localDate = new Date(datosAEnviar.fecha);
+            localDate.setMinutes(localDate.getMinutes() + localDate.getTimezoneOffset());
+            datosAEnviar.fecha = localDate.toISOString();
+        }
 
         try {
             const response = await fetch("http://localhost:5000/api/produccion/registrar", {
@@ -229,38 +262,71 @@ export default function RegistroPage() {
                             <Input type="date" name="fecha" value={formData.fecha} onChange={handleChange} required />
                         </div>
 
-                        {["oti", "proceso", "areaProduccion", "maquina"].map((field) => (
-                            <div key={field} className="relative">
-                                <label className="block text-gray-700 font-medium mb-1">
-                                    {field.charAt(0).toUpperCase() + field.slice(1)}:
-                                </label>
+                        <label className= "block text-gray-700 font-medium mb-1">OTI:</label>
+                        <div className="relative">                            
                                 <Input
-                                    type="select"
-                                    name={field}
-                                    value={formData[field]}
+                                    type="text"
+                                    name="oti"
+                                    value={formData.oti}
                                     onChange={handleChange}
                                     onBlur={handleBlur}
-                                    placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
+                                    placeholder="OTI"
                                     required
                                 />
-                                {suggestions[field]?.length > 0 && (
+                                {suggestions.oti?.length > 0 && (
                                     <ul className="absolute bg-white border rounded w-full mt-1 shadow-md z-10">
-                                        {suggestions[field].map((item) => (
+                                        {suggestions.oti.map((item) => (
                                             <li
                                                 key={item._id}
                                                 className="p-2 hover:bg-gray-200 cursor-pointer"
                                                 onClick={() => {
-                                                    setFormData((prev) => ({ ...prev, [field]: item.nombre }));
-                                                    setSuggestions((prev) => ({ ...prev, [field]: [] }));
+                                                    setFormData((prev) => ({ ...prev, oti: item.numeroOti }));
+                                                    setSuggestions((prev) => ({ ...prev, oti: [] }));
+                                                    setSelectedIds((prev) => ({ ...prev, oti: item._id }));
                                                 }}
                                             >
-                                                {item.nombre}
+                                                {item.numeroOti}
                                             </li>
                                         ))}
                                     </ul>
                                 )}
                             </div>
-                        ))}
+
+                            <div>
+                                <label className="block text-gray-700 font-medium mb-1">Maquina:</label>
+                                <Input as ="select" name= "maquina" value={formData.maquina} onChange={handleChange} required>
+                                    <option value="">Seleccionar Maquina</option>
+                                    {maquinasData.map((maquina) => (
+                                        <option key={maquina._id} value={maquina._id}>
+                                            {maquina.nombre}
+                                        </option>
+                                    ))}
+                                </Input>
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 font-medium mb-1">Area de Produccion:</label>
+                                <Input as ="select" name= "areaProduccion" value={formData.areaProduccion} onChange={handleChange} required>
+                                    <option value="">Seleccionar Area de Produccion</option>
+                                    {areasProduccionData.map((areaProduccion) => (
+                                        <option key={areaProduccion._id} value={areaProduccion._id}>
+                                            {areaProduccion.nombre}
+                                        </option>
+                                    ))}
+                                </Input>
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 font-medium mb-1">Proceso:</label>
+                                <Input as ="select" name= "proceso" value={formData.proceso} onChange={handleChange} required>
+                                    <option value="">Seleccionar Proceso</option>
+                                    {procesosData.map((proceso) => (
+                                        <option key={proceso._id} value={proceso._id}>
+                                            {proceso.nombre}
+                                        </option>
+                                    ))}
+                                </Input>
+                            </div>
 
                         <div>
                             <label className="block text-gray-700 font-medium mb-1">Tiempo de Preparación (min):</label>
