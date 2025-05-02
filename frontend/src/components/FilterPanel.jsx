@@ -5,6 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/Popover";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/Card";
 import { CalendarIcon, ChevronDown, ChevronUp, Download, Search, X } from "lucide-react";
 import { format } from "date-fns";
+import { es } from "date-fns/locale"; // Importamos la localización en español
 import { cn } from "../utils/cn";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/Collapsible";
 
@@ -84,7 +85,7 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-3 w-3" />
-                      {filters.fechaInicio ? format(filters.fechaInicio, "PPP") : <span>Seleccione</span>}
+                      {filters.fechaInicio ? format(filters.fechaInicio, "d MMM yyyy", { locale: es }) : <span>Seleccione</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 bg-gray-100">
@@ -110,7 +111,7 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filters.fechaFin ? format(filters.fechaFin, "PPP") : <span>Seleccione</span>}
+                      {filters.fechaFin ? format(filters.fechaFin, "d MMM yyyy", { locale: es }) : <span>Seleccione</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 bg-gray-100">
