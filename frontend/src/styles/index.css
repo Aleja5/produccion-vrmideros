@@ -15,4 +15,11 @@
   h1, h2, h3, h4 {
     @apply font-semibold text-gray-900;
   }
+
+  thead[aria-hidden="true"] {
+    display: table-header-group !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
 }

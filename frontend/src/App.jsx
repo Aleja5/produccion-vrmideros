@@ -7,6 +7,7 @@ import OperarioDashboard from './pages/OperarioDashboard';
 import RegistroPage from './pages/RegistroProduccion';
 import EditarProduccion from './pages/EditarProduccion';
 import ProtectedRoute from './components/ProtectedRoute';
+import MaquinasPage from './pages/Maquinas';
 
 function App() {
     return (
@@ -25,6 +26,7 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+                <Route path="/admin/maquinas" element={<MaquinasPage />} />
 
                 {/* Ruta protegida: Validar Cédula */}
                 <Route path="/validate-cedula" element={<ValidateCedula />} />

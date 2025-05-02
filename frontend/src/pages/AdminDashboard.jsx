@@ -69,12 +69,12 @@ const AdminDashboard = () => {
   const handleClearFilters = async () => {
     setLoading(true);
     setError(null);
-    setCurrentPage(1); // Reset to the first page
+    setCurrentPage(1);
 
     try {
       const response = await axiosInstance.get('/admin/admin-producciones', {
         params: {
-          page: 1, // Fetch the first page of results
+          page: 1, 
           limit: itemsPerPage,
         },
       });
@@ -82,7 +82,7 @@ const AdminDashboard = () => {
       if (response.data.resultados && Array.isArray(response.data.resultados)) {
         setResultados(response.data.resultados);
         calcularTotalHoras(response.data.resultados);
-        setTotalResults(response.data.totalResults || 0); // Update total results
+        setTotalResults(response.data.totalResults || 0);
       } else {
         setResultados([]);
         setTotalHoras(0);
@@ -113,7 +113,8 @@ const AdminDashboard = () => {
         setResultados(res.data.resultados);
         calcularTotalHoras(res.data.resultados);
         console.log('AdminDashboard - Setting totalResults:', res.data.totalResults);
-        setTotalResults(res.data.totalResultados || 0);
+        setTotalResults(res.data.totalResults || res.data.totalResultados || 0);
+
       } else {
         setResultados([]);
         setTotalResults(0);

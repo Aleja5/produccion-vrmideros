@@ -9,6 +9,7 @@ const productionRoutes = require('./src/routes/productionRoutes');
 const buscarRoutes = require("./src/routes/buscarRoutes");
 const crearRoutes = require("./src/routes/crearRoutes");
 const adminRoutes = require('./src/routes/adminRoutes');
+const maquinasRoutes = require('./src/routes/maquinasRoutes');
 
 // Cargar variables de entorno
 dotenv.config();
@@ -29,6 +30,7 @@ app.use('/api/produccion', productionRoutes);
 app.use("/api", buscarRoutes);
 app.use("/api", crearRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/maquinas', maquinasRoutes);
 
 
 app.use((req, res, next) => {
