@@ -16,3 +16,16 @@
     @apply font-semibold text-gray-900;
   }
 }
+/* Ocultar iconos automaticos de mostrar contraseña que agregan algunos navegadores*/
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+input[type='password']::-webkit-credentials-auto-fill-button {
+  display: none !important;
+}
+input[type='password']::-webkit-inner-spin-button,
+input[type='password']::-webkit-outer-spin-button {
+  display: none;
+}
+
