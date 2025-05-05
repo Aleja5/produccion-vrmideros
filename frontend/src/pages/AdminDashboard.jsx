@@ -138,6 +138,7 @@ const AdminDashboard = () => {
       Proceso: r.proceso?.nombre || '',
       Maquina: r.maquina?.nombre || '',
       Area: r.areaProduccion?.nombre || '',
+      Insumos: r.insumos?.nombre || '',
       Preparación: r.tiempoPreparacion,
       Operación: r.tiempoOperacion,
       Total: r.tiempoPreparacion + r.tiempoOperacion,
@@ -160,7 +161,7 @@ const AdminDashboard = () => {
 
         <div className="flex-1 flex flex-col bg-white overflow-hidden">
           <div className="p-6 bg-gray-100 min-h-screen">
-            <h1 className="text-xl font-bold mb-2">Consultas Produccion</h1>
+            <h1 className="text-xl font-bold mb-2">Consultas de Produccion</h1>
             <FilterPanel onBuscar={handleBuscar} onExportar={exportarExcel} onClearFilters={handleClearFilters} />
 
             <div className="flex flex-col h-full"> {/* Contenedor principal */}
@@ -176,6 +177,7 @@ const AdminDashboard = () => {
                         <th className="p-2">Operario</th>
                         <th className="p-2">Fecha</th>
                         <th className="p-2">Proceso</th>
+                        <th className="p-2">Insumos</th>
                         <th className="p-2">Máquina</th>
                         <th className="p-2">Área</th>
                         <th className="p-2">Prep.</th>
@@ -190,6 +192,7 @@ const AdminDashboard = () => {
                           <td className="p-2">{r.operario?.name}</td>
                           <td className="p-2">{new Date(r.fecha).toISOString().split('T')[0]}</td>
                           <td className="p-2">{r.proceso?.nombre}</td>
+                          <td className="p-2">{r.insumos?.nombre}</td>
                           <td className="p-2">{r.maquina?.nombre}</td>
                           <td className="p-2">{r.areaProduccion?.nombre}</td>
                           <td className="p-2">{r.tiempoPreparacion} min</td>

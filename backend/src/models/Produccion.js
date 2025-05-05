@@ -7,6 +7,7 @@ const produccionSchema = new mongoose.Schema({
     proceso: { type: mongoose.Schema.Types.ObjectId, ref: 'Proceso', required: true },
     areaProduccion: { type: mongoose.Schema.Types.ObjectId, ref: 'AreaProduccion', required: true },
     maquina: { type: mongoose.Schema.Types.ObjectId, ref: 'Maquina', required: true },
+    insumos: { type: mongoose.Schema.Types.ObjectId, ref: 'Insumo', required: true },
     tiempoPreparacion: {
         type: Number,
         required: true,

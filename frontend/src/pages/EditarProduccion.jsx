@@ -1,250 +1,242 @@
-import React, { useEffect, useState } from 'react';
-import axiosInstance from '../utils/axiosInstance';
-import { useParams, useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
+import React, { useState, useEffect } from 'react';
+import { Card, Input, Button } from '../components/ui/index'; // Asegúrate de tener instalada esta librería o usa tus propios componentes
+import  axiosInstance  from '../utils/axiosInstance'; // Ajusta la ruta a tu instancia de Axios
+import { toast } from 'react-toastify';
+import { verificarYCrear } from '../utils/verificarYCrear';
 
+function EditarProduccion({ produccion, onClose, onGuardar }) {
+  const [registroEditado, setRegistroEditado] = useState({});
+  const [procesos, setProcesos] = useState([]);
+  const [insumosColeccion, setInsumosColeccion] = useState([]);
+  const [maquinas, setMaquinas] = useState([]);
+  const [areasProduccion, setAreasProduccion] = useState([]);
 
-const EditarProduccion = () => {
-    const { id } = useParams(); // ID de la producción a editar
-    const [oti, setOti] = useState('');
-    const [fecha, setFecha] = useState('');
-    const [proceso, setProceso] = useState('');
-    const [areaProduccion, setAreaProduccion] = useState('');
-    const [maquina, setMaquina] = useState('');
-    const [tiempoPreparacion, setTiempoPreparacion] = useState('');
-    const [tiempoOperacion, setTiempoOperacion] = useState('');
-    const [otis, setOtis] = useState([]);
-    const [procesos, setProcesos] = useState([]);
-    const [areasProduccion, setAreasProduccion] = useState([]);
-    const [maquinas, setMaquinas] = useState([]);
-    const navigate = useNavigate();
+  useEffect(() => {
+    if (produccion) {
+      const fechaFormateada = produccion.fecha ? new Date(produccion.fecha).toISOString().split('T')[0] : "";
+      setRegistroEditado({
+        ...produccion,
+        fecha: fechaFormateada,
+        oti: { numeroOti: produccion.oti?.numeroOti || "" }, // Solo numeroOti para el input
+        proceso: produccion.proceso?._id || "",
+        insumos: produccion.insumos?._id || "",
+        maquina: produccion.maquina?._id || "",
+        areaProduccion: produccion.areaProduccion?._id || ""
+      });
+    }
+  }, [produccion]);
 
-    // Cargar datos iniciales de la producción y opciones disponibles
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                const headers = { Authorization: `Bearer ${token}` };
+  useEffect(() => {
+    const cargarDatosColecciones = async () => {
+      try {
+        const procesosResponse = await axiosInstance.get('produccion/procesos');
+        setProcesos(procesosResponse.data);
 
-                // Obtener los datos de la producción específica
-                const produccionResponse = await axios.get(`http://localhost:5000/api/produccion/${id}`, { headers });
-                const produccionData = produccionResponse.data;
+        const insumosResponse = await axiosInstance.get('produccion/insumos');
+        setInsumosColeccion(insumosResponse.data);
 
-                // Establecer los valores iniciales del formulario
-                setOti(produccionData.oti?.numeroOti || '');
-                setFecha(produccionData.fecha || '');
-                setProceso(produccionData.proceso?.nombre || '');
-                setAreaProduccion(produccionData.areaProduccion?.nombre || '');
-                setMaquina(produccionData.maquina?.nombre || '');
-                setTiempoPreparacion(produccionData.tiempoPreparacion || '');
-                setTiempoOperacion(produccionData.tiempoOperacion || '');
+        const maquinasResponse = await axiosInstance.get('produccion/maquinas');
+        setMaquinas(maquinasResponse.data);
 
+        const areasResponse = await axiosInstance.get('produccion/areas');
+        setAreasProduccion(areasResponse.data);
 
-                // Obtener las listas de OTIs, procesos, áreas de producción y máquinas
-                const [otisRes, procesosRes, areasRes, maquinasRes] = await Promise.all([
-                    axiosInstance.get('http://localhost:5000/api/produccion/otis', { headers }),
-                    axiosInstance.get('http://localhost:5000/api/produccion/procesos', { headers }),
-                    axiosInstance.get('http://localhost:5000/api/produccion/areas-produccion', { headers }),
-                    axiosInstance.get('http://localhost:5000/api/produccion/maquinas', { headers }),
-                ]);
-
-                setOtis(otisRes.data);
-                setProcesos(procesosRes.data);
-                setAreasProduccion(areasRes.data);
-                setMaquinas(maquinasRes.data);
-            } catch (error) {
-                console.error('Error al cargar los datos:', error);
-                toast.error('Hubo un problema al cargar los datos.');
-            }
-        };
-
-        fetchData();
-    }, [id]);
-
-    // Manejar el envío del formulario
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const token = localStorage.getItem('token');
-
-            // Verificar si cada valor existe en la BD o crearlo si es nuevo
-            let otiId = otis.find((o) => o.numeroOti.trim().toLowerCase() === oti.trim().toLowerCase())?._id;
-            if (!otiId) {
-                const nuevaOti = await axios.post(
-                    'http://localhost:5000/api/produccion/otis',
-                    { numeroOti: oti.trim() },
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                otiId = nuevaOti.data._id;
-            }
-
-            let procesoId = procesos.find((p) => p.nombre.trim().toLowerCase() === proceso.trim().toLowerCase())?._id;
-            if (!procesoId) {
-                const nuevoProceso = await axios.post(
-                    'http://localhost:5000/api/produccion/procesos',
-                    { nombre: proceso.trim() },
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                procesoId = nuevoProceso.data._id;
-            }
-
-            let areaProduccionId = areasProduccion.find(
-                (a) => a.nombre.trim().toLowerCase() === areaProduccion.trim().toLowerCase()
-            )?._id;
-            if (!areaProduccionId) {
-                const nuevaArea = await axios.post(
-                    'http://localhost:5000/api/produccion/areas-produccion',
-                    { nombre: areaProduccion.trim() },
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                areaProuccionId = nuevaArea.data._id;
-            }
-
-            let maquinaId = maquinas.find((m) => m.nombre.trim().toLowerCase() === maquina.trim().toLowerCase())?._id;
-            if (!maquinaId) {
-                const nuevaMaquina = await axios.post(
-                    'http://localhost:5000/api/produccion/maquinas',
-                    { nombre: maquina.trim() },
-                    { headers: { Authorization: `Bearer ${token}` } }
-                );
-                maquinaId = nuevaMaquina.data._id;
-            }
-
-            // Ajustar la fecha para incluir la zona horaria local
-            const fechaLocal = new Date(fecha);
-            fechaLocal.setMinutes(fechaLocal.getMinutes() + fechaLocal.getTimezoneOffset());
-
-            // Actualizar la producción con los IDs obtenidos o creados
-            await axios.put(
-                `http://localhost:5000/api/produccion/${id}`,
-                {
-                    oti: otiId,
-                    fecha: fechaLocal.toISOString(),
-                    proceso: procesoId,
-                    areaProduccion: areaProduccionId,
-                    maquina: maquinaId,
-                    tiempoPreparacion,
-                    tiempoOperacion,
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-
-            toast.success('Producción actualizada exitosamente.');
-            navigate('/operario-dashboard'); // Redirigir al dashboard después de editar
-        } catch (error) {
-            console.error('Error al actualizar la producción:', error);
-            toast.error('Hubo un problema al actualizar la producción.');
-        }
+      } catch (error) {
+        console.error("Error al cargar los datos de las colecciones:", error);
+        toast.error("Error al cargar los datos para la edición.");
+      }
     };
 
-    return (
-        <div>
-            <h2>Editar Producción</h2>
-            <form onSubmit={handleSubmit}>
-                {/* Campo OTI */}
-                <div>
-                    <label>OTI:</label>
-                    <input
-                        list="oti-list"
-                        value={oti}
-                        onChange={(e) => setOti(e.target.value)}
-                        required
-                    />
-                    <datalist id="oti-list">
-                        {otis.map((o) => (
-                            <option key={o._id} value={o.numeroO} />
-                        ))}
-                    </datalist>
-                </div>
+    cargarDatosColecciones();
+  }, []);
 
-                {/* Campo Fecha */}
-                <div>
-                    <label>Fecha:</label>
-                    <input
-                        type="date"
-                        value={fecha}
-                        onChange={(e) => setFecha(e.target.value)}
-                        required
-                    />
-                </div>
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setRegistroEditado(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-                {/* Campo Proceso */}
-                <div>
-                    <label>Proceso:</label>
-                    <input
-                        list="procesos-list"
-                        value={proceso}
-                        onChange={(e) => setProceso(e.target.value)}
-                        required
-                    />
-                    <datalist id="procesos-list">
-                        {procesos.map((p) => (
-                            <option key={p._id} value={p.nombre} />
-                        ))}
-                    </datalist>
-                </div>
+  const handleChangeRelacion = (e) => {
+    const { name, value } = e.target;
+    setRegistroEditado(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-                {/* Campo Área de Producción */}
-                <div>
-                    <label>Área de Producción:</label>
-                    <input
-                        list="area-list"
-                        value={areaProduccion}
-                        onChange={(e) => setAreaProduccion(e.target.value)}
-                        required
-                    />
-                    <datalist id="area-list">
-                        {areasProduccion.map((a) => (
-                            <option key={a._id} value={a.nombre} />
-                        ))}
-                    </datalist>
-                </div>
+  const guardarEdicion = async () => {
+    try {
+      if (!registroEditado || Object.keys(registroEditado).length === 0) {
+        toast.error("⚠️ No hay datos para guardar.");
+        return;
+      }
 
-                {/* Campo Máquina */}
-                <div>
-                    <label>Máquina:</label>
-                    <input
-                        list="maquina-list"
-                        value={maquina}
-                        onChange={(e) => setMaquina(e.target.value)}
-                        required
-                    />
-                    <datalist id="maquina-list">
-                        {maquinas.map((m) => (
-                            <option key={m._id} value={m.nombre} />
-                        ))}
-                    </datalist>
-                </div>
+      const normalizarTexto = (texto) => (typeof texto === 'string' ? texto.trim().toLowerCase() : texto);
 
-                {/* Campo Tiempo de Preparación */}
-                <div>
-                    <label>Tiempo de Preparación (min):</label>
-                    <input
-                        type="number"
-                        min="0"
-                        value={tiempoPreparacion}
-                        onChange={(e) => setTiempoPreparacion(e.target.value)}
-                        required
-                    />
-                </div>
+      const otiId = await verificarYCrear(normalizarTexto(registroEditado.oti?.numeroOti || ''), "oti");
+      const procesoId = registroEditado.proceso;
+      const insumoId = registroEditado.insumos;
+      const areaId = registroEditado.areaProduccion;
+      const maquinaId = registroEditado.maquina;
 
-                {/* Campo Tiempo de Operación */}
-                <div>
-                    <label>Tiempo de Operación (min):</label>
-                    <input
-                        type="number"
-                        min="0"
-                        value={tiempoOperacion}
-                        onChange={(e) => setTiempoOperacion(e.target.value)}
-                        required
-                    />
-                </div>
-                {/* Botón de Envío */}
-                <button type="submit">Guardar Cambios</button>
-            </form>
-            <ToastContainer />
-        </div>
-    );
-};
+      if (!otiId || !procesoId || !areaId || !maquinaId || !insumoId) {
+        toast.error("❌ No se pudieron verificar o crear todas las entidades requeridas.");
+        return;
+      }
+
+      const datosActualizados = {
+        _id: produccion._id, // Usar el _id de la producción que se está editando
+        oti: otiId,
+        operario: produccion.operario?._id || produccion.operario,
+        proceso: procesoId,
+        insumos: insumoId,
+        areaProduccion: areaId,
+        maquina: maquinaId,
+        fecha: registroEditado.fecha || null,
+        tiempoPreparacion: parseInt(registroEditado.tiempoPreparacion, 10),
+        tiempoOperacion: parseInt(registroEditado.tiempoOperacion, 10),
+      };
+
+      const response = await axiosInstance.put(`/produccion/actualizar/${produccion._id}`, datosActualizados);
+
+      if (response.status >= 200 && response.status < 300) {
+        toast.success("✅ Producción actualizada con éxito");
+        onGuardar(); // Llama a la función para recargar los datos en el dashboard
+        onClose(); // Cierra el modal
+      } else {
+        throw new Error("⚠️ La respuesta del servidor no indica éxito.");
+      }
+
+    } catch (error) {
+      console.error('❌ Error al editar la producción:', error);
+      if (error.response) {
+        toast.error(`Error: ${error.response.data.message || "No se pudo guardar la edición."}`);
+      } else {
+        toast.error(`⚠️ Error: ${error.message}`);
+      }
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    guardarEdicion();
+  };
+
+  if (!produccion) {
+    return null; // O algún otro indicador de que no hay producción para editar
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+      <Card className="w-full max-w-lg p-6 rounded-2xl shadow-2xl bg-white">
+        <h2 className="text-2xl font-semibold text-center mb-6 text-gray-800">Editar Producción</h2>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <Input
+            label="OTI"
+            value={registroEditado.oti?.numeroOti || ''}
+            onChange={(e) => setRegistroEditado(prev => ({
+              ...prev,
+              oti: { ...prev.oti, numeroOti: e.target.value }
+            }))}
+          />
+          <Input
+            label="Fecha"
+            type="date"
+            value={registroEditado.fecha?.split('T')[0] || ''}
+            onChange={handleChange}
+            name="fecha"
+          />
+          <div className="space-y-2">
+            <label htmlFor="proceso" className="block text-sm font-medium text-gray-700">Proceso</label>
+            <select
+              id="proceso"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              value={registroEditado.proceso || ''}
+              onChange={handleChangeRelacion}
+              name="proceso"
+            >
+              <option value="">Seleccionar Proceso</option>
+              {procesos.map((proceso) => (
+                <option key={proceso._id} value={proceso._id}>{proceso.nombre}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="insumos" className="block text-sm font-medium text-gray-700">Insumo</label>
+            <select
+              id="insumos"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              value={registroEditado.insumos || ''}
+              onChange={handleChangeRelacion}
+              name="insumos"
+            >
+              <option value="">Seleccionar Insumo</option>
+              {insumosColeccion.map((insumo) => (
+                <option key={insumo._id} value={insumo._id}>{insumo.nombre}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="maquina" className="block text-sm font-medium text-gray-700">Máquina</label>
+            <select
+              id="maquina"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              value={registroEditado.maquina || ''}
+              onChange={handleChangeRelacion}
+              name="maquina"
+            >
+              <option value="">Seleccionar Máquina</option>
+              {maquinas.map((maquina) => (
+                <option key={maquina._id} value={maquina._id}>{maquina.nombre}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="areaProduccion" className="block text-sm font-medium text-gray-700">Área de Producción</label>
+            <select
+              id="areaProduccion"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              value={registroEditado.areaProduccion || ''}
+              onChange={handleChangeRelacion}
+              name="areaProduccion"
+            >
+              <option value="">Seleccionar Área de Producción</option>
+              {areasProduccion.map((area) => (
+                <option key={area._id} value={area._id}>{area.nombre}</option>
+              ))}
+            </select>
+          </div>
+          <Input
+            label="Tiempo de Preparación (min)"
+            type="number"
+            value={registroEditado.tiempoPreparacion || ''}
+            onChange={handleChange}
+            name="tiempoPreparacion"
+          />
+          <Input
+            label="Tiempo de Operación (min)"
+            type="number"
+            value={registroEditado.tiempoOperacion || ''}
+            onChange={handleChange}
+            name="tiempoOperacion"
+          />
+          <div className="flex justify-end gap-4 pt-4">
+            <Button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Guardar Cambios
+            </Button>
+            <Button variant="secondary" onClick={onClose} className="border-gray-300">
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+}
 
 export default EditarProduccion;

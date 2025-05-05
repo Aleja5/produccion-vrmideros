@@ -62,9 +62,6 @@ async function verificarPassword(email, password) {
 
 // Insertar usuario y luego verificar la contraseña
 (async () => {
-  await insertUser('admin@gmail.com', '123456', 'admin');
-  await verificarPassword('admin@gmail.com', '123456');
-
-  await insertUser('production@gmail.com', '123456', 'production');
-  await verificarPassword('production@gmail.com', '123456');
+  await insertUser('alejandra1308castellanos@gmail.com', '123456', 'admin');
+  await verificarPassword('alejandra1308castellanos@gmail.com', '123456');
 })();

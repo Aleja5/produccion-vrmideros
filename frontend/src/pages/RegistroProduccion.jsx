@@ -18,6 +18,7 @@ export default function RegistroPage() {
         operario: "",
         oti: "",
         proceso: "",
+        insumos: "",
         areaProduccion: "",
         maquina: "",
         tiempoPreparacion: "",
@@ -30,6 +31,7 @@ export default function RegistroPage() {
     const [maquinasData, setMaquinasData] = useState([]);
     const [areasProduccionData, setAreasProduccionData] = useState([]);
     const [procesosData, setProcesosData] = useState([]);
+    const [insumosData, setInsumosData] = useState([]);
 
 
     useEffect(() => {
@@ -77,6 +79,15 @@ export default function RegistroPage() {
                 }else {
                     console.error("Error al cargar procesos:", procesosRes.status);
                 }
+
+                const insumosRes = await fetch("http://localhost:5000/api/produccion/insumos");
+                if (insumosRes.ok) {
+                    const data = await insumosRes.json();
+                    setInsumosData(data);
+                }else {
+                    console.error("Error al cargar insumos:", insumosRes.status);
+                }
+
             } catch (error) {
                 console.error("Error al cargar datos de los selectores:", error);
             }
@@ -209,6 +220,7 @@ export default function RegistroPage() {
             operario: idOperario,
             oti: selectedIds.oti ||(await verificarYCrear(formData.oti, "oti")) || formData.oti,
             proceso: formData.proceso,
+            insumos: formData.insumos,
             areaProduccion:  formData.areaProduccion,
             maquina:  formData.maquina,
             tiempoPreparacion: Number(formData.tiempoPreparacion),
@@ -293,21 +305,9 @@ export default function RegistroPage() {
                             </div>
 
                             <div>
-                                <label className="block text-gray-700 font-medium mb-1">Maquina:</label>
-                                <Input as ="select" name= "maquina" value={formData.maquina} onChange={handleChange} required>
-                                    <option value="">Seleccionar Maquina</option>
-                                    {maquinasData.map((maquina) => (
-                                        <option key={maquina._id} value={maquina._id}>
-                                            {maquina.nombre}
-                                        </option>
-                                    ))}
-                                </Input>
-                            </div>
-
-                            <div>
                                 <label className="block text-gray-700 font-medium mb-1">Area de Produccion:</label>
                                 <Input as ="select" name= "areaProduccion" value={formData.areaProduccion} onChange={handleChange} required>
-                                    <option value="">Seleccionar Area de Produccion</option>
+                                    <option className="text-gray-400" value="">Seleccionar Area de Produccion</option>
                                     {areasProduccionData.map((areaProduccion) => (
                                         <option key={areaProduccion._id} value={areaProduccion._id}>
                                             {areaProduccion.nombre}
@@ -317,15 +317,39 @@ export default function RegistroPage() {
                             </div>
 
                             <div>
+                                <label className="block text-gray-700 font-medium mb-1">Maquina:</label>
+                                <Input as ="select" name= "maquina" value={formData.maquina} onChange={handleChange} required>
+                                    <option className="text-gray-400" value="">Seleccionar Maquina</option>
+                                    {maquinasData.map((maquina) => (
+                                        <option key={maquina._id} value={maquina._id}>
+                                            {maquina.nombre}
+                                        </option>
+                                    ))}
+                                </Input>
+                            </div>
+
+                            <div>
                                 <label className="block text-gray-700 font-medium mb-1">Proceso:</label>
                                 <Input as ="select" name= "proceso" value={formData.proceso} onChange={handleChange} required>
-                                    <option value="">Seleccionar Proceso</option>
+                                    <option className="text-gray-400" value="">Seleccionar Proceso</option>
                                     {procesosData.map((proceso) => (
                                         <option key={proceso._id} value={proceso._id}>
                                             {proceso.nombre}
                                         </option>
                                     ))}
                                 </Input>
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 font-medium mb-1">Insumos:</label>
+                                <Input as ="select" name= "insumos" value={formData.insumos} onChange={handleChange} required>
+                                    <option className="text-gray-400" value="">Seleccionar Insumo</option>
+                                    {insumosData.map((insumo) => (
+                                        <option key={insumo._id} value={insumo._id}>
+                                            {insumo.nombre}
+                                        </option>
+                                    ))}
+                                </Input>    
                             </div>
 
                         <div>

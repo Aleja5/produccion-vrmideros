@@ -13,6 +13,7 @@ const buscarEntidad = async (req, res) => {
         areaProduccion: require("../models/AreaProduccion"),
         maquina: require("../models/Maquina"),
         operario: require("../models/Operario"),
+        insumo: require("../models/Insumos"),
     };
 
     const Modelo = modelos[coleccion];
@@ -50,6 +51,9 @@ const buscarEntidad = async (req, res) => {
                     break;
                 case "operario":
                     filtro = { cedula: valor };
+                    break;
+                case "insumo":
+                    filtro = { nombre: new RegExp(valor, "i") };
                     break;
                 default:
                     return res.status(400).json({ error: "Filtro no definido para esta colección" });

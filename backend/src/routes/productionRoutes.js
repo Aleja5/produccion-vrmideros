@@ -13,6 +13,7 @@ const AreaProduccion = require('../models/AreaProduccion');
 const Maquina = require('../models/Maquina');
 const Proceso = require('../models/Proceso');
 const Operario = require('../models/Operario');
+const Insumos = require('../models/Insumos');
 const Produccion = require('../models/Produccion');
 const Oti = require('../models/Oti');
 
@@ -57,7 +58,8 @@ router.get('/operario-produccion', async (req, res) => {
             .populate('proceso', 'nombre')
             .populate('areaProduccion', 'nombre')
             .populate('maquina', 'nombre')
-            .populate('operario', 'name');
+            .populate('operario', 'name')
+            .populate('insumos', 'nombre');
 
         res.status(200).json(producciones);
     } catch (error) {
@@ -121,6 +123,18 @@ router.get('/operarios', async (req, res) => {
     }
 });
 
+// Endpoint para obtener todos los insumos
+router.get('/insumos', async (req, res) => {
+    try {
+        const insumos = await Insumos.find({}, 'nombre');
+        res.status(200).json(insumos);
+    } catch (error) {
+        console.error('Error al obtener insumos:', error);
+        res.status(500).json({ msg: 'Error al obtener insumos' });
+    }
+});
+
+
 // Endpoint general para filtrar producciones dinámicamente
 router.get('/filtrar-producciones', async (req, res) => {
     try {
@@ -139,6 +153,9 @@ router.get('/filtrar-producciones', async (req, res) => {
         }
         if (filtros.proceso && filtros.proceso.trim() !== '') {
             query.proceso = filtros.proceso;
+        }
+        if (filtros.insumos && filtros.insumos.trim() !== '') {
+            query.insumos = filtros.insumo;
         }
         if (filtros.fechaInicio && filtros.fechaFin) {
             query.fecha = {
@@ -166,7 +183,9 @@ router.get('/filtrar-producciones', async (req, res) => {
             .populate('operario', 'name')
             .populate('proceso', 'nombre')
             .populate('areaProduccion', 'nombre')
-            .populate('maquina', 'nombre');
+            .populate('maquina', 'nombre')
+            .populate('insumos', 'nombre');
+
 
         res.status(200).json(producciones);
     } catch (error) {

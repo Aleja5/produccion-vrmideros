@@ -17,6 +17,7 @@ const Proceso = require('../models/Proceso');
 const AreaProduccion = require('../models/AreaProduccion');
 const Maquina = require('../models/Maquina');
 const Operario = require("../models/Operario")
+const Insumos = require('../models/Insumos');
 
 
 // Obtener todos los registros de producción
@@ -37,7 +38,8 @@ exports.getAllProduccion = async (req, res) => {
             .populate("operario", "name")
             .populate("proceso", "nombre")
             .populate("areaProduccion", "nombre")
-            .populate("maquina", "nombre");
+            .populate("maquina", "nombre")
+            .populate("insumos", "nombre");
 
         console.log("Registros encontrados", registros);
         
@@ -54,9 +56,9 @@ exports.registrarProduccion = async (req, res) => {
         console.log("📥 Datos recibidos para guardar:", req.body);
         logger.info('Cuerpo de la solicitud recibido:', req.body);
         
-        const { operario, oti, proceso, areaProduccion, maquina, fecha, tiempoPreparacion, tiempoOperacion } = req.body;
+        const { operario, oti, proceso, areaProduccion, maquina, fecha, tiempoPreparacion, tiempoOperacion, insumos } = req.body;
         // Validar campos requeridos
-        if (!oti || !proceso || !areaProduccion || !maquina || !fecha || tiempoPreparacion === undefined || tiempoOperacion === undefined) {
+        if (!oti || !proceso || !areaProduccion || !maquina || !fecha || !insumos || tiempoPreparacion === undefined || tiempoOperacion === undefined) {
             console.error("❌ Error: Faltan campos requeridos", req.body);
             return res.status(400).json({ msg: 'Faltan campos requeridos' });
         }
@@ -84,7 +86,7 @@ exports.registrarProduccion = async (req, res) => {
 
         
 
-        console.log("✅ Valores recibidos:", { oti, proceso, areaProduccion, maquina });
+        console.log("✅ Valores recibidos:", { oti, proceso, areaProduccion, maquina, insumos });
 
         // 🔹 Convertir `oti` a ObjectId
 const otiId = new mongoose.Types.ObjectId(oti);
@@ -112,6 +114,10 @@ const maquinaId = new mongoose.Types.ObjectId(maquina);
 const maquinaExistente = await Maquina.findOne({ _id: maquinaId });
 if (!maquinaExistente) return res.status(404).json({ msg: "Máquina no encontrada" });
 
+const insumosId = new mongoose.Types.ObjectId(insumos);
+const insumosExistente = await Insumos.findOne({ _id: insumosId });
+if (!insumosExistente) return res.status(404).json({ msg: "Insumo no encontrado" });
+
 
         // 📌 Guardar Registro de Producción
         const nuevaProduccion = new Produccion({
@@ -121,6 +127,7 @@ if (!maquinaExistente) return res.status(404).json({ msg: "Máquina no encontrad
             proceso: procesoExistente._id,
             areaProduccion: areaExistente._id,
             maquina: maquinaExistente._id,
+            insumos: insumosExistente._id,
             tiempoPreparacion,
             tiempoOperacion
         });
@@ -196,7 +203,8 @@ exports.listarProduccion = async (req, res) => {
         .populate({ path: 'proceso', select: 'nombre' })
         .populate({ path: 'areaProduccion', select: 'nombre' })
         .populate({ path: 'maquina', select: 'nombre' })
-        .populate({ path: 'operario', select: 'name' });
+        .populate({ path: 'operario', select: 'name' })
+        .populate({ path: 'insumos', select: 'nombre' });
 
         console.log("📊 Producciones enviadas al frontend:", JSON.stringify(producciones, null, 2));
 
@@ -213,7 +221,7 @@ exports.listarProduccion = async (req, res) => {
 exports.actualizarProduccion = async (req, res) => {
     try {
         console.log("🛠 Datos recibidos en backend para actualización:", req.body);
-        const { _id, operario, oti, proceso, areaProduccion, maquina, fecha, tiempoPreparacion, tiempoOperacion } = req.body;
+        const { _id, operario, oti, proceso, areaProduccion, maquina, insumos, fecha, tiempoPreparacion, tiempoOperacion } = req.body;
 
         // Validar que el ID de la producción esté presente
         if (!_id) {
@@ -221,7 +229,7 @@ exports.actualizarProduccion = async (req, res) => {
         }
 
         // Buscar la producción existente
-        let produccion = await Produccion.findById(_id);
+        const produccion = await Produccion.findById(_id);
         if (!produccion) {
             return res.status(404).json({ msg: "Producción no encontrada" });
         }
@@ -239,32 +247,32 @@ exports.actualizarProduccion = async (req, res) => {
         let otiExistente = await Oti.findById(oti);
         if (!otiExistente) {
             console.warn(`⚠️ OTI con ID ${oti} no encontrada. Creando nueva OTI.`);
-            otiExistente = new Oti({ _id: oti, numeroOti: "Nuevo OTI" });
+            otiExistente = new Oti({ _id: oti, numeroOti: "Nueva OTI" });
             await otiExistente.save();
         }
 
-        // Validar y/o buscar Proceso
-        let procesoExistente = await Proceso.findById(proceso);
+        // Validar Proceso
+        const procesoExistente = await Proceso.findById(proceso);
         if (!procesoExistente) {
-            console.warn(`⚠️ Proceso con ID ${proceso} no encontrado. Creando nuevo Proceso.`);
-            procesoExistente = new Proceso({ _id: proceso, nombre: "Nuevo Proceso" });
-            await procesoExistente.save();
+            return res.status(404).json({ msg: "Proceso no encontrado" });
         }
 
-        // Validar y/o buscar Área de Producción
-        let areaExistente = await AreaProduccion.findById(areaProduccion);
+        // Validar Área de Producción
+        const areaExistente = await AreaProduccion.findById(areaProduccion);
         if (!areaExistente) {
-            console.warn(`⚠️ Área de Producción con ID ${areaProduccion} no encontrada. Creando nueva Área.`);
-            areaExistente = new AreaProduccion({ _id: areaProduccion, nombre: "Nueva Área" });
-            await areaExistente.save();
+            return res.status(404).json({ msg: "Área de producción no encontrada" });
         }
 
-        // Validar y/o buscar Máquina
-        let maquinaExistente = await Maquina.findById(maquina);
+        // Validar Máquina
+        const maquinaExistente = await Maquina.findById(maquina);
         if (!maquinaExistente) {
-            console.warn(`⚠️ Máquina con ID ${maquina} no encontrada. Creando nueva Máquina.`);
-            maquinaExistente = new Maquina({ _id: maquina, nombre: "Nueva Máquina" });
-            await maquinaExistente.save();
+            return res.status(404).json({ msg: "Máquina no encontrada" });
+        }
+
+        // Validar Insumos
+        const insumosExistente = await Insumos.findById(insumos);
+        if (!insumosExistente) {
+            return res.status(404).json({ msg: "Insumo no encontrado" });
         }
 
         // Validar Fecha
@@ -284,6 +292,7 @@ exports.actualizarProduccion = async (req, res) => {
         produccion.proceso = procesoExistente._id;
         produccion.areaProduccion = areaExistente._id;
         produccion.maquina = maquinaExistente._id;
+        produccion.insumos = insumosExistente._id;
         produccion.tiempoPreparacion = tiempoPreparacion;
         produccion.tiempoOperacion = tiempoOperacion;
 
@@ -326,11 +335,11 @@ exports.eliminarProduccion = async (req, res) => {
 // 📌 Buscar Producción con filtros dinámicos
 exports.buscarProduccion = async (req, res) => {
     try {
-        const { oti, operario, fechaInicio, fechaFin, proceso, areaProduccion, maquina, page = 1, limit = 10 } = req.query;
+        const { oti, operario, fechaInicio, fechaFin, proceso, areaProduccion, maquina, insumos, page = 1, limit = 10 } = req.query;
         const query = {};
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        console.log("📥 Filtros recibidos en el backend:", req.query); // Log para verificar los filtros recibidos
+        console.log("📥 Filtros recibidos en el backend:", req.query); 
 
         // Ajustar lógica para aplicar solo los filtros proporcionados
         if (oti && oti.trim() !== '') {
@@ -392,8 +401,18 @@ exports.buscarProduccion = async (req, res) => {
             if (maquinaDocs.length > 0) {
                 query.maquina = { $in: maquinaDocs.map(m => m._id) };
             } else {
-                console.log("❌ No se encontraron máquinas con ese nombre:", maquina); // Log para máquina no encontrada
+                console.log("❌ No se encontraron máquinas con ese nombre:", maquina); 
                 return res.status(404).json({ msg: 'No se encontraron máquinas con ese nombre' });
+            }
+        }
+
+        if (insumos && insumos.trim() !== '') {
+            const insumosDocs = await Insumos.find({ nombre: { $regex: insumos, $options: 'i' } });
+            if (insumosDocs.length > 0) {
+                query.insumos = { $in: insumosDocs.map(i => i._id) };
+            } else {
+                console.log("❌ No se encontraron insumos con ese nombre:", insumos); 
+                return res.status(404).json({ msg: 'No se encontraron insumos con ese nombre' });
             }
         }
 
@@ -411,9 +430,11 @@ exports.buscarProduccion = async (req, res) => {
             .populate('operario', 'name')
             .populate('proceso', 'nombre')
             .populate('areaProduccion', 'nombre')
-            .populate('maquina', 'nombre');
+            .populate('maquina', 'nombre')
+            .populate('insumos', 'nombre');
 
-        console.log("📋 Resultados devueltos al frontend:", producciones); // Log para resultados devueltos
+
+        console.log("📋 Resultados devueltos al frontend:", producciones); 
 
         res.status(200).json({ totalResultados, resultados: producciones });
     } catch (error) {
@@ -447,7 +468,9 @@ exports.buscarPorFechas = async (req, res) => {
             .populate("operario", "name")
             .populate("proceso", "nombre")
             .populate("areaProduccion", "nombre")
-            .populate("maquina", "nombre");
+            .populate("maquina", "nombre")
+            .populate("insumos", "nombre");
+
 
         res.status(200).json(producciones);
     } catch (error) {
