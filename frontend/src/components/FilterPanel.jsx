@@ -1,15 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, Input, Label } from "./ui/index";
 import { Calendar } from "./ui/Calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/Popover";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/Card";
 import { CalendarIcon, ChevronDown, ChevronUp, Download, Search, X } from "lucide-react";
 import { format } from "date-fns";
-import { es } from "date-fns/locale"; // Importamos la localización en español
+import { es } from "date-fns/locale";
 import { cn } from "../utils/cn";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/Collapsible";
+import axiosInstance from "../utils/axiosInstance"; // Importa tu instancia de Axios
 
-const FilterPanel = ({ onBuscar, onExportar, onClearFilters }) => {
+const FilterPanel = ({ onBuscar, onExportar }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [filters, setFilters] = useState({
     oti: "",
@@ -20,6 +21,38 @@ const FilterPanel = ({ onBuscar, onExportar, onClearFilters }) => {
     fechaInicio: undefined,
     fechaFin: undefined,
   });
+  const [oti, setOti] = useState([]);
+  const [operarios, setOperarios] = useState([]);
+  const [procesos, setProcesos] = useState([]);
+  const [areasProduccionData, setAreasProduccionData] = useState([]);
+  const [maquinas, setMaquinas] = useState([]);
+
+  useEffect(() => {
+    const cargarDatosColecciones = async () => {
+      try {
+        const otiResponse = await axiosInstance.get('produccion/oti');
+        setOti(otiResponse.data);
+
+        const operariosResponse = await axiosInstance.get('produccion/operarios');
+        setOperarios(operariosResponse.data);
+
+        const procesosResponse = await axiosInstance.get('produccion/procesos');
+        setProcesos(procesosResponse.data);
+
+        const areasResponse = await axiosInstance.get('produccion/areas');
+        setAreasProduccionData(areasResponse.data);
+
+        const maquinasResponse = await axiosInstance.get('produccion/maquinas');
+        setMaquinas(maquinasResponse.data);
+
+      } catch (error) {
+        console.error("Error al cargar los datos de las colecciones para el filtro:", error);
+        // Puedes mostrar un mensaje de error al usuario si lo deseas
+      }
+    };
+
+    cargarDatosColecciones();
+  }, []);
 
   const handleApplyFilters = () => {
     onBuscar(filters);
@@ -35,7 +68,13 @@ const FilterPanel = ({ onBuscar, onExportar, onClearFilters }) => {
       fechaInicio: undefined,
       fechaFin: undefined,
     });
-    onBuscar({ page: 1, limit: 10 }); // Solicita todos los resultados al limpiar filtros
+    onBuscar({});
+    console.log('🔍 handleClearFilters ejecutado en FilterPanel');
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFilters({ ...filters, [name]: value });
   };
 
   return (
@@ -54,26 +93,54 @@ const FilterPanel = ({ onBuscar, onExportar, onClearFilters }) => {
 
         <CollapsibleContent className="p-0">
           <CardContent className="grid gap-4 pb-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 xl:grid-cols-7 gap-4"> 
-              {[
-                { id: "oti", label: "OTI" },
-                { id: "operario", label: "Operario" },
-                { id: "proceso", label: "Proceso" },
-                { id: "areaProduccion", label: "Área Producción" },
-                { id: "maquina", label: "Máquina" },
-              ].map(({ id, label }) => (
-                <div key={id} className="space-y-1"> {/* Disposición vertical label-input */}
-                  <Label htmlFor={id}>{label}</Label>
-                  <Input
-                    id={id}
-                    value={filters[id]}
-                    onChange={(e) => setFilters({ ...filters, [id]: e.target.value })}
-                    placeholder={` ${label.toLowerCase()}...`}
-                  />
-                </div>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 xl:grid-cols-7 gap-4">
+              <div key="oti" className="space-y-1">
+                <Label htmlFor="oti">OTI</Label>
+                <Input as="select" id="oti" name="oti" value={filters.oti} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                  <option value="">Todas las OTI</option>
+                  {oti.map((otiItem) => (
+                    <option key={otiItem._id} value={otiItem._id}>{otiItem.numeroOti}</option>
+                  ))}
+                </Input>
+              </div>
+              <div key="operario" className="space-y-1">
+                <Label htmlFor="operario">Operario</Label>
+                <Input as="select" id="operario" name="operario" value={filters.operario} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                  <option value="">Todos los operarios</option>
+                  {operarios.map((operario) => (
+                    <option key={operario._id} value={operario._id}>{operario.name}</option>
+                  ))}
+                </Input>
+              </div>
+              <div key="proceso" className="space-y-1">
+                <Label htmlFor="proceso">Proceso</Label>
+                <Input as="select" id="proceso" name="proceso" value={filters.proceso} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                  <option value="">Todos los procesos</option>
+                  {procesos.map((proceso) => (
+                    <option key={proceso._id} value={proceso._id}>{proceso.nombre}</option>
+                  ))}
+                </Input>
+              </div>
+              <div key="areaProduccion" className="space-y-1">
+                <Label htmlFor="areaProduccion">Área Producción</Label>
+                <Input as="select" id="areaProduccion" name="areaProduccion" value={filters.areaProduccion} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                  <option value="">Todas las áreas</option>
+                  {areasProduccionData.map((area) => (
+                    <option key={area._id} value={area._id}>{area.nombre}</option>
+                  ))}
+                </Input>
+              </div>
+              <div key="maquina" className="space-y-1">
+                <Label htmlFor="maquina">Máquina</Label>
+                <Input as="select" id="maquina" name="maquina" value={filters.maquina} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                  <option value="">Todas las máquinas</option>
+                  {maquinas.map((maquina) => (
+                    <option key={maquina._id} value={maquina._id}>{maquina.nombre}</option>
+                  ))}
+                </Input>
+              </div>
 
-              <div className="space-y-1"> {/* Disposición vertical label-datepicker */}
+              <div className="space-y-1">
                 <Label>Desde</Label>
                 <Popover>
                   <PopoverTrigger asChild>
@@ -99,7 +166,7 @@ const FilterPanel = ({ onBuscar, onExportar, onClearFilters }) => {
                 </Popover>
               </div>
 
-              <div className="space-y-1"> {/* Disposición vertical label-datepicker */}
+              <div className="space-y-1">
                 <Label>Hasta</Label>
                 <Popover>
                   <PopoverTrigger asChild>

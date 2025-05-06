@@ -9,6 +9,7 @@ const Pagination = ({ currentPage, totalResults, itemsPerPage, onPageChange }) =
     pageNumbers.push(i);
   }
   console.log('Pagination Component - totalResults:', totalResults, 'totalPages:', totalPages, 'currentPage:', currentPage);
+  console.log('🔍 Rendering Pagination - currentPage:', currentPage, 'totalPages:', totalPages, 'totalResults:', totalResults);
 
   return (
     <div className="flex justify-center mt-4">

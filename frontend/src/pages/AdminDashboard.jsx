@@ -4,7 +4,7 @@ import FilterPanel from '../components/FilterPanel';
 import * as XLSX from 'xlsx';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import axiosInstance from '../utils/axiosInstance';
-import Pagination from '../components/Pagination'; // Asegúrate de importar el componente de paginación
+import Pagination from '../components/Pagination'; 
 
 const AdminDashboard = () => {
   const [resultados, setResultados] = useState([]);
@@ -24,11 +24,11 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleBuscar = async (filtrosRecibidos) => {
+    const handleBuscar = async (filtrosRecibidos) => {
     setLoading(true);
     setError(null);
-    setCurrentPage(1); // Reinicia a la primera página al buscar
-
+    setCurrentPage(1);
+    
     try {
       const filtrosAjustados = { ...filtrosRecibidos };
       if (filtrosRecibidos.fechaInicio) {
@@ -38,62 +38,31 @@ const AdminDashboard = () => {
         filtrosAjustados.fechaFin = new Date(filtrosRecibidos.fechaFin).toISOString();
       }
 
-      const response = await axiosInstance.get('/produccion/buscar-produccion', {
-        params: {
-          ...filtrosAjustados,
-          page: 1, // Siempre comienza desde la primera página
+      const params = {
+          page: 1,
           limit: itemsPerPage,
-        },
-      });
+          ...filtrosAjustados,
+          
+        };
 
+      const response = await axiosInstance.get('/produccion/buscar-produccion', { params });
+      
       if (response.data.resultados && Array.isArray(response.data.resultados)) {
         setResultados(response.data.resultados);
         calcularTotalHoras(response.data.resultados);
-        setTotalResults(response.data.totalResults || response.data.totalResultados || 0);
+        setTotalResults(response.data.totalResultados || response.data.totalResults || 0);
       } else {
         setResultados([]);
         setTotalHoras(0);
-        setTotalResults(0); // Asegúrate de que la paginación no desaparezca
+        setTotalResults(0);
+        alert(response.data?.msg || 'Sin resultados');
       }
     } catch (err) {
       console.error("❌ Error al buscar:", err);
       setError('Error al buscar los registros.');
       setResultados([]);
       setTotalHoras(0);
-      setTotalResults(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleClearFilters = async () => {
-    setLoading(true);
-    setError(null);
-    setCurrentPage(1);
-
-    try {
-      const response = await axiosInstance.get('/admin/admin-producciones', {
-        params: {
-          page: 1, 
-          limit: itemsPerPage,
-        },
-      });
-
-      if (response.data.resultados && Array.isArray(response.data.resultados)) {
-        setResultados(response.data.resultados);
-        calcularTotalHoras(response.data.resultados);
-        setTotalResults(response.data.totalResults || 0);
-      } else {
-        setResultados([]);
-        setTotalHoras(0);
-        setTotalResults(0);
-      }
-    } catch (err) {
-      console.error("Error al limpiar filtros:", err);
-      setError('Error al limpiar los filtros.');
-      setResultados([]);
-      setTotalHoras(0);
-      setTotalResults(0);
+      set
     } finally {
       setLoading(false);
     }
@@ -101,34 +70,28 @@ const AdminDashboard = () => {
 
   // 🔄 Cargar todas las producciones al iniciar
   useEffect(() => {
-    setLoading(true);
-    axiosInstance.get('/admin/admin-producciones', {
-      params: {
-        page: currentPage,
-        limit: itemsPerPage,
-      },
-    }).then((res) => {
-      console.log('AdminDashboard - Backend Response:', res.data);
-      if (res.data?.resultados && Array.isArray(res.data.resultados)) {
-        setResultados(res.data.resultados);
-        calcularTotalHoras(res.data.resultados);
-        console.log('AdminDashboard - Setting totalResults:', res.data.totalResults);
-        setTotalResults(res.data.totalResults || res.data.totalResultados || 0);
-
-      } else {
-        setResultados([]);
-        setTotalResults(0);
-        if (res.data?.msg) {
-          alert(res.data.msg);
+    const cargarProducciones = async () => {
+        setLoading(true);
+        setError(null);
+        console.log("AdminDashboard - Cargando página:", currentPage);
+        try {
+            const response = await axiosInstance.get(`/admin/admin-producciones?page=${currentPage}&limit=${itemsPerPage}`);
+            setResultados(response.data.resultados);
+            setTotalResults(response.data.totalResults);
+            calcularTotalHoras(response.data.resultados);
+        } catch (error) {
+            console.error("Error al cargar las producciones:", error);
+            setError("Error al cargar los registros.");
+            setResultados([]);
+            setTotalResults(0);
+            setTotalHoras(0);
+        } finally {
+            setLoading(false);
         }
-      }
-      setLoading(false);
-    }).catch((err) => {
-      console.error("❌ Error al cargar producciones iniciales:", err);
-      setError('Error al cargar las producciones iniciales.');
-      setLoading(false);
-    });
-  }, [currentPage, itemsPerPage]);
+    };
+
+    cargarProducciones();
+}, [currentPage, itemsPerPage]);
 
   const exportarExcel = () => {
     const rows = resultados.map((r) => ({
@@ -139,6 +102,7 @@ const AdminDashboard = () => {
       Maquina: r.maquina?.nombre || '',
       Area: r.areaProduccion?.nombre || '',
       Insumos: r.insumos?.nombre || '',
+      Observaciones: r.observaciones || '',
       Preparación: r.tiempoPreparacion,
       Operación: r.tiempoOperacion,
       Total: r.tiempoPreparacion + r.tiempoOperacion,
@@ -151,7 +115,12 @@ const AdminDashboard = () => {
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
+    console.log("Página cambiada a:", newPage);
   };
+
+
+  console.log('🔄 AdminDashboard Render - loading:', loading, 'resultados:', resultados.length, 'totalResults:', totalResults);
+  console.log('🔄 Renderizando AdminDashboard - totalResults:', totalResults, 'resultados:', resultados.length);
 
   return (
     <>
@@ -162,7 +131,7 @@ const AdminDashboard = () => {
         <div className="flex-1 flex flex-col bg-white overflow-hidden">
           <div className="p-6 bg-gray-100 min-h-screen">
             <h1 className="text-xl font-bold mb-2">Consultas de Produccion</h1>
-            <FilterPanel onBuscar={handleBuscar} onExportar={exportarExcel} onClearFilters={handleClearFilters} />
+            <FilterPanel onBuscar={handleBuscar} onExportar={exportarExcel} />
 
             <div className="flex flex-col h-full"> {/* Contenedor principal */}
               <div className="flex-1 overflow-y-auto"> {/* Contenedor scrollable para resultados */}
@@ -207,7 +176,7 @@ const AdminDashboard = () => {
                   {resultados.length === 0 && !loading && <p className="mt-4 text-gray-600">No se encontraron registros con los filtros aplicados.</p>}
                 </div>
               </div>
-              {totalResults > 0 && (
+              {totalResults > itemsPerPage && ( // Mostrar paginación solo si hay más de una página
                 <div className="bg-white p-4 shadow-md sticky bottom-0"> {/* Ajusto el margen y anclo la paginación al final de la vista */}
                   <Pagination
                     currentPage={currentPage}

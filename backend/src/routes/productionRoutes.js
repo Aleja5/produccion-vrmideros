@@ -79,6 +79,16 @@ router.get('/operarios', async (req, res) => {
     }
 });
 
+router.get('/oti', async (req, res) => {
+    try {
+        const otis = await Oti.find({}, 'numeroOti _id'); // Selecciona solo los campos necesarios
+        res.status(200).json(otis);
+    } catch (error) {
+        console.error('Error al obtener la lista de OTI:', error);
+        res.status(500).json({ msg: 'Error al obtener la lista de OTI' });
+    }
+});
+
 // Endpoint para obtener todas las áreas de producción
 router.get('/areas', async (req, res) => {
     try {
@@ -145,7 +155,7 @@ router.get('/filtrar-producciones', async (req, res) => {
         if (filtros.operario && filtros.operario.trim() !== '') {
             query.operario = filtros.operario;
         }
-        if (filtros.area && filtros.area.trim() !== '') {
+        if (filtros.areaProduccion && filtros.areaProduccion.trim() !== '') {
             query.areaProduccion = filtros.area;
         }
         if (filtros.maquina && filtros.maquina.trim() !== '') {
