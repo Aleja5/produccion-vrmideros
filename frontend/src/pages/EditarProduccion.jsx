@@ -10,6 +10,7 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
   const [insumosColeccion, setInsumosColeccion] = useState([]);
   const [maquinas, setMaquinas] = useState([]);
   const [areasProduccion, setAreasProduccion] = useState([]);
+  const [observaciones, setObservaciones] = useState("");
 
   useEffect(() => {
     if (produccion) {
@@ -17,11 +18,12 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
       setRegistroEditado({
         ...produccion,
         fecha: fechaFormateada,
-        oti: { numeroOti: produccion.oti?.numeroOti || "" }, // Solo numeroOti para el input
+        oti: { numeroOti: produccion.oti?.numeroOti || "" },
         proceso: produccion.proceso?._id || "",
         insumos: produccion.insumos?._id || "",
         maquina: produccion.maquina?._id || "",
-        areaProduccion: produccion.areaProduccion?._id || ""
+        areaProduccion: produccion.areaProduccion?._id || "",
+        observaciones: produccion.observaciones || "" // Corregido para asignar directamente el valor
       });
     }
   }, [produccion]);
@@ -97,6 +99,7 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
         fecha: registroEditado.fecha || null,
         tiempoPreparacion: parseInt(registroEditado.tiempoPreparacion, 10),
         tiempoOperacion: parseInt(registroEditado.tiempoOperacion, 10),
+        observaciones: registroEditado.observaciones // Agregar observaciones
       };
 
       const response = await axiosInstance.put(`/produccion/actualizar/${produccion._id}`, datosActualizados);
@@ -221,6 +224,12 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
             value={registroEditado.tiempoOperacion || ''}
             onChange={handleChange}
             name="tiempoOperacion"
+          />
+          <Input
+            label="Observaciones"
+            value={registroEditado.observaciones || ''}
+            onChange={handleChange}
+            name="observaciones"
           />
           <div className="flex justify-end gap-4 pt-4">
             <Button

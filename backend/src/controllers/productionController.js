@@ -129,7 +129,8 @@ if (!insumosExistente) return res.status(404).json({ msg: "Insumo no encontrado"
             maquina: maquinaExistente._id,
             insumos: insumosExistente._id,
             tiempoPreparacion,
-            tiempoOperacion
+            tiempoOperacion,
+            observaciones: req.body.observaciones || "" // Asegurar que se incluya el campo observaciones
         });
 
         console.log("🔍 Producción antes de guardar:", nuevaProduccion);
@@ -176,7 +177,7 @@ exports.obtenerProducciones = async (req, res) => {
     }
 };
 
-// 📌 Listar Producción con detalles
+// 📌 Listar Producción con detalles para operario
 exports.listarProduccion = async (req, res) => {
     try {
         const { operario, oti } = req.query;
@@ -296,6 +297,9 @@ exports.actualizarProduccion = async (req, res) => {
         produccion.tiempoPreparacion = tiempoPreparacion;
         produccion.tiempoOperacion = tiempoOperacion;
 
+        // Validar Observaciones
+        produccion.observaciones = req.body.observaciones || produccion.observaciones;
+
         // Guardar cambios
         const produccionActualizada = await produccion.save();
         console.log("✅ Producción actualizada en BD:", produccionActualizada);
@@ -332,7 +336,7 @@ exports.eliminarProduccion = async (req, res) => {
         res.status(500).json({ msg: 'Error al eliminar producción', error: error.message });
     }
 };
-// 📌 Buscar Producción con filtros dinámicos
+// 📌 Buscar Producción con filtros dinámicos para FilterPanel
 exports.buscarProduccion = async (req, res) => {
     try {
         const { oti, operario, fechaInicio, fechaFin, proceso, areaProduccion, maquina, insumos, page = 1, limit = 10 } = req.query;
@@ -346,9 +350,6 @@ exports.buscarProduccion = async (req, res) => {
             const otiDoc = await Oti.findOne({ numeroOti: { $regex: `^${oti}$`, $options: 'i' } });
             if (otiDoc) {
                 query.oti = otiDoc._id;
-            } else {
-                console.log("❌ No se encontró una OTI con ese número:", oti); // Log para OTI no encontrada
-                return res.status(404).json({ msg: 'No se encontró una OTI con ese número' });
             }
         }
 
@@ -356,33 +357,26 @@ exports.buscarProduccion = async (req, res) => {
             const operarioDoc = await Operario.findOne({ name: { $regex: `^${operario}$`, $options: 'i' } });
             if (operarioDoc) {
                 query.operario = operarioDoc._id;
-            } else {
-                console.log("❌ No se encontró un operario con ese nombre:", operario); // Log para operario no encontrado
-                return res.status(404).json({ msg: 'No se encontró un operario con ese nombre' });
             }
         }
 
         if (fechaInicio && fechaFin) {
             const inicio = new Date(fechaInicio);
-            inicio.setHours(0, 0, 0, 0); // Inicio del día en hora local
+            inicio.setHours(0, 0, 0, 0);
 
             const fin = new Date(fechaFin);
-            fin.setHours(23, 59, 59, 999); // Fin del día en hora local
+            fin.setHours(23, 59, 59, 999);
 
             query.fecha = {
                 $gte: inicio,
                 $lte: fin,
             };
-            console.log("📅 Filtro de fechas aplicado:", query.fecha); // Log para rango de fechas
         }
 
         if (proceso && proceso.trim() !== '') {
             const procesoDocs = await Proceso.find({ nombre: { $regex: proceso, $options: 'i' } });
             if (procesoDocs.length > 0) {
                 query.proceso = { $in: procesoDocs.map(p => p._id) };
-            } else {
-                console.log("❌ No se encontraron procesos con ese nombre:", proceso); // Log para proceso no encontrado
-                return res.status(404).json({ msg: 'No se encontraron procesos con ese nombre' });
             }
         }
 
@@ -390,9 +384,6 @@ exports.buscarProduccion = async (req, res) => {
             const areaDocs = await AreaProduccion.find({ nombre: { $regex: `^${areaProduccion}$`, $options: 'i' } });
             if (areaDocs.length > 0) {
                 query.areaProduccion = { $in: areaDocs.map(a => a._id) };
-            } else {
-                console.log("❌ No se encontraron áreas de producción con ese nombre:", areaProduccion); // Log para área no encontrada
-                return res.status(404).json({ msg: 'No se encontraron áreas de producción con ese nombre' });
             }
         }
 
@@ -400,9 +391,6 @@ exports.buscarProduccion = async (req, res) => {
             const maquinaDocs = await Maquina.find({ nombre: { $regex: maquina, $options: 'i' } });
             if (maquinaDocs.length > 0) {
                 query.maquina = { $in: maquinaDocs.map(m => m._id) };
-            } else {
-                console.log("❌ No se encontraron máquinas con ese nombre:", maquina); 
-                return res.status(404).json({ msg: 'No se encontraron máquinas con ese nombre' });
             }
         }
 
@@ -410,19 +398,14 @@ exports.buscarProduccion = async (req, res) => {
             const insumosDocs = await Insumos.find({ nombre: { $regex: insumos, $options: 'i' } });
             if (insumosDocs.length > 0) {
                 query.insumos = { $in: insumosDocs.map(i => i._id) };
-            } else {
-                console.log("❌ No se encontraron insumos con ese nombre:", insumos); 
-                return res.status(404).json({ msg: 'No se encontraron insumos con ese nombre' });
             }
         }
 
-        console.log("🔍 Query final construida para la búsqueda:", query); // Log para la consulta final
+        console.log("🔍 Query final construida para la búsqueda:", query);
 
-        // Obtener el total de resultados que coinciden con la consulta
         const totalResultados = await Produccion.countDocuments(query);
-        console.log("📊 Total de resultados encontrados:", totalResultados); // Log para total de resultados
+        console.log("📊 Total de resultados encontrados:", totalResultados);
 
-        // Buscar producciones con los filtros aplicados
         const producciones = await Produccion.find(query)
             .skip(skip)
             .limit(parseInt(limit))
@@ -433,8 +416,9 @@ exports.buscarProduccion = async (req, res) => {
             .populate('maquina', 'nombre')
             .populate('insumos', 'nombre');
 
-
-        console.log("📋 Resultados devueltos al frontend:", producciones); 
+        if (producciones.length === 0) {
+            return res.status(404).json({ msg: 'No se encontraron registros con los filtros aplicados.' });
+        }
 
         res.status(200).json({ totalResultados, resultados: producciones });
     } catch (error) {
