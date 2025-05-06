@@ -3,6 +3,8 @@ import { Card, Input, Button } from '../components/ui/index'; // Asegúrate de t
 import  axiosInstance  from '../utils/axiosInstance'; // Ajusta la ruta a tu instancia de Axios
 import { toast } from 'react-toastify';
 import { verificarYCrear } from '../utils/verificarYCrear';
+import { confirmAlert } from 'react-confirm-alert';
+import 'react-confirm-alert/src/react-confirm-alert.css';
 
 function EditarProduccion({ produccion, onClose, onGuardar }) {
   const [registroEditado, setRegistroEditado] = useState({});
@@ -70,48 +72,62 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
 
   const guardarEdicion = async () => {
     try {
-      if (!registroEditado || Object.keys(registroEditado).length === 0) {
-        toast.error("⚠️ No hay datos para guardar.");
-        return;
-      }
+      confirmAlert({
+        title: 'Confirmar Guardado',
+        message: '¿Estás seguro de que deseas guardar los cambios?',
+        buttons: [
+          {
+            label: 'Sí',
+            onClick: async () => {
+              if (!registroEditado || Object.keys(registroEditado).length === 0) {
+                toast.error("⚠️ No hay datos para guardar.");
+                return;
+              }
 
-      const normalizarTexto = (texto) => (typeof texto === 'string' ? texto.trim().toLowerCase() : texto);
+              const normalizarTexto = (texto) => (typeof texto === 'string' ? texto.trim().toLowerCase() : texto);
 
-      const otiId = await verificarYCrear(normalizarTexto(registroEditado.oti?.numeroOti || ''), "oti");
-      const procesoId = registroEditado.proceso;
-      const insumoId = registroEditado.insumos;
-      const areaId = registroEditado.areaProduccion;
-      const maquinaId = registroEditado.maquina;
+              const otiId = await verificarYCrear(normalizarTexto(registroEditado.oti?.numeroOti || ''), "oti");
+              const procesoId = registroEditado.proceso;
+              const insumoId = registroEditado.insumos;
+              const areaId = registroEditado.areaProduccion;
+              const maquinaId = registroEditado.maquina;
 
-      if (!otiId || !procesoId || !areaId || !maquinaId || !insumoId) {
-        toast.error("❌ No se pudieron verificar o crear todas las entidades requeridas.");
-        return;
-      }
+              if (!otiId || !procesoId || !areaId || !maquinaId || !insumoId) {
+                toast.error("❌ No se pudieron verificar o crear todas las entidades requeridas.");
+                return;
+              }
 
-      const datosActualizados = {
-        _id: produccion._id, // Usar el _id de la producción que se está editando
-        oti: otiId,
-        operario: produccion.operario?._id || produccion.operario,
-        proceso: procesoId,
-        insumos: insumoId,
-        areaProduccion: areaId,
-        maquina: maquinaId,
-        fecha: registroEditado.fecha || null,
-        tiempoPreparacion: parseInt(registroEditado.tiempoPreparacion, 10),
-        tiempoOperacion: parseInt(registroEditado.tiempoOperacion, 10),
-        observaciones: registroEditado.observaciones // Agregar observaciones
-      };
+              const datosActualizados = {
+                _id: produccion._id, // Usar el _id de la producción que se está editando
+                oti: otiId,
+                operario: produccion.operario?._id || produccion.operario,
+                proceso: procesoId,
+                insumos: insumoId,
+                areaProduccion: areaId,
+                maquina: maquinaId,
+                fecha: registroEditado.fecha || null,
+                tiempoPreparacion: parseInt(registroEditado.tiempoPreparacion, 10),
+                tiempoOperacion: parseInt(registroEditado.tiempoOperacion, 10),
+                observaciones: registroEditado.observaciones // Agregar observaciones
+              };
 
-      const response = await axiosInstance.put(`/produccion/actualizar/${produccion._id}`, datosActualizados);
+              const response = await axiosInstance.put(`/produccion/actualizar/${produccion._id}`, datosActualizados);
 
-      if (response.status >= 200 && response.status < 300) {
-        toast.success("✅ Producción actualizada con éxito");
-        onGuardar(); // Llama a la función para recargar los datos en el dashboard
-        onClose(); // Cierra el modal
-      } else {
-        throw new Error("⚠️ La respuesta del servidor no indica éxito.");
-      }
-
+              if (response.status >= 200 && response.status < 300) {
+                toast.success("✅ Producción actualizada con éxito");
+                onGuardar(); // Llama a la función para recargar los datos en el dashboard
+                onClose(); // Cierra el modal
+              } else {
+                throw new Error("⚠️ La respuesta del servidor no indica éxito.");
+              }
+            }
+          },
+          {
+            label: 'Cancelar',
+            onClick: () => {}
+          }
+        ]
+      });
     } catch (error) {
       console.error('❌ Error al editar la producción:', error);
       if (error.response) {
