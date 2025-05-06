@@ -3,8 +3,10 @@ import axios from 'axios';
 import MaquinasList from '../components/MaquinasList';
 import MaquinaForm from '../components/MaquinaForm';
 import Pagination from '../components/Pagination';
+import { useNavigate } from "react-router-dom";
 
-const MaquinasPage = ({currentPage, totalResults, itemsPerPage, onPageChange}) => {
+const MaquinasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) => {
+    const navigate = useNavigate();
     const [maquinas, setMaquinas] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
     const [maquinaAEditar, setMaquinaAEditar] = useState(null);
@@ -12,7 +14,7 @@ const MaquinasPage = ({currentPage, totalResults, itemsPerPage, onPageChange}) =
     const [totalPages, setTotalPages] = useState(0);
     const [searchText, setSearchText] = useState(''); // Para la búsqueda de máquinas
 
-    const cargarMaquinas = async (page = 1, search = '') => { 
+    const cargarMaquinas = async (page = 1, search = '') => {
         setLoading(true);
         try {
             const response = await axios.get(`http://localhost:5000/api/maquinas?page=${page}&limit=${itemsPerPage}&search=${search}`);
@@ -26,8 +28,8 @@ const MaquinasPage = ({currentPage, totalResults, itemsPerPage, onPageChange}) =
     };
 
     useEffect(() => {
-        console.log('Valores en useEffect:', currentPage , searchText);
-        cargarMaquinas( currentPage, searchText); // Llama a cargarMaquinas con los valores correctos
+        console.log('Valores en useEffect:', currentPage, searchText);
+        cargarMaquinas(currentPage, searchText); // Llama a cargarMaquinas con los valores correctos
     }, [currentPage, searchText]);
 
     const handleCrear = () => {
@@ -72,49 +74,81 @@ const MaquinasPage = ({currentPage, totalResults, itemsPerPage, onPageChange}) =
 
     const handleSearchTextChange = (event) => {
         setSearchText(event.target.value);
-        onPageChange(1); 
-    }
+        onPageChange(1);
+    };
 
     return (
-        <div>
-            <h1>Gestión de Máquinas</h1>
+        <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
+            <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Máquinas</h1>
+
             {loading ? (
-                <p>Cargando máquinas...</p>
+                <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"></div>
+                    <p className="ml-3 text-gray-600">Cargando máquinas...</p>
+                </div>
             ) : (
                 <>
                     {modo === 'listar' && (
-                        <>
-                            <button onClick={handleCrear}>Crear Nueva Máquina</button>
-                            <div>
-                                <label htmlFor="searchText">Buscar por Nombre:</label>
+                        <div className="flex justify-between items-center mt-6">
+                            <button
+                                onClick={handleCrear}
+                                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                            >
+                                Crear Nueva Máquina
+                            </button>
+                            <div className="flex items-center">
+                                <label htmlFor="searchText" className="mr-2 text-gray-700">
+                                    Buscar por Nombre:
+                                </label>
                                 <input
                                     type="text"
                                     id="searchText"
                                     value={searchText}
                                     onChange={handleSearchTextChange}
+                                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                                 />
+                                <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer" 
+                                variant="ghost" onClick={() => navigate('/admin-dashboard')}>
+                                Atras
+                                </button>
                             </div>
+                        </div>
+                    )}
+
+                    {modo === 'listar' && (
+                        <div className="overflow-x-auto">
                             <MaquinasList maquinas={maquinas} onEditar={handleEditar} onEliminar={handleEliminar} />
-                            {totalResults > 0 && (
-                                <Pagination
-                                    totalResults={totalResults}
-                                    currentPage={currentPage}
-                                    onPageChange={setCurrentPage}
-                                    itemsPerPage={itemsPerPage}
-                                />
-                            )}
-                        </>
+                        </div>
                     )}
+
+                    {totalResults > 0 && modo === 'listar' && (
+                        <div className="mt-4">
+                            <Pagination
+                                totalResults={totalResults}
+                                currentPage={currentPage}
+                                onPageChange={onPageChange}
+                                itemsPerPage={itemsPerPage}
+                            />
+                        </div>
+                    )}
+
                     {modo === 'crear' && (
-                        <MaquinaForm onGuardar={handleGuardar} onCancelar={handleCancelar} />
+                        <div className="mt-6">
+                            <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Nueva Máquina</h2>
+                            <MaquinaForm onGuardar={handleGuardar} onCancelar={handleCancelar} />
+                        </div>
                     )}
+
                     {modo === 'editar' && maquinaAEditar && (
-                        <MaquinaForm maquinaInicial={maquinaAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar} />
+                        <div className="mt-6">
+                            <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar Máquina</h2>
+                            <MaquinaForm maquinaInicial={maquinaAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar} />
+                        </div>
                     )}
                 </>
             )}
         </div>
     );
-}
+};
 
 export default MaquinasPage;

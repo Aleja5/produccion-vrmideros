@@ -1,10 +1,12 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import InsumosList from '../components/InsumosList';
 import InsumoForm from '../components/InsumoForm';
 import Pagination from '../components/Pagination';
+import { useNavigate } from "react-router-dom";
 
-const InsumosPage = ({currentPage, totalResults, itemsPerPage, onPageChange}) => {
+const InsumosPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) => {
+    const navigate = useNavigate();
     const [insumos, setInsumos] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
     const [insumoAEditar, setInsumoAEditar] = useState(null);
@@ -12,7 +14,7 @@ const InsumosPage = ({currentPage, totalResults, itemsPerPage, onPageChange}) =>
     const [totalPages, setTotalPages] = useState(0);
     const [searchText, setSearchText] = useState(''); // Para la búsqueda de insumos
 
-    const cargarInsumos = async (page = 1, search = '') => { 
+    const cargarInsumos = async (page = 1, search = '') => {
         setLoading(true);
         try {
             const response = await axios.get(`http://localhost:5000/api/insumos?page=${page}&limit=${itemsPerPage}&search=${search}`);
@@ -26,8 +28,8 @@ const InsumosPage = ({currentPage, totalResults, itemsPerPage, onPageChange}) =>
     };
 
     useEffect(() => {
-        console.log('Valores en useEffect:', currentPage , searchText);
-        cargarInsumos( currentPage, searchText); // Llama a cargarInsumos con los valores correctos
+        console.log('Valores en useEffect:', currentPage, searchText);
+        cargarInsumos(currentPage, searchText); // Llama a cargarInsumos con los valores correctos
     }, [currentPage, searchText]);
 
     const handleCrear = () => {
@@ -72,49 +74,80 @@ const InsumosPage = ({currentPage, totalResults, itemsPerPage, onPageChange}) =>
 
     const handleSearchTextChange = (event) => {
         setSearchText(event.target.value);
-        onPageChange(1); 
+        onPageChange(1);
     };
 
     return (
-        <div className="container mt-4">
-            <h1>Insumos</h1>
-            <input
-                type="text"
-                placeholder="Buscar insumos..."
-                value={searchText}
-                onChange={handleSearchTextChange}
-                className="form-control mb-3"
-            />
-            {modo === 'listar' && (
-                <div>
-                    <button className="btn btn-primary mb-3" onClick={handleCrear}>Crear Insumo</button>
-                    {loading ? (
-                        <p>Cargando...</p>
-                    ) : (
-                        <InsumosList insumos={insumos} onEditar={handleEditar} onEliminar={handleEliminar} />
-                    )}
-                    <Pagination
-                        currentPage={currentPage}
-                        totalResults={totalResults}
-                        itemsPerPage={itemsPerPage}
-                        onPageChange={onPageChange}
-                    />
+        <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
+            <h1 className="text-2xl font-semibold mb-4 text-gray-800">Insumos</h1>
+
+            {loading ? (
+                <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"></div>
+                    <p className="ml-3 text-gray-600">Cargando insumos...</p>
                 </div>
-            )}
-            {(modo === 'crear' || modo === 'editar') && (
-                <InsumoForm
-                    insumo={modo === 'editar' ? insumoAEditar : null}
-                    onGuardar={handleGuardar}
-                    onCancelar={handleCancelar}
-                />
+            ) : (
+                <>
+                    <div className="flex justify-between items-center mb-4">
+                        <button
+                            onClick={handleCrear}
+                            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                        >
+                            Crear Insumo
+                        </button>
+                        <div className="flex items-center">
+                            <label htmlFor="searchText" className="mr-2 text-gray-700">
+                                Buscar por Nombre:
+                            </label>
+                            <input
+                                type="text"
+                                id="searchText"
+                                value={searchText}
+                                onChange={handleSearchTextChange}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            />
+                            <button
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-md transition cursor-pointer ml-2"
+                                onClick={() => navigate('/admin-dashboard')}
+                            >
+                                Atras
+                            </button>
+                        </div>
+                    </div>
+
+                    {modo === 'listar' && (
+                        <div className="overflow-x-auto">
+                            <InsumosList insumos={insumos} onEditar={handleEditar} onEliminar={handleEliminar} />
+                        </div>
+                    )}
+
+                    {totalResults > 0 && modo === 'listar' && (
+                        <div className="mt-4">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalResults={totalResults}
+                                itemsPerPage={itemsPerPage}
+                                onPageChange={onPageChange}
+                            />
+                        </div>
+                    )}
+
+                    {(modo === 'crear' || modo === 'editar') && (
+                        <div className="mt-6">
+                            <h2 className="text-xl font-semibold mb-2 text-gray-800">
+                                {modo === 'crear' ? 'Crear Nuevo Insumo' : 'Editar Insumo'}
+                            </h2>
+                            <InsumoForm
+                                insumo={modo === 'editar' ? insumoAEditar : null}
+                                onGuardar={handleGuardar}
+                                onCancelar={handleCancelar}
+                            />
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
-}
+};
 
 export default InsumosPage;
-
-
-
-
-

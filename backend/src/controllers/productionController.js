@@ -22,7 +22,6 @@ const Insumos = require('../models/Insumos');
 
 // Obtener todos los registros de producción
 exports.getAllProduccion = async (req, res) => {
-    console.log("🔍 req.query:", req.query);
     try {
         let { page = 1, limit = 10 } = req.query;
 
@@ -31,10 +30,8 @@ exports.getAllProduccion = async (req, res) => {
 
         const skip = (page - 1) * limit;
 
-        console.log(" ejecutando getAllProduccion con Page", page, "limit:", limit, "skip:", skip);
 
         const totalResults = await Produccion.countDocuments({});
-        console.log("Total de resultados:", totalResults);
 
         const registros = await Produccion.find()
             .sort({ fecha: -1 })
@@ -47,11 +44,8 @@ exports.getAllProduccion = async (req, res) => {
             .populate("maquina", "nombre")
             .populate("insumos", "nombre");
 
-        console.log("Registros encontrados (cantidad):", registros.length);
-        console.log("Registros encontrados:", registros.map(r => r._id));
 
         res.json({ totalResults, resultados: registros });
-        console.log("🔍 Respuesta enviada al frontend:", { totalResults, resultados: registros.map(r => r._id) });
     } catch (error) {
         console.error("error en getAllProduccion:", error);
         res.status(500).json({ message: "Error obteniendo registros", error, totalResults: 0, resultados: [] });

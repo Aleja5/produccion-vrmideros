@@ -73,7 +73,6 @@ const AdminDashboard = () => {
     const cargarProducciones = async () => {
         setLoading(true);
         setError(null);
-        console.log("AdminDashboard - Cargando página:", currentPage);
         try {
             const response = await axiosInstance.get(`/admin/admin-producciones?page=${currentPage}&limit=${itemsPerPage}`);
             setResultados(response.data.resultados);

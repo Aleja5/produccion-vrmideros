@@ -51,6 +51,11 @@ export const SidebarAdmin = () => {
           {!collapsed && <span>Gestión de Procesos</span>}
         </Link>
 
+        <Link to="/admin/insumos" className="flex items-center gap-2 p-2 hover:bg-gray-700 rounded-md">
+        <Cpu className="text-white" size={20} />
+          {!collapsed && <span>Gestión de Insumos</span>}
+        </Link>
+
         <Link to="/admin/reportes" className="flex items-center gap-2 p-2 hover:bg-gray-700 rounded-md">
         <BarChart2 className="text-white" size={20} />
           {!collapsed && <span>Reportes</span>}

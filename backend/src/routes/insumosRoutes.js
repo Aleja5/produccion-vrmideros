@@ -6,7 +6,7 @@ const {
     crearInsumo,
     actualizarInsumo,
     eliminarInsumo
-} = require('../controllers/insumoController');
+} = require('../controllers/insumosController');
 
 router.get('/', obtenerInsumos);
 router.get('/:id', obtenerInsumo);

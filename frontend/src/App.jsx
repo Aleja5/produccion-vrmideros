@@ -11,6 +11,7 @@ import EditarProduccion from './pages/EditarProduccion';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import MaquinasPage from './pages/Maquinas';
+import InsumosPage from './pages/Insumos';
 import ResetPassword from './pages/ResetPassword';
 
 
@@ -44,6 +45,7 @@ function App() {
                     }
                 />
                 <Route path="/admin/maquinas" element={<MaquinasPage />} />
+                <Route path="/admin/insumos" element={<InsumosPage />} />
 
         {/* Ruta protegida: Validar Cédula */}
         <Route

@@ -1,4 +1,4 @@
-const Maquina = require('../models/Maquina'); // Asegúrate de que la ruta sea correcta
+const Maquina = require('../models/Maquina'); 
 
 // Obtener todas las máquinas
 const obtenerMaquinas = async (req, res) => {
@@ -52,8 +52,10 @@ const crearMaquina = async (req, res) => {
     const nuevaMaquina = new Maquina({ nombre });
     try {
         const maquinaGuardada = await nuevaMaquina.save();
+        console.log('Máquina guardada:', maquinaGuardada);
         res.status(201).json(maquinaGuardada);
     } catch (error) {
+        console.error('Error al guardar máquina:', error);
         res.status(400).json({ message: error.message });
     }
 };
