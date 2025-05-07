@@ -25,48 +25,53 @@ const AdminDashboard = () => {
   };
 
     const handleBuscar = async (filtrosRecibidos) => {
-    setLoading(true);
-    setError(null);
-    setCurrentPage(1);
-    
-    try {
-      const filtrosAjustados = { ...filtrosRecibidos };
-      if (filtrosRecibidos.fechaInicio) {
-        filtrosAjustados.fechaInicio = new Date(filtrosRecibidos.fechaInicio).toISOString();
-      }
-      if (filtrosRecibidos.fechaFin) {
-        filtrosAjustados.fechaFin = new Date(filtrosRecibidos.fechaFin).toISOString();
-      }
+        setLoading(true);
+        setError(null);
+        setCurrentPage(1);
 
-      const params = {
-          page: 1,
-          limit: itemsPerPage,
-          ...filtrosAjustados,
-          
-        };
+        try {
+            const filtrosAjustados = { ...filtrosRecibidos };
+            if (filtrosRecibidos.fechaInicio) {
+                filtrosAjustados.fechaInicio = new Date(filtrosRecibidos.fechaInicio).toISOString();
+            }
+            if (filtrosRecibidos.fechaFin) {
+                filtrosAjustados.fechaFin = new Date(filtrosRecibidos.fechaFin).toISOString();
+            }
 
-      const response = await axiosInstance.get('/produccion/buscar-produccion', { params });
-      
-      if (response.data.resultados && Array.isArray(response.data.resultados)) {
-        setResultados(response.data.resultados);
-        calcularTotalHoras(response.data.resultados);
-        setTotalResults(response.data.totalResultados || response.data.totalResults || 0);
-      } else {
-        setResultados([]);
-        setTotalHoras(0);
-        setTotalResults(0);
-        alert(response.data?.msg || 'Sin resultados');
-      }
-    } catch (err) {
-      console.error("❌ Error al buscar:", err);
-      setError('Error al buscar los registros.');
-      setResultados([]);
-      setTotalHoras(0);
-      set
-    } finally {
-      setLoading(false);
-    }
-  };
+            const params = {
+                page: 1,
+                limit: itemsPerPage,
+                ...filtrosAjustados,
+            };
+
+            const response = await axiosInstance.get('/produccion/buscar-produccion', { params });
+
+            if (response.data.resultados && Array.isArray(response.data.resultados)) {
+                let resultadosOrdenados = response.data.resultados;
+
+                // Ordenar por fecha si no hay filtros aplicados
+                if (!filtrosRecibidos || Object.keys(filtrosRecibidos).length === 0) {
+                    resultadosOrdenados = resultadosOrdenados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+                }
+
+                setResultados(resultadosOrdenados);
+                calcularTotalHoras(resultadosOrdenados);
+                setTotalResults(response.data.totalResultados || response.data.totalResults || 0);
+            } else {
+                setResultados([]);
+                setTotalHoras(0);
+                setTotalResults(0);
+                alert(response.data?.msg || 'Sin resultados');
+            }
+        } catch (err) {
+            console.error("❌ Error al buscar:", err);
+            setError('Error al buscar los registros.');
+            setResultados([]);
+            setTotalHoras(0);
+        } finally {
+            setLoading(false);
+        }
+    };
 
   // 🔄 Cargar todas las producciones al iniciar
   useEffect(() => {
@@ -141,31 +146,31 @@ const AdminDashboard = () => {
                   <table className="w-full bg-white rounded shadow text-sm">
                     <thead className="bg-gray-200">
                       <tr>
-                        <th className="p-2">OTI</th>
-                        <th className="p-2">Operario</th>
-                        <th className="p-2">Fecha</th>
-                        <th className="p-2">Proceso</th>
-                        <th className="p-2">Insumos</th>
-                        <th className="p-2">Máquina</th>
-                        <th className="p-2">Área</th>
-                        <th className="p-2">Prep.</th>
-                        <th className="p-2">Oper.</th>
-                        <th className="p-2 font-bold">Total</th>
+                        <th className="p-1">OTI</th>
+                        <th className="p-1">Operario</th>
+                        <th className="p-1">Fecha</th>
+                        <th className="p-1">Proceso</th>
+                        <th className="p-1">Insumos</th>
+                        <th className="p-1">Máquina</th>
+                        <th className="p-1">Área</th>
+                        <th className="p-1">Prep.</th>
+                        <th className="p-1">Oper.</th>
+                        <th className="p-1 font-bold">Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {resultados.map((r) => (
                         <tr key={r._id} className="text-center border-b hover:bg-gray-50">
-                          <td className="p-2">{r.oti?.numeroOti}</td>
-                          <td className="p-2">{r.operario?.name}</td>
-                          <td className="p-2">{new Date(r.fecha).toISOString().split('T')[0]}</td>
-                          <td className="p-2">{r.proceso?.nombre}</td>
-                          <td className="p-2">{r.insumos?.nombre}</td>
-                          <td className="p-2">{r.maquina?.nombre}</td>
-                          <td className="p-2">{r.areaProduccion?.nombre}</td>
-                          <td className="p-2">{r.tiempoPreparacion} min</td>
-                          <td className="p-2">{r.tiempoOperacion} min</td>
-                          <td className="p-2 font-semibold text-green-600">
+                          <td className="p-1 whitespace-nowrap">{r.oti?.numeroOti}</td>
+                          <td className="p-1 whitespace-nowrap">{r.operario?.name}</td>
+                          <td className="p-1 whitespace-nowrap">{new Date(r.fecha).toISOString().split('T')[0]}</td>
+                          <td className="p-1 whitespace-nowrap">{r.proceso?.nombre}</td>
+                          <td className="p-1 whitespace-nowrap">{r.insumos?.nombre}</td>
+                          <td className="p-1 whitespace-nowrap">{r.maquina?.nombre}</td>
+                          <td className="p-1 whitespace-nowrap">{r.areaProduccion?.nombre}</td>
+                          <td className="p-1 whitespace-nowrap">{r.tiempoPreparacion} min</td>
+                          <td className="p-1 whitespace-nowrap">{r.tiempoOperacion} min</td>
+                          <td className="p-1 font-semibold text-green-600 whitespace-nowrap">
                             {r.tiempoPreparacion + r.tiempoOperacion} min
                           </td>
                         </tr>

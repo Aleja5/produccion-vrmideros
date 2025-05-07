@@ -41,7 +41,7 @@ export const SidebarAdmin = () => {
           {!collapsed && <span>Gestión de Máquinas</span>}
         </Link>
 
-        <Link to="/admin/areas-produccion" className="flex items-center gap-2 p-2 hover:bg-gray-700 rounded-md">
+        <Link to="/admin/areas" className="flex items-center gap-2 p-2 hover:bg-gray-700 rounded-md">
         <Building className="text-white" size={20} />
           {!collapsed && <span>Áreas de Producción</span>}
         </Link>
