@@ -1,5 +1,12 @@
 const express = require('express');
-const { validateCedula } = require('../controllers/operatorController');
+const {
+    validateCedula,
+    crearOperario,
+    obtenerOperarios,
+    obtenerOperario,
+    actualizarOperario,
+    eliminarOperario
+} = require('../controllers/operatorController');
 const Operario = require('../models/Operario');
 
 const router = express.Router();
@@ -21,5 +28,11 @@ router.get('/buscar/operario', async (req, res) => {
         res.status(500).json({ msg: 'Error al buscar operarios', error: error.message });
     }
 });
+
+router.post('/', crearOperario);
+router.get('/', obtenerOperarios);
+router.get('/:id', obtenerOperario);
+router.put('/:id', actualizarOperario);
+router.delete('/:id', eliminarOperario);
 
 module.exports = router;

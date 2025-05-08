@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import MaquinasList from '../components/MaquinasList';
 import MaquinaForm from '../components/MaquinaForm';
 import Pagination from '../components/Pagination';
 import { useNavigate } from "react-router-dom";
+import { debounce } from 'lodash';
 
 const MaquinasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) => {
     const navigate = useNavigate();
@@ -14,8 +15,8 @@ const MaquinasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange })
     const [totalPages, setTotalPages] = useState(0);
     const [searchText, setSearchText] = useState(''); // Para la búsqueda de máquinas
 
-    const cargarMaquinas = async (page = 1, search = '') => {
-        setLoading(true);
+    const cargarMaquinas = useCallback(async (page = 1, search = '') => {
+            setLoading(true);
         try {
             const response = await axios.get(`http://localhost:5000/api/maquinas?page=${page}&limit=${itemsPerPage}&search=${search}`);
             setMaquinas(response.data.maquinas);
@@ -25,12 +26,21 @@ const MaquinasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange })
         } finally {
             setLoading(false);
         }
-    };
+    }, [itemsPerPage]);
+
+      // Crea una versión debounced de la función cargarMaquinas
+    const cargarMaquinasDebounced = useCallback(
+        debounce((page, search) => {
+        cargarMaquinas(page, search);
+        }, 500), // Espera 500ms después de que el usuario deje de escribir
+        [cargarMaquinas] // cargarMaquinas debería estar en las dependencias
+    );
+
 
     useEffect(() => {
         console.log('Valores en useEffect:', currentPage, searchText);
-        cargarMaquinas(currentPage, searchText); // Llama a cargarMaquinas con los valores correctos
-    }, [currentPage, searchText]);
+        cargarMaquinasDebounced(currentPage, searchText); // Llama a cargarMaquinas con los valores correctos
+    }, [currentPage, cargarMaquinasDebounced, searchText]);
 
     const handleCrear = () => {
         setModo('crear');
@@ -74,7 +84,6 @@ const MaquinasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange })
 
     const handleSearchTextChange = (event) => {
         setSearchText(event.target.value);
-        onPageChange(1);
     };
 
     return (
@@ -88,14 +97,13 @@ const MaquinasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange })
                 </div>
             ) : (
                 <>
-                    {modo === 'listar' && (
-                        <div className="flex justify-between items-center mt-6">
-                            <button
-                                onClick={handleCrear}
-                                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                            >
-                                Crear Nueva Máquina
-                            </button>
+                    <div className="flex justify-between items-center mb-4">
+                        <button
+                            onClick={handleCrear}
+                            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                        >
+                            Crear Maquina
+                        </button>
                             <div className="flex items-center">
                                 <label htmlFor="searchText" className="mr-2 text-gray-700">
                                     Buscar por Nombre:
@@ -113,7 +121,6 @@ const MaquinasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange })
                                 </button>
                             </div>
                         </div>
-                    )}
 
                     {modo === 'listar' && (
                         <div className="overflow-x-auto">

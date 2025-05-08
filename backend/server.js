@@ -28,7 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Rutas
 app.use('/api/auth', authRoutes);
-app.use('/api/operator', operatorRoutes);
+app.use('/api/operarios', operatorRoutes);
 app.use('/api/produccion', productionRoutes);
 app.use("/api", buscarRoutes);
 app.use("/api", crearRoutes);

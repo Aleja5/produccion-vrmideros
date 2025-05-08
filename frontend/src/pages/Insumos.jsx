@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import InsumosList from '../components/InsumosList';
 import InsumoForm from '../components/InsumoForm';
 import Pagination from '../components/Pagination';
 import { useNavigate } from "react-router-dom";
+import { debounce } from 'lodash';
 
 const InsumosPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) => {
     const navigate = useNavigate();
@@ -14,8 +15,8 @@ const InsumosPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
     const [totalPages, setTotalPages] = useState(0);
     const [searchText, setSearchText] = useState(''); // Para la búsqueda de insumos
 
-    const cargarInsumos = async (page = 1, search = '') => {
-        setLoading(true);
+    const cargarInsumos = useCallback(async (page = 1, search = '') => {
+            setLoading(true);
         try {
             const response = await axios.get(`http://localhost:5000/api/insumos?page=${page}&limit=${itemsPerPage}&search=${search}`);
             setInsumos(response.data.insumos);
@@ -25,12 +26,20 @@ const InsumosPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
         } finally {
             setLoading(false);
         }
-    };
+    }, [itemsPerPage]);
+
+        // Crea una versión debounced de la función cargarInsumos
+    const cargarInsumosDebounced = useCallback(
+        debounce((page, search) => {
+        cargarInsumos(page, search);
+        }, 500), // Espera 500ms después de que el usuario deje de escribir
+        [cargarInsumos] // cargarInsumos debería estar en las dependencias
+    );
 
     useEffect(() => {
         console.log('Valores en useEffect:', currentPage, searchText);
-        cargarInsumos(currentPage, searchText); // Llama a cargarInsumos con los valores correctos
-    }, [currentPage, searchText]);
+        cargarInsumosDebounced(currentPage, searchText); // Llama a cargarInsumos con los valores correctos
+    }, [currentPage, cargarInsumosDebounced, searchText]);
 
     const handleCrear = () => {
         setModo('crear');
@@ -74,7 +83,6 @@ const InsumosPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
 
     const handleSearchTextChange = (event) => {
         setSearchText(event.target.value);
-        onPageChange(1);
     };
 
     return (
@@ -132,18 +140,18 @@ const InsumosPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
                         </div>
                     )}
 
-                    {(modo === 'crear' || modo === 'editar') && (
+                    {modo === 'crear' && (
                         <div className="mt-6">
-                            <h2 className="text-xl font-semibold mb-2 text-gray-800">
-                                {modo === 'crear' ? 'Crear Nuevo Insumo' : 'Editar Insumo'}
-                            </h2>
-                            <InsumoForm
-                                insumo={modo === 'editar' ? insumoAEditar : null}
-                                onGuardar={handleGuardar}
-                                onCancelar={handleCancelar}
-                            />
+                            <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Insumo</h2>
+                            <InsumoForm onGuardar={handleGuardar} onCancelar={handleCancelar} />
                         </div>
                     )}
+                    {modo === 'editar' && insumoAEditar && (
+                        <div className="mt-6">
+                            <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar Insumo</h2>
+                            <InsumoForm insumoInicial={insumoAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar} />
+                        </div>
+                    )}                    
                 </>
             )}
         </div>

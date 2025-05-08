@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import ProcesoForm from '../components/ProcesoForm';
 import ProcesosList from '../components/ProcesosList';
 import Pagination from '../components/Pagination';
 import { useNavigate } from 'react-router-dom';
+import { debounce } from 'lodash';
 
 const ProcesoPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) => {
     const navigate = useNavigate();
@@ -14,8 +15,8 @@ const ProcesoPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
     const [totalPages, setTotalPages] = useState(0);
     const [searchText, setSearchText] = useState(''); // Para la búsqueda de procesos
 
-    const cargarProcesos = async (page = 1, search = '') => {
-        setLoading(true);
+    const cargarProcesos = useCallback(async (page = 1, search = '') => {
+            setLoading(true);
         try {
             const response = await axios.get(`http://localhost:5000/api/procesos?page=${page}&limit=${itemsPerPage}&search=${search}`);
             setProcesos(response.data.procesos);
@@ -25,11 +26,20 @@ const ProcesoPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
         } finally {
             setLoading(false);
         }
-    };
+    }, [itemsPerPage]);
+
+        // Crea una versión debounced de la función cargarProcesos
+    const cargarProcesosDebounced = useCallback(
+        debounce((page, search) => {
+        cargarProcesos(page, search);
+        }, 500), // Espera 500ms después de que el usuario deje de escribir
+        [cargarProcesos] // cargarProcesos debería estar en las dependencias
+    );
+    
 
     useEffect(() => {
-        cargarProcesos(currentPage, searchText); // Llama a cargarProcesos con los valores correctos
-        }, [currentPage, searchText]); // Se ejecuta cada vez que currentPage o searchText cambian      
+        cargarProcesosDebounced(currentPage, searchText); // Llama a cargarProcesos con los valores correctos
+        }, [currentPage, cargarProcesosDebounced, searchText]); // Se ejecuta cada vez que currentPage o searchText cambian      
 
     const handleCrear = () => {
         setModo('crear');
@@ -104,7 +114,7 @@ const ProcesoPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
                             onChange={handleSearchTextChange}
                             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                         />
-                        <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer" 
+                        <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer ml-2" 
                         variant="ghost" onClick={() => navigate('/admin-dashboard')}>
                         Atras
                         </button>
@@ -127,16 +137,17 @@ const ProcesoPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
                     </div>
                 )}
 
-                {(modo === 'crear' || modo === 'editar') && (
+                {modo === 'crear' && (
                     <div className="mt-6">
-                        <h2 className="text-xl font-semibold mb-2 text-gray-800">
-                            {modo === 'crear' ? 'Crear Proceso' : 'Editar Proceso'}
-                        </h2>
-                        <ProcesoForm
-                            proceso={modo === 'editar' ? procesoAEditar : null}
-                            onGuardar={handleGuardar}
-                            onCancelar={handleCancelar}
+                        <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Nuevo Proceso</h2>                    
+                        <ProcesoForm onGuardar={handleGuardar} onCancelar={handleCancelar}
                         />
+                    </div>
+                )}
+                    {modo === 'editar' && procesoAEditar && (
+                        <div className="mt-6">
+                            <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar proceso</h2>
+                            <ProcesoForm procesoInicial={procesoAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar} />
                         </div>
                     )}
                 </>

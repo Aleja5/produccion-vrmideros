@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import AreaForm from '../components/AreaForm';
 import AreasList from '../components/AreasList';
 import Pagination from '../components/Pagination';
 import { useNavigate } from 'react-router-dom';
-
+import { debounce } from 'lodash';
 
 const AreasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) => {
     const navigate = useNavigate();
@@ -13,9 +13,9 @@ const AreasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) =>
     const [areaAEditar, setAreaAEditar] = useState(null);
     const [loading, setLoading] = useState(false);
     const [totalPages, setTotalPages] = useState(0);
-    const [searchText, setSearchText] = useState(0);
+    const [searchText, setSearchText] = useState('');
 
-    const cargarAreas = async (page = 1, search = '') => {
+    const cargarAreas = useCallback(async (page = 1, search = '') => {
         setLoading(true);
         try {
             const response = await axios.get(`http://localhost:5000/api/areas?page=${page}&limit=${itemsPerPage}&search=${search}`);
@@ -26,11 +26,21 @@ const AreasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) =>
         } finally {
             setLoading(false);
         }
-    };
+    },[itemsPerPage]);
+
+      // Crea una versión debounced de la función cargarAreas
+    const cargarAreasDebounced = useCallback(
+        debounce((page, search) => {
+        cargarAreas(page, search);
+        }, 500), // Espera 500ms después de que el usuario deje de escribir
+        [cargarAreas] // cargarAreas debería estar en las dependencias
+    );
+
+
 
     useEffect(() => {
-        cargarAreas(currentPage, searchText); // Llama a cargarAreas con los valores correctos
-    }, [currentPage, searchText]); // Se ejecuta cada vez que currentPage cambia
+        cargarAreasDebounced(currentPage, searchText); // Llama a cargarAreas con los valores correctos
+    }, [currentPage, cargarAreasDebounced, searchText]); // Se ejecuta cada vez que currentPage cambia
 
     const handleCrear = () => {
         setModo('crear');
@@ -76,6 +86,8 @@ const AreasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) =>
         setSearchText(event.target.value);
     };
 
+    console.log('Renderizando AreasPage');
+
     return (
         <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
         <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Areas</h1>
@@ -105,8 +117,8 @@ const AreasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) =>
                             onChange={handleSearchTextChange}
                             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                         />
-                        <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer" 
-                        variant="ghost" onClick={() => navigate('/admin-dashboard')}>
+                        <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer ml-2" 
+                         onClick={() => navigate('/admin-dashboard')}>
                         Atras
                         </button>
                     </div>
@@ -123,23 +135,24 @@ const AreasPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) =>
                         <Pagination
                             currentPage={currentPage}
                             totalPages={totalPages}
+                            itemsPerPage={itemsPerPage}
                             onPageChange={onPageChange}
                         />
                     </div>
                 )}
 
-                {(modo === 'crear' || modo === 'editar') && (
+                {modo === 'crear' && (
                     <div className="mt-6">
-                        <h2 className="text-xl font-semibold mb-2 text-gray-800">
-                            {modo === 'crear' ? 'Crear Nueva Area' : 'Editar Area'}
-                        </h2>
-                        <AreaForm
-                            area={modo === 'editar' ? areaAEditar : null}
-                            onGuardar={handleGuardar}
-                            onCancelar={handleCancelar}
-                        />
+                        <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Area de Producción</h2>
+                        <AreaForm onGuardar={handleGuardar} onCancelar={handleCancelar}/>
                     </div>
-                )}                
+                )} 
+                {modo === 'editar' && areaAEditar && (
+                    <div className="mt-6">
+                        <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar Area de Producción</h2>
+                        <AreaForm areaInicial={areaAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar}/>
+                    </div>
+                )}
             </>
         )}
     </div>

@@ -14,6 +14,7 @@ import MaquinasPage from './pages/Maquinas';
 import InsumosPage from './pages/Insumos';
 import ProcesosPage from './pages/Procesos';
 import AreasPage from './pages/Areas';
+import OperariosPage from './pages/Operarios';
 import ResetPassword from './pages/ResetPassword';
 
 
@@ -50,6 +51,7 @@ function App() {
                 <Route path="/admin/insumos" element={<InsumosPage />} />
                 <Route path="/admin/procesos" element={<ProcesosPage />} />
                 <Route path="/admin/areas" element={<AreasPage />} />
+                <Route path="/admin/operarios" element={<OperariosPage />} />
 
         {/* Ruta protegida: Validar Cédula */}
         <Route
