@@ -5,7 +5,7 @@ import OperarioForm from '../components/OperarioForm';
 import Pagination from '../components/Pagination';
 import { useNavigate } from 'react-router-dom';
 
-const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10, onPageChange }) => {
+const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10 }) => {
     const navigate = useNavigate();
     const [operarios, setOperarios] = useState([]);
     const [modo, setModo] = useState('listar');
@@ -105,7 +105,8 @@ const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRe
       <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
           <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Operarios</h1>
           <div className="flex justify-between items-center mb-4">
-              <button onClick={handleCrear} className="bg-green-500 ...">Crear Nuevo Operario</button>
+              <button onClick={handleCrear} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              >Crear Nuevo Operario</button>
               <div className="flex items-center">
                   <label htmlFor="searchText" className="mr-2 text-gray-700">Buscar por Nombre:</label>
                   <input
@@ -113,14 +114,16 @@ const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRe
                       id="searchText"
                       value={searchText}
                       onChange={handleSearchTextChange}
-                      className="shadow ..."
+                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                   />
-                  <button className="bg-blue-500 ..." onClick={() => navigate('/admin-dashboard')}>Atras</button>
+                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer ml-2" 
+                  onClick={() => navigate('/admin-dashboard')}>Atras</button>
               </div>
           </div>
 
           {loading ? (
-              <div className="flex justify-center ...">Cargando operarios...</div>
+              <div className="flex justify-center items-center py-8 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"
+              >Cargando operarios...</div>
           ) : (
               <>
                   {modo === 'listar' && (

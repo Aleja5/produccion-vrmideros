@@ -4,9 +4,8 @@ import InsumosList from '../components/InsumosList';
 import InsumoForm from '../components/InsumoForm';
 import Pagination from '../components/Pagination';
 import { useNavigate } from "react-router-dom";
-import { debounce } from 'lodash';
 
-const InsumosPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) => {
+const InsumosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10 }) => {
     const navigate = useNavigate();
     const [insumos, setInsumos] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
@@ -14,6 +13,10 @@ const InsumosPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
     const [loading, setLoading] = useState(false);
     const [totalPages, setTotalPages] = useState(0);
     const [searchText, setSearchText] = useState(''); // Para la búsqueda de insumos
+    const [filteredInsumos, setFilteredInsumos] = useState([]);
+    const [currentPage, setCurrentPage] = useState(propCurrentPage || 1);
+    const [totalResults, setTotalResults] = useState(propTotalResults || 0);
+
 
     const cargarInsumos = useCallback(async (page = 1, search = '') => {
             setLoading(true);
@@ -21,6 +24,7 @@ const InsumosPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
             const response = await axios.get(`http://localhost:5000/api/insumos?page=${page}&limit=${itemsPerPage}&search=${search}`);
             setInsumos(response.data.insumos);
             setTotalPages(response.data.totalPages);
+            setTotalResults(response.data.totalResults);
         } catch (error) {
             console.error('Error al cargar los insumos:', error);
         } finally {
@@ -28,18 +32,33 @@ const InsumosPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
         }
     }, [itemsPerPage]);
 
-        // Crea una versión debounced de la función cargarInsumos
-    const cargarInsumosDebounced = useCallback(
-        debounce((page, search) => {
-        cargarInsumos(page, search);
-        }, 500), // Espera 500ms después de que el usuario deje de escribir
-        [cargarInsumos] // cargarInsumos debería estar en las dependencias
-    );
+    useEffect(() => {
+        cargarInsumos(currentPage, searchText); // Llama a cargarInsumos con los valores correctos
+    }, [currentPage, cargarInsumos, searchText]);
 
     useEffect(() => {
-        console.log('Valores en useEffect:', currentPage, searchText);
-        cargarInsumosDebounced(currentPage, searchText); // Llama a cargarInsumos con los valores correctos
-    }, [currentPage, cargarInsumosDebounced, searchText]);
+        if (insumos && Array.isArray(insumos)) { 
+            if (searchText) {
+                const filtered = insumos.filter(insumos =>
+                    insumos.nombre.toLowerCase().includes(searchText.toLowerCase())
+                );
+                setFilteredInsumos(filtered);
+            } else {
+                setFilteredInsumos(insumos);
+            }
+        } else {
+            setFilteredInsumos([]); // O algún otro valor por defecto seguro
+        }
+    }, [searchText, insumos]);
+
+    const handleSearchTextChange = (event) => {
+        setSearchText(event.target.value);
+        setCurrentPage(1);
+    };
+
+    const handlePageChange = (newPage) => {
+        setCurrentPage(newPage);
+    };
 
     const handleCrear = () => {
         setModo('crear');
@@ -81,61 +100,51 @@ const InsumosPage = ({ currentPage, totalResults, itemsPerPage, onPageChange }) 
         setInsumoAEditar(null);
     }
 
-    const handleSearchTextChange = (event) => {
-        setSearchText(event.target.value);
-    };
+
 
     return (
         <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
             <h1 className="text-2xl font-semibold mb-4 text-gray-800">Insumos</h1>
+            <div className="flex justify-between items-center mb-4">
+            <button onClick={handleCrear} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                >Crear Insumo</button>
+                <div className="flex items-center">
+                <label htmlFor="searchText" className="mr-2 text-gray-700">Buscar por Nombre:</label>
+                <input
+                    type="text"
+                    id="searchText"
+                    value={searchText}
+                    onChange={handleSearchTextChange}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                />
+                <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-md transition cursor-pointer ml-2"
+                onClick={() => navigate('/admin-dashboard')}>Atras</button>
+            </div>
+        </div>  
 
             {loading ? (
-                <div className="flex justify-center items-center py-8">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"></div>
+                <div className="flex justify-center items-center py-8 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid">
                     <p className="ml-3 text-gray-600">Cargando insumos...</p>
                 </div>
             ) : (
                 <>
-                    <div className="flex justify-between items-center mb-4">
-                        <button
-                            onClick={handleCrear}
-                            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                        >
-                            Crear Insumo
-                        </button>
-                        <div className="flex items-center">
-                            <label htmlFor="searchText" className="mr-2 text-gray-700">
-                                Buscar por Nombre:
-                            </label>
-                            <input
-                                type="text"
-                                id="searchText"
-                                value={searchText}
-                                onChange={handleSearchTextChange}
-                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                            />
-                            <button
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-md transition cursor-pointer ml-2"
-                                onClick={() => navigate('/admin-dashboard')}
-                            >
-                                Atras
-                            </button>
-                        </div>
-                    </div>
-
                     {modo === 'listar' && (
                         <div className="overflow-x-auto">
-                            <InsumosList insumos={insumos} onEditar={handleEditar} onEliminar={handleEliminar} />
+                            <InsumosList insumos={filteredInsumos} onEditar={handleEditar} onEliminar={handleEliminar} />
                         </div>
                     )}
 
-                    {totalResults > 0 && modo === 'listar' && (
+                    {filteredInsumos.length > 0 && modo === 'listar' && searchText && (
+                        <p className="mt-2 text-gray-600">{filteredInsumos.length} resultados encontrados para "{searchText}"</p>
+                    )}
+
+                    {totalResults > 0 && modo === 'listar' && !searchText && (
                         <div className="mt-4">
                             <Pagination
                                 currentPage={currentPage}
                                 totalResults={totalResults}
                                 itemsPerPage={itemsPerPage}
-                                onPageChange={onPageChange}
+                                onPageChange={handlePageChange}
                             />
                         </div>
                     )}
