@@ -1,67 +1,43 @@
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { MongoClient } = require('mongodb');
 
-const uri = 'mongodb://localhost:27017/localproduccion';
-const dbName = 'localproduccion';
+const uri = 'mongodb+srv://Admin:Thomas130817@cluster0.vhx5w.mongodb.net/localproduccion';
 
+// Conexión con Mongoose
+mongoose.connect(uri)
+  .then(() => console.log('✅ MongoDB Atlas conectado con Mongoose'))
+  .catch(err => console.error('❌ Error de conexión:', err));
+
+// Definir esquema y modelo
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true },
+  password: { type: String, required: true },
+  role: String,
+});
+
+const User = mongoose.model('User', userSchema);
+
+// Insertar usuario
 async function insertUser(email, password, role) {
-  const client = new MongoClient(uri);
-
-  try {
-    await client.connect();
-    const db = client.db(dbName);
-
-    // Encriptar la contraseña
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insertar el usuario
-    await db.collection('users').insertOne({
-      email,
-      password: hashedPassword,
-      role,
-    });
-
-    console.log(`Usuario ${email} insertado correctamente.`);
-
-    return { email, password, hashedPassword }; // Retornar datos para la verificación
-  } catch (error) {
-    console.error('Error:', error);
-  } finally {
-    await client.close();
-  }
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const user = new User({ email, password: hashedPassword, role });
+  await user.save();
+  console.log(`✅ Usuario ${email} insertado correctamente.`);
 }
 
-// Función para verificar la contraseña después de la inserción
+// Verificar contraseña
 async function verificarPassword(email, password) {
-  const client = new MongoClient(uri);
-
-  try {
-    await client.connect();
-    const db = client.db(dbName);
-
-    // Buscar el usuario por email
-    const users = await db.collection('users').findOne({ email });
-
-    if (!users) {
-      console.log('Usuario no encontrado.');
-      return;
-    }
-
-    console.log('Contraseña ingresada:', password);
-    console.log('Contraseña almacenada en BD:', users.password);
-
-    // Comparar la contraseña ingresada con la almacenada
-    const isMatch = await bcrypt.compare(password, users.password);
-    console.log('¿Coincide?', isMatch);
-  } catch (error) {
-    console.error('Error:', error);
-  } finally {
-    await client.close();
+  const user = await User.findOne({ email });
+  if (!user) {
+    console.log('❌ Usuario no encontrado.');
+    return;
   }
+  const isMatch = await bcrypt.compare(password, user.password);
+  console.log(`🔐 ¿La contraseña coincide? → ${isMatch}`);
 }
 
-// Insertar usuario y luego verificar la contraseña
+// Ejecución
 (async () => {
-  await insertUser('alejandra1308castellanos@gmail.com', '123456', 'admin');
-  await verificarPassword('alejandra1308castellanos@gmail.com', '123456');
+  await insertUser('usuario@gmail.com', '123456', 'production');
+  await verificarPassword('usuario@gmail.com', '123456');
 })();

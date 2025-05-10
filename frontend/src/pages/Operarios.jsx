@@ -4,6 +4,8 @@ import OperarioList from '../components/OperarioList';
 import OperarioForm from '../components/OperarioForm';
 import Pagination from '../components/Pagination';
 import { useNavigate } from 'react-router-dom';
+import { SidebarAdmin } from '../components/SidebarAdmin';
+import Navbar from '../components/Navbar';
 
 const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10 }) => {
     const navigate = useNavigate();
@@ -102,67 +104,80 @@ const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRe
 
 
   return (
-      <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
-          <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Operarios</h1>
-          <div className="flex justify-between items-center mb-4">
-              <button onClick={handleCrear} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              >Crear Nuevo Operario</button>
-              <div className="flex items-center">
-                  <label htmlFor="searchText" className="mr-2 text-gray-700">Buscar por Nombre:</label>
-                  <input
-                      type="text"
-                      id="searchText"
-                      value={searchText}
-                      onChange={handleSearchTextChange}
-                      className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                  />
-                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer ml-2" 
-                  onClick={() => navigate('/admin-dashboard')}>Atras</button>
-              </div>
-          </div>
+    <>
+        <Navbar />
+        <div className="flex bg-gray-100 h-screen">
+            <SidebarAdmin />
 
-          {loading ? (
-              <div className="flex justify-center items-center py-8 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"
-              >Cargando operarios...</div>
-          ) : (
-              <>
-                  {modo === 'listar' && (
-                      <div className="overflow-x-auto">
-                          <OperarioList operarios={filteredOperarios} onEditar={handleEditar} onEliminar={handleEliminar} />
-                      </div>
-                  )}
-
-                  {filteredOperarios.length > 0 && modo === 'listar' && searchText && (
-                      <p className="mt-2 text-gray-600">{filteredOperarios.length} resultados encontrados para "{searchText}"</p>
-                  )}
-
-                  {totalResults > 0 && modo === 'listar' && !searchText && (
-                      <div className="mt-4">
-                          <Pagination
-                              totalResults={totalResults}
-                              currentPage={currentPage}
-                              onPageChange={handlePageChange}
-                              itemsPerPage={itemsPerPage}
-                          />
-                      </div>
-                  )}
-
-                  {modo === 'crear' && (
-                    <div className="mt-6">
-                        <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Nuevo Operario</h2>
-                        <OperarioForm onGuardar={handleGuardar} onCancelar={handleCancelar} />
+            <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
+                <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Operarios</h1>
+                <div className="flex justify-between items-center mb-4">
+                    <button onClick={handleCrear} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                    >Crear Nuevo Operario</button>
+                    {modo === 'listar' && (
+                    <div className="flex items-center">
+                        <label htmlFor="searchText" className="mr-2 text-gray-700">Buscar por Nombre:</label>
+                        <input
+                            type="text"
+                            id="searchText"
+                            value={searchText}
+                            onChange={handleSearchTextChange}
+                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        />
+                        <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer ml-2" 
+                        onClick={() => navigate('/admin-dashboard')}>Atras</button>
                     </div>
-                  )}
-                  {modo === 'editar' && operarioAEditar && (
-                    <div className="mt-6">
-                        <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar Operario</h2>
-                        <OperarioForm operarioInicial={operarioAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar} />
-                    </div>
-                  )}
-                  </>        
-                )}
+                    )}
                 </div>
-              );
-            };
 
+                {loading ? (
+                    <div className="flex justify-center items-center py-8 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"
+                    ></div>
+                ) : (
+                    <>
+                        {modo === 'listar' && (
+                            <div className="overflow-x-auto">
+                                <OperarioList operarios={filteredOperarios} onEditar={handleEditar} onEliminar={handleEliminar} />
+                            </div>
+                        )}
+
+                        {filteredOperarios.length > 0 && modo === 'listar' && searchText && (
+                            <p className="mt-2 text-gray-600">{filteredOperarios.length} resultados encontrados para "{searchText}"</p>
+                        )}
+
+                        {totalResults > 0 && modo === 'listar' && !searchText && (
+                            <div className="mt-4">
+                                <Pagination
+                                    totalResults={totalResults}
+                                    currentPage={currentPage}
+                                    onPageChange={handlePageChange}
+                                    itemsPerPage={itemsPerPage}
+                                />
+                            </div>
+                        )}
+
+                        {modo === 'crear' && (
+                          <div className="mt-6">
+                              <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Nuevo Operario</h2>
+                              <OperarioForm onGuardar={handleGuardar} onCancelar={handleCancelar} />
+                          </div>
+                        )}
+                        {modo === 'editar' && operarioAEditar && (
+                          <div className="mt-6">
+                              <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar Operario</h2>
+                              <button
+                                  onClick={() => setModo('listar')}
+                                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-md transition cursor-pointer mb-4"
+                              >Atrás</button>
+                              <OperarioForm operarioInicial={operarioAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar} />
+                          </div>
+                        )}
+                        </>        
+                      )}
+                      </div>
+                  </div>
+          </>
+      );
+}  
+    
 export default OperariosPage;

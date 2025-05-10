@@ -1,106 +1,106 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import MaquinasList from '../components/MaquinasList';
-import MaquinaForm from '../components/MaquinaForm';
+import UsuarioList from '../components/UsuarioList';
+import UsuarioForm from '../components/UsuarioForm';
 import Pagination from '../components/Pagination';
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import Navbar from '../components/Navbar';
 
-const MaquinasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10 }) => {
+const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10 }) => {
     const navigate = useNavigate();
-    const [maquinas, setMaquinas] = useState([]);
+    const [usuarios, setUsuarios] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
-    const [maquinaAEditar, setMaquinaAEditar] = useState(null);
+    const [usuarioAEditar, setUsuarioAEditar] = useState(null);
     const [loading, setLoading] = useState(false);
     const [totalPages, setTotalPages] = useState(0);
-    const [searchText, setSearchText] = useState(''); // Para la búsqueda de máquinas
-    const [filteredMaquinas, setFilteredMaquinas] = useState([]); 
+    const [searchText, setSearchText] = useState(''); // Para la búsqueda de usuarios
+    const [filteredUsuarios, setFilteredUsuarios] = useState([]); 
     const [currentPage, setCurrentPage] = useState(propCurrentPage || 1);
     const [totalResults, setTotalResults] = useState(propTotalResults || 0);
 
-
-    const cargarMaquinas = useCallback(async (page = 1, search = '') => {
-            setLoading(true);
+    const cargarUsuarios = useCallback(async (page = 1, search = '') => {
+        setLoading(true);
         try {
-            const response = await axios.get(`http://localhost:5000/api/maquinas?page=${page}&limit=${itemsPerPage}&search=${search}`);
-            setMaquinas(response.data.maquinas);
+            const response = await axios.get(`http://localhost:5000/api/usuarios?page=${page}&limit=${itemsPerPage}&search=${search}`);
+            setUsuarios(response.data.usuarios);
             setTotalPages(response.data.totalPages);
             setTotalResults(response.data.totalResults);
         } catch (error) {
-            console.error('Error al cargar las máquinas:', error);
+            console.error('Error al cargar los usuarios:', error);
         } finally {
             setLoading(false);
         }
     }, [itemsPerPage]);
 
     useEffect(() => {
-        cargarMaquinas(currentPage, searchText); // Llama a cargarMaquinas con los valores correctos
-    }, [currentPage, cargarMaquinas, searchText]);
+        cargarUsuarios(currentPage, searchText); // Llama a cargarUsuarios con los valores correctos
+    }, [currentPage, cargarUsuarios, searchText]);
 
     useEffect(() => {
-      if (maquinas && Array.isArray(maquinas)) { 
+      if (usuarios && Array.isArray(usuarios)) { 
           if (searchText) {
-              const filtered = maquinas.filter(maquinas =>
-                  maquinas.nombre.toLowerCase().includes(searchText.toLowerCase())
+              const filtered = usuarios.filter(usuario =>
+                  usuario.nombre.toLowerCase().includes(searchText.toLowerCase())
               );
-              setFilteredMaquinas(filtered);
+              setFilteredUsuarios(filtered);
           } else {
-              setFilteredMaquinas(maquinas);
+              setFilteredUsuarios(usuarios);
           }
       } else {
-          setFilteredMaquinas([]); // O algún otro valor por defecto seguro
+          setFilteredUsuarios([]); // O algún otro valor por defecto seguro
       }
-  }, [searchText, maquinas]);
+    }, [searchText, usuarios]);
 
     const handleSearchTextChange = (event) => {
-    setSearchText(event.target.value);
-    setCurrentPage(1);
-};
+        setSearchText(event.target.value);
+        setCurrentPage(1); // Resetear la página al buscar
+    };
 
     const handlePageChange = (newPage) => {
         setCurrentPage(newPage);
     };
 
-
     const handleCrear = () => {
-        setModo('crear');
+        setModo('crear');    
     };
 
-    const handleEditar = (maquina) => {
-        setMaquinaAEditar(maquina);
+    const handleEditar = (usuario) => {
         setModo('editar');
+        setUsuarioAEditar(usuario);
     };
 
-    const handleGuardar = async (maquina) => {
+    const handleGuardar = async (usuario) => {
         try {
-            if (maquinaAEditar) {
-                await axios.put(`http://localhost:5000/api/maquinas/${maquinaAEditar._id}`, maquina);
-            } else {
-                await axios.post('http://localhost:5000/api/maquinas', maquina);
+            if (usuarioAEditar) {
+                // Actualizar usuario
+                await axios.put(`http://localhost:5000/api/usuarios/${usuarioAEditar._id}`, usuario);
+            }else {
+                // Crear nuevo usuario
+                await axios.post('http://localhost:5000/api/usuarios', usuario);
             }
-            cargarMaquinas(currentPage, searchText); // Recarga con la página y búsqueda actuales
-            setModo('listar');
-            setMaquinaAEditar(null);
+            cargarUsuarios(currentPage, searchText); // Recargar usuarios después de crear/editar
+            setModo('listar'); // Volver al modo listar
+            setUsuarioAEditar(null);
         } catch (error) {
-            console.error('Error al guardar la máquina:', error);
+            console.error('Error al guardar el usuario:', error);
         }
     };
 
     const handleEliminar = async (id) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar esta máquina?')) {
+        if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
             try {
-                await axios.delete(`http://localhost:5000/api/maquinas/${id}`);
-                cargarMaquinas(currentPage, searchText); // Recarga con la página y búsqueda actuales
+                await axios.delete(`http://localhost:5000/api/usuarios/${id}`);
+                cargarUsuarios(currentPage, searchText); // Recargar usuarios después de eliminar
             } catch (error) {
-                console.error('Error al eliminar la máquina:', error);
+                console.error('Error al eliminar el usuario:', error);
             }
         }
     };
 
     const handleCancelar = () => {
         setModo('listar');
-        setMaquinaAEditar(null);
+        setUsuarioAEditar(null);
     };
 
     return (
@@ -110,10 +110,10 @@ const MaquinasPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
                 <SidebarAdmin />
 
                 <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
-                    <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Máquinas</h1>
+                    <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Usuarios</h1>
                     <div className="flex justify-between items-center mb-4">
                         <button onClick={handleCrear} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                        >Crear Maquina</button>
+                        >Crear Usuario</button>
                         {modo === 'listar' && (
                         <div className="flex items-center">
                             <label htmlFor="searchText" className="mr-2 text-gray-700">Buscar por Nombre:</label>
@@ -127,24 +127,22 @@ const MaquinasPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
                             <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer" 
                             onClick={() => navigate('/admin-dashboard')}>Atras</button>
                         </div>
-                    )}
+                        )}
                     </div>
 
                     {loading ? (
-                        <div className="flex justify-center items-center py-8 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"
-                            ></div>
+                        <div className="flex justify-center items-center py-8 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"></div>
                     ) : (
                         <>
-                            {modo === 'listar' && (
-                                <div className="overflow-x-auto">
-                                    <MaquinasList maquinas={filteredMaquinas} onEditar={handleEditar} onEliminar={handleEliminar} />
-                                </div>
-                            )}
+                        {modo === 'listar' && (
+                            <div className="overflow-x-auto">
+                                <UsuarioList usuarios={filteredUsuarios} onEditar={handleEditar} onEliminar={handleEliminar} />
+                            </div>
+                        )}
 
-                            {filteredMaquinas.length > 0 && modo === 'listar' && searchText && (
-                              <p className="mt-2 text-gray-600">{filteredMaquinas.length} resultados encontrados para "{searchText}"</p>
-                          )}
-
+                        {filteredUsuarios.length > 0 && modo === 'listar' && searchText && (
+                            <p className="mt-2 text-gray-600">{filteredUsuarios.length} resultados encontrados para "{seachText}"</p>
+                        )}
                             {totalResults > 0 && modo === 'listar' && !searchText && (
                                 <div className="mt-4">
                                     <Pagination
@@ -158,19 +156,19 @@ const MaquinasPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
 
                             {modo === 'crear' && (
                                 <div className="mt-6">
-                                    <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Nueva Máquina</h2>
-                                    <MaquinaForm onGuardar={handleGuardar} onCancelar={handleCancelar} />
+                                    <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Nuevo Usuario</h2>
+                                    <UsuarioForm onGuardar={handleGuardar} onCancelar={handleCancelar} />
                                 </div>
-                            )}
+                            )}   
 
-                            {modo === 'editar' && maquinaAEditar && (
+                            {modo === 'editar' && usuarioAEditar && (
                                 <div className="mt-6">
-                                    <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar Máquina</h2>
+                                    <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar Usuario</h2>
                                     <button
                                         onClick={() => setModo('listar')}
                                         className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-md transition cursor-pointer mb-4"
                                     >Atrás</button>
-                                    <MaquinaForm maquinaInicial={maquinaAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar} />
+                                    <UsuarioForm usuario={usuarioAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar} />
                                 </div>
                             )}
                         </>
@@ -181,4 +179,4 @@ const MaquinasPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
     );
 };
 
-export default MaquinasPage;
+export default UsuariosPage;

@@ -26,7 +26,7 @@ const ValidateCedula = () => {
       const storedToken = localStorage.getItem('token');
       const config = storedToken ? { headers: { Authorization: `Bearer ${storedToken}` } } : {};
 
-      const response = await axiosInstance.post('operator/validate-cedula', { cedula }, config);
+      const response = await axiosInstance.post('/operarios/validate-cedula', { cedula }, config);
       const { operario, token } = response.data;
 
       if (!operario || (!operario.id && !operario._id)) {

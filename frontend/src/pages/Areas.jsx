@@ -4,6 +4,8 @@ import AreaForm from '../components/AreaForm';
 import AreasList from '../components/AreasList';
 import Pagination from '../components/Pagination';
 import { useNavigate } from 'react-router-dom';
+import { SidebarAdmin } from '../components/SidebarAdmin';
+import Navbar from '../components/Navbar';
 
 const AreasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10 }) => {
     const navigate = useNavigate();
@@ -100,70 +102,108 @@ const AreasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResult
     };
 
 
-    return (
-        <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
-            <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Areas de Producción</h1>
-            <div className="flex justify-between items-center mb-4">
-            <button onClick={handleCrear} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              >Crear Nueva Area de Producción</button>
-              <div className="flex items-center">
-              <label htmlFor="searchText" className="mr-2 text-gray-700">Buscar por Nombre:</label>
-              <input
-                type="text"
-                id="searchText"
-                value={searchText}
-                onChange={handleSearchTextChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                />
-            <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer ml-2" 
-            onClick={() => navigate('/admin-dashboard')}>Atras</button>
+return (
+    <>
+        <Navbar />
+        <div className="flex bg-gray-100 h-screen">
+            <SidebarAdmin />
+
+            <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
+                <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Áreas de Producción</h1>
+
+                <div className="flex justify-between items-center mb-4">
+                    <button
+                        onClick={handleCrear}
+                        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                    >
+                        Crear Nueva Área de Producción
+                    </button>
+
+                    {modo === 'listar' && (
+                        <div className="flex items-center">
+                            <label htmlFor="searchText" className="mr-2 text-gray-700">
+                                Buscar por Nombre:
+                            </label>
+                            <input
+                                type="text"
+                                id="searchText"
+                                value={searchText}
+                                onChange={handleSearchTextChange}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            />
+                            <button
+                                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer ml-2"
+                                onClick={() => navigate('/admin-dashboard')}
+                            >
+                                Atrás
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {loading ? (
+                    <div className="flex justify-center items-center py-8">
+                        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"></div>
+                    </div>
+                ) : (
+                    <>
+                        {modo === 'listar' && (
+                            <div className="overflow-x-auto">
+                                <AreasList
+                                    areas={filteredAreas}
+                                    onEditar={handleEditar}
+                                    onEliminar={handleEliminar}
+                                />
+                            </div>
+                        )}
+
+                        {filteredAreas.length > 0 && modo === 'listar' && searchText && (
+                            <p className="mt-2 text-gray-600">
+                                {filteredAreas.length} resultados encontrados para "{searchText}"
+                            </p>
+                        )}
+
+                        {totalResults > 0 && modo === 'listar' && !searchText && (
+                            <div className="mt-4">
+                                <Pagination
+                                    totalResults={totalResults}
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    itemsPerPage={itemsPerPage}
+                                    onPageChange={handlePageChange}
+                                />
+                            </div>
+                        )}
+
+                        {modo === 'crear' && (
+                            <div className="mt-6">
+                                <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Área de Producción</h2>
+                                <AreaForm onGuardar={handleGuardar} onCancelar={handleCancelar} />
+                            </div>
+                        )}
+
+                        {modo === 'editar' && areaAEditar && (
+                            <div className="mt-6">
+                                <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar Área de Producción</h2>
+                                <button
+                                    onClick={() => setModo('listar')}
+                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-md transition cursor-pointer mb-4"
+                                >
+                                    Atrás
+                                </button>
+                                <AreaForm
+                                    areaInicial={areaAEditar}
+                                    onGuardar={handleGuardar}
+                                    onCancelar={handleCancelar}
+                                />
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
         </div>
-
-        {loading ? (
-            <div className="flex justify-center items-center py-8 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid">
-                <p className="ml-3 text-gray-600">Cargando areas...</p>
-            </div>
-        ) : (
-            <>
-                {modo === 'listar' && (
-                    <div className="overflow-x-auto">
-                        <AreasList areas={filteredAreas} onEditar={handleEditar} onEliminar={handleEliminar} />
-                    </div>
-                )}
-
-                {filteredAreas.length > 0 && modo === 'listar' && searchText && (
-                    <p className="mt-2 text-gray-600">{filteredAreas.length} resultados encontrados para "{searchText}"</p>
-                )}
-
-                {totalResults > 0 && modo === 'listar' && !searchText && (
-                    <div className="mt-4">
-                        <Pagination
-                            totalResults={totalResults}
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            itemsPerPage={itemsPerPage}
-                            onPageChange={handlePageChange}
-                        />
-                    </div>
-                )}
-
-                {modo === 'crear' && (
-                    <div className="mt-6">
-                        <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Area de Producción</h2>
-                        <AreaForm onGuardar={handleGuardar} onCancelar={handleCancelar}/>
-                    </div>
-                )} 
-                {modo === 'editar' && areaAEditar && (
-                    <div className="mt-6">
-                        <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar Area de Producción</h2>
-                        <AreaForm areaInicial={areaAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar}/>
-                    </div>
-                )}
-            </>
-        )}
-    </div>
-    );
+    </>
+);
 };
 
 export default AreasPage;
