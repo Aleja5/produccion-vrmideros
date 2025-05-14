@@ -31,6 +31,7 @@ const OperarioForm = ({ operarioInicial, onGuardar, onCancelar }) => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -41,6 +42,7 @@ const OperarioForm = ({ operarioInicial, onGuardar, onCancelar }) => {
             value={cedula}
             onChange={(e) => setCedula(e.target.value)}
             required
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <button type="submit">Guardar</button>

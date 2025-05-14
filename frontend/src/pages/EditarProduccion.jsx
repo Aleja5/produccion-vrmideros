@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { verificarYCrear } from '../utils/verificarYCrear';
 import { confirmAlert } from 'react-confirm-alert';
 import 'react-confirm-alert/src/react-confirm-alert.css';
+import { useNavigate } from 'react-router-dom';
 
 function EditarProduccion({ produccion, onClose, onGuardar }) {
   const [registroEditado, setRegistroEditado] = useState({});
@@ -13,6 +14,32 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
   const [maquinas, setMaquinas] = useState([]);
   const [areasProduccion, setAreasProduccion] = useState([]);
   const [observaciones, setObservaciones] = useState("");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let timeoutId;
+
+    const resetTimeout = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        toast.warning("Tiempo de inactividad alcanzado. Redirigiendo a validación de cédula.");
+        navigate("/validate-cedula");
+      }, 180000); // 3 minutos de inactividad
+    };
+
+    const handleActivity = () => resetTimeout();
+
+    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+
+    resetTimeout();
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+    };
+  }, [navigate]);
 
   useEffect(() => {
     if (produccion) {
@@ -72,69 +99,75 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
 
   const guardarEdicion = async () => {
     try {
-      confirmAlert({
-        title: 'Confirmar Guardado',
-        message: '¿Estás seguro de que deseas guardar los cambios?',
-        buttons: [
-          {
-            label: 'Sí',
-            onClick: async () => {
-              if (!registroEditado || Object.keys(registroEditado).length === 0) {
-                toast.error("⚠️ No hay datos para guardar.");
-                return;
-              }
+        // Validar que todos los campos obligatorios estén completos
+        if (!registroEditado.fecha || !registroEditado.proceso || !registroEditado.insumos || !registroEditado.maquina || !registroEditado.areaProduccion) {
+            toast.error("⚠️ Por favor, completa todos los campos obligatorios antes de guardar.");
+            return;
+        }
 
-              const normalizarTexto = (texto) => (typeof texto === 'string' ? texto.trim().toLowerCase() : texto);
+        confirmAlert({
+            title: 'Confirmar Guardado',
+            message: '¿Estás seguro de que deseas guardar los cambios?',
+            buttons: [
+                {
+                    label: 'Sí',
+                    onClick: async () => {
+                        if (!registroEditado || Object.keys(registroEditado).length === 0) {
+                            toast.error("⚠️ No hay datos para guardar.");
+                            return;
+                        }
 
-              const otiId = await verificarYCrear(normalizarTexto(registroEditado.oti?.numeroOti || ''), "oti");
-              const procesoId = registroEditado.proceso;
-              const insumoId = registroEditado.insumos;
-              const areaId = registroEditado.areaProduccion;
-              const maquinaId = registroEditado.maquina;
+                        const normalizarTexto = (texto) => (typeof texto === 'string' ? texto.trim().toLowerCase() : texto);
 
-              if (!otiId || !procesoId || !areaId || !maquinaId || !insumoId) {
-                toast.error("❌ No se pudieron verificar o crear todas las entidades requeridas.");
-                return;
-              }
+                        const otiId = await verificarYCrear(normalizarTexto(registroEditado.oti?.numeroOti || ''), "oti");
+                        const procesoId = registroEditado.proceso;
+                        const insumoId = registroEditado.insumos;
+                        const areaId = registroEditado.areaProduccion;
+                        const maquinaId = registroEditado.maquina;
 
-              const datosActualizados = {
-                _id: produccion._id, // Usar el _id de la producción que se está editando
-                oti: otiId,
-                operario: produccion.operario?._id || produccion.operario,
-                proceso: procesoId,
-                insumos: insumoId,
-                areaProduccion: areaId,
-                maquina: maquinaId,
-                fecha: registroEditado.fecha || null,
-                tiempoPreparacion: parseInt(registroEditado.tiempoPreparacion, 10),
-                tiempoOperacion: parseInt(registroEditado.tiempoOperacion, 10),
-                observaciones: registroEditado.observaciones // Agregar observaciones
-              };
+                        if (!otiId || !procesoId || !areaId || !maquinaId || !insumoId) {
+                            toast.error("❌ No se pudieron verificar o crear todas las entidades requeridas.");
+                            return;
+                        }
 
-              const response = await axiosInstance.put(`/produccion/actualizar/${produccion._id}`, datosActualizados);
+                        const datosActualizados = {
+                            _id: produccion._id, // Usar el _id de la producción que se está editando
+                            oti: otiId,
+                            operario: produccion.operario?._id || produccion.operario,
+                            proceso: procesoId,
+                            insumos: insumoId,
+                            areaProduccion: areaId,
+                            maquina: maquinaId,
+                            fecha: registroEditado.fecha || null,
+                            tiempoPreparacion: parseInt(registroEditado.tiempoPreparacion, 10),
+                            tiempoOperacion: parseInt(registroEditado.tiempoOperacion, 10),
+                            observaciones: registroEditado.observaciones // Agregar observaciones
+                        };
 
-              if (response.status >= 200 && response.status < 300) {
-                toast.success("✅ Producción actualizada con éxito");
-                onGuardar(); // Llama a la función para recargar los datos en el dashboard
-                onClose(); // Cierra el modal
-              } else {
-                throw new Error("⚠️ La respuesta del servidor no indica éxito.");
-              }
-            }
-          },
-          {
-            label: 'Cancelar',
-            onClick: () => {}
-          }
-        ]
-      });
+                        const response = await axiosInstance.put(`/produccion/actualizar/${produccion._id}`, datosActualizados);
+
+                        if (response.status >= 200 && response.status < 300) {
+                            toast.success("✅ Producción actualizada con éxito");
+                            onGuardar(); // Llama a la función para recargar los datos en el dashboard
+                            onClose(); // Cierra el modal
+                        } else {
+                            throw new Error("⚠️ La respuesta del servidor no indica éxito.");
+                        }
+                    }
+                },
+                {
+                    label: 'Cancelar',
+                    onClick: () => {}
+                }
+            ]
+        });
     } catch (error) {
-      console.error('❌ Error al editar la producción:', error);
-      if (error.response) {
-        toast.error(`Error: ${error.response.data.message || "No se pudo guardar la edición."}`);
-      } else {
-        toast.error(`⚠️ Error: ${error.message}`);
-      }
+        console.error('❌ Error al editar la producción:', error);
+        if (error.response) {
+            toast.error(`Error: ${error.response.data.message || "No se pudo guardar la edición."}`);
+        } else {
+            toast.error(`⚠️ Error: ${error.message}`);
+        }
     }
   };
 

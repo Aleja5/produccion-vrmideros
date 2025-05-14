@@ -5,6 +5,8 @@ import * as XLSX from 'xlsx';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import axiosInstance from '../utils/axiosInstance';
 import Pagination from '../components/Pagination'; 
+import { toast } from 'react-toastify';
+import { Button, Card } from '../components/ui';
 
 const AdminDashboard = () => {
   const [resultados, setResultados] = useState([]);
@@ -14,6 +16,7 @@ const AdminDashboard = () => {
   const [itemsPerPage] = useState(10); // Define cuántos resultados mostrar por página
   const [totalResults, setTotalResults] = useState(0); // Para saber cuántos resultados totales hay
   const [error, setError] = useState(null);
+  const [jornadas, setJornadas] = useState([]);
 
   const calcularTotalHoras = (data) => {
     if (Array.isArray(data)) {
@@ -122,6 +125,22 @@ const AdminDashboard = () => {
     console.log("Página cambiada a:", newPage);
   };
 
+  useEffect(() => {
+    const fetchJornadas = async () => {
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get('/jornadas');
+        setJornadas(response.data);
+      } catch (error) {
+        console.error('Error al obtener jornadas:', error);
+        toast.error('No se pudieron cargar las jornadas.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJornadas();
+  }, []);
 
   console.log('🔄 AdminDashboard Render - loading:', loading, 'resultados:', resultados.length, 'totalResults:', totalResults);
   console.log('🔄 Renderizando AdminDashboard - totalResults:', totalResults, 'resultados:', resultados.length);
@@ -190,6 +209,23 @@ const AdminDashboard = () => {
                   />
                 </div>
               )}
+            </div>
+
+            <div className="mt-8">
+              <h2 className="text-xl font-bold mb-4">Jornadas Registradas</h2>
+              {loading && <p>Cargando jornadas...</p>}
+              {!loading && jornadas.length === 0 && <p>No se encontraron jornadas.</p>}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {jornadas.map((jornada) => (
+                  <Card key={jornada._id} className="p-4">
+                    <h2 className="text-lg font-semibold">Operario: {jornada.operario.name}</h2>
+                    <p>Fecha: {new Date(jornada.fecha).toLocaleDateString()}</p>
+                    <p>Actividades: {jornada.registros.length}</p>
+                    <Button variant="secondary" onClick={() => console.log('Ver detalles')}>Ver detalles</Button>
+                  </Card>
+                ))}
+              </div>
             </div>
           </div>
         </div>

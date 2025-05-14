@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const winston = require('winston');
 const Produccion = require("../models/Produccion");
+const Jornada = require("../models/Jornada"); // Asegúrate de tener el modelo de Jornada
 
 // Configuración del logger
 const logger = winston.createLogger({
@@ -55,101 +56,72 @@ exports.getAllProduccion = async (req, res) => {
 // 📌 Registrar Producción
 exports.registrarProduccion = async (req, res) => {
     try {
-        console.log("📥 Datos recibidos para guardar:", req.body);
-        logger.info('Cuerpo de la solicitud recibido:', req.body);
-        
-        const { operario, oti, proceso, areaProduccion, maquina, fecha, tiempoPreparacion, tiempoOperacion, insumos } = req.body;
+        const { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, horaInicioPreparacion, horaFinPreparacion, horaInicioOperacion, horaFinOperacion, observaciones } = req.body;
+
         // Validar campos requeridos
-        if (!oti || !proceso || !areaProduccion || !maquina || !fecha || !insumos || tiempoPreparacion === undefined || tiempoOperacion === undefined) {
-            console.error("❌ Error: Faltan campos requeridos", req.body);
+        if (!operario || !fecha || !oti || !proceso || !areaProduccion || !maquina || !insumos) {
             return res.status(400).json({ msg: 'Faltan campos requeridos' });
         }
 
-        // Validar operario antes de seguir
-        if (!operario || !mongoose.Types.ObjectId.isValid(operario)) {
-            console.error("❌ Error: El ID del operario no es válido o no existe:", operario);
-            return res.status(400).json({ msg: 'Operario no válido' });
+        // Buscar o crear la jornada correspondiente
+        const fechaISO = new Date(fecha).toISOString().split('T')[0];
+        let jornada = await Jornada.findOne({ operario, fecha: fechaISO });
+
+        if (!jornada) {
+            jornada = new Jornada({ operario, fecha: fechaISO, registros: [] });
+            await jornada.save();
         }
 
-        console.log("🔍 Buscando operario en BD con ID:", operario);
-        const operarioDB = await Operario.findById(operario);
-        if (!operarioDB) {
-            console.error("❌ Error: Operario no encontrado en la base de datos:", operario);
-            return res.status(404).json({ msg: "Operario no encontrado" });
+        // Calcular tiempos de preparación y operación
+        let tiempoPreparacion = 0;
+        let tiempoOperacion = 0;
+
+        if (horaInicioPreparacion && horaFinPreparacion) {
+            const inicioPreparacion = new Date(`1970-01-01T${horaInicioPreparacion}:00`);
+            const finPreparacion = new Date(`1970-01-01T${horaFinPreparacion}:00`);
+
+            if (finPreparacion > inicioPreparacion) {
+                tiempoPreparacion = Math.floor((finPreparacion - inicioPreparacion) / 60000); // Convertir a minutos
+            } else {
+                return res.status(400).json({ msg: 'La hora de fin de preparación debe ser mayor que la hora de inicio' });
+            }
         }
 
-        console.log("✅ Operario encontrado:", operarioDB);
+        if (horaInicioOperacion && horaFinOperacion) {
+            const inicioOperacion = new Date(`1970-01-01T${horaInicioOperacion}:00`);
+            const finOperacion = new Date(`1970-01-01T${horaFinOperacion}:00`);
 
-        // Validar fecha
-        const fechaValida = new Date(fecha);
-        if (isNaN(fechaValida.getTime())) {
-            return res.status(400).json({ msg: 'Fecha inválida' });
+            if (finOperacion > inicioOperacion) {
+                tiempoOperacion = Math.floor((finOperacion - inicioOperacion) / 60000); // Convertir a minutos
+            } else {
+                return res.status(400).json({ msg: 'La hora de fin de operación debe ser mayor que la hora de inicio' });
+            }
         }
 
-        
-
-        console.log("✅ Valores recibidos:", { oti, proceso, areaProduccion, maquina, insumos });
-
-        // 🔹 Convertir `oti` a ObjectId
-const otiId = new mongoose.Types.ObjectId(oti);
-const otiExistente = await Oti.findOne({ _id: otiId });
-
-if (!otiExistente) {
-    console.error(`❌ OTI con ID ${oti} no encontrada en la base de datos`);
-    return res.status(404).json({ msg: "OTI no encontrada" });
-}
-
-console.log("📥 ID recibido para proceso:", req.body.proceso);
-
-const procesoId = new mongoose.Types.ObjectId(proceso);
-const procesoExistente = await Proceso.findOne({ _id: procesoId });
-if (!procesoExistente) {
-    console.error(`❌ Proceso con ID ${proceso} no encontrado en la base de datos`);
-    return res.status(404).json({ msg: "Proceso no encontrado" });
-}
-
-const areaId = new mongoose.Types.ObjectId(areaProduccion);
-const areaExistente = await AreaProduccion.findOne({ _id: areaId });
-if (!areaExistente) return res.status(404).json({ msg: "Área de producción no encontrada" });
-
-const maquinaId = new mongoose.Types.ObjectId(maquina);
-const maquinaExistente = await Maquina.findOne({ _id: maquinaId });
-if (!maquinaExistente) return res.status(404).json({ msg: "Máquina no encontrada" });
-
-const insumosId = new mongoose.Types.ObjectId(insumos);
-const insumosExistente = await Insumos.findOne({ _id: insumosId });
-if (!insumosExistente) return res.status(404).json({ msg: "Insumo no encontrado" });
-
-
-        // 📌 Guardar Registro de Producción
+        // Crear el registro de producción
         const nuevaProduccion = new Produccion({
-            oti: otiExistente._id,
-            operario: operarioDB._id,
-            fecha: fechaValida,
-            proceso: procesoExistente._id,
-            areaProduccion: areaExistente._id,
-            maquina: maquinaExistente._id,
-            insumos: insumosExistente._id,
+            operario,
+            fecha,
+            oti,
+            proceso,
+            areaProduccion,
+            maquina,
+            insumos,
             tiempoPreparacion,
             tiempoOperacion,
-            observaciones: req.body.observaciones || "" // Asegurar que se incluya el campo observaciones
+            observaciones
         });
-
-        console.log("🔍 Producción antes de guardar:", nuevaProduccion);
 
         const produccionGuardada = await nuevaProduccion.save();
-        console.log("✅ Producción guardada en BD:", produccionGuardada);
 
-        logger.info("Registro de producción guardado exitosamente", { produccion: produccionGuardada });
+        // Asociar el registro a la jornada
+        jornada.registros.push(produccionGuardada._id);
+        await jornada.save();
 
-        res.status(201).json({ 
-            msg: "Registro de producción guardado exitosamente", 
-            produccion: produccionGuardada 
-        });
-
+        res.status(201).json({ msg: 'Producción registrada y vinculada a la jornada', produccion: produccionGuardada });
     } catch (error) {
-        logger.error('Error al registrar producción:', error);
-        res.status(500).json({ msg: 'Error al guardar el registro de producción', error: error.message });
+        console.error('Error al registrar producción:', error);
+        res.status(500).json({ msg: 'Error interno del servidor' });
     }
 };
 

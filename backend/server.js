@@ -14,6 +14,7 @@ const insumosRoutes = require('./src/routes/insumosRoutes');
 const procesosRoutes = require('./src/routes/procesosRoutes');
 const usuarioRoutes = require('./src/routes/usuarioRoutes');
 const areaRoutes = require('./src/routes/areaRoutes');
+const jornadaRoutes = require('./src/routes/jornadaRoutes');
 
 // Cargar variables de entorno
 dotenv.config();
@@ -39,6 +40,7 @@ app.use('/api/insumos', insumosRoutes);
 app.use('/api/procesos', procesosRoutes);
 app.use('/api/areas', areaRoutes);
 app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/jornadas', jornadaRoutes);
 
 
 app.use((req, res, next) => {

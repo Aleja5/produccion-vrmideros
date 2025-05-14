@@ -6,7 +6,7 @@ import ForgotPassword from './pages/ForgotPassword'; // Componente de recuperaci
 import AdminDashboard from './pages/AdminDashboard';
 import ValidateCedula from './pages/ValidateCedula';
 import OperarioDashboard from './pages/OperarioDashboard';
-import RegistroPage from './pages/RegistroProduccion';
+import RegistroProduccion from './components/RegistroProduccion';
 import EditarProduccion from './pages/EditarProduccion';
 
 import ProtectedRoute from './components/ProtectedRoute';
@@ -80,7 +80,7 @@ function App() {
           path="/registro-produccion"
           element={
             <ProtectedRoute allowedRoles={['production']}>
-              <RegistroPage />
+              <RegistroProduccion />
             </ProtectedRoute>
           }
         />
