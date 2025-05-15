@@ -1,7 +1,9 @@
 const mongoose = require("mongoose");
 const winston = require('winston');
 const Produccion = require("../models/Produccion");
-const Jornada = require("../models/Jornada"); // Asegúrate de tener el modelo de Jornada
+const Jornada = require("../models/Jornada");
+const verificarYCrearOti = require('../utils/verificarYCrearEntidad');
+
 
 // Configuración del logger
 const logger = winston.createLogger({
@@ -58,19 +60,27 @@ exports.registrarProduccion = async (req, res) => {
     try {
         const { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, horaInicioPreparacion, horaFinPreparacion, horaInicioOperacion, horaFinOperacion, observaciones } = req.body;
 
+        // Log de datos recibidos
+        logger.info('Datos recibidos en registrarProduccion:', req.body);
+
         // Validar campos requeridos
         if (!operario || !fecha || !oti || !proceso || !areaProduccion || !maquina || !insumos) {
+            logger.warn('Faltan campos requeridos:', { operario, fecha, oti, proceso, areaProduccion, maquina, insumos });
             return res.status(400).json({ msg: 'Faltan campos requeridos' });
         }
 
         // Buscar o crear la jornada correspondiente
         const fechaISO = new Date(fecha).toISOString().split('T')[0];
-        let jornada = await Jornada.findOne({ operario, fecha: fechaISO });
+        logger.info('Fecha ISO calculada:', fechaISO);
 
+        let jornada = await Jornada.findOne({ operario, fecha: fechaISO });
         if (!jornada) {
+            logger.info('No se encontró jornada, creando una nueva.');
             jornada = new Jornada({ operario, fecha: fechaISO, registros: [] });
             await jornada.save();
         }
+
+        logger.info('Jornada creada o encontrada:', jornada);
 
         // Calcular tiempos de preparación y operación
         let tiempoPreparacion = 0;
@@ -83,6 +93,7 @@ exports.registrarProduccion = async (req, res) => {
             if (finPreparacion > inicioPreparacion) {
                 tiempoPreparacion = Math.floor((finPreparacion - inicioPreparacion) / 60000); // Convertir a minutos
             } else {
+                logger.warn('Hora de fin de preparación menor que hora de inicio:', { horaInicioPreparacion, horaFinPreparacion });
                 return res.status(400).json({ msg: 'La hora de fin de preparación debe ser mayor que la hora de inicio' });
             }
         }
@@ -94,33 +105,40 @@ exports.registrarProduccion = async (req, res) => {
             if (finOperacion > inicioOperacion) {
                 tiempoOperacion = Math.floor((finOperacion - inicioOperacion) / 60000); // Convertir a minutos
             } else {
+                logger.warn('Hora de fin de operación menor que hora de inicio:', { horaInicioOperacion, horaFinOperacion });
                 return res.status(400).json({ msg: 'La hora de fin de operación debe ser mayor que la hora de inicio' });
             }
         }
 
-        // Crear el registro de producción
+        const otiId = await verificarYCrearOti(oti);
+
+
+        // Asignar el ObjectId de OTI al registro de producción
         const nuevaProduccion = new Produccion({
             operario,
             fecha,
-            oti,
+            oti: otiId,
             proceso,
             areaProduccion,
             maquina,
             insumos,
+            jornada: jornada._id,
             tiempoPreparacion,
             tiempoOperacion,
             observaciones
         });
 
+        logger.info('Creando nueva producción:', nuevaProduccion);
         const produccionGuardada = await nuevaProduccion.save();
 
         // Asociar el registro a la jornada
         jornada.registros.push(produccionGuardada._id);
         await jornada.save();
 
+        logger.info('Producción registrada y vinculada a la jornada:', produccionGuardada);
         res.status(201).json({ msg: 'Producción registrada y vinculada a la jornada', produccion: produccionGuardada });
     } catch (error) {
-        console.error('Error al registrar producción:', error);
+        logger.error('Error al registrar producción:', error);
         res.status(500).json({ msg: 'Error interno del servidor' });
     }
 };

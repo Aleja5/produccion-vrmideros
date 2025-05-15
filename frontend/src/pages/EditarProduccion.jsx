@@ -52,7 +52,28 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
         insumos: produccion.insumos?._id || "",
         maquina: produccion.maquina?._id || "",
         areaProduccion: produccion.areaProduccion?._id || "",
-        observaciones: produccion.observaciones || "" // Corregido para asignar directamente el valor
+        observaciones: produccion.observaciones || "",
+        horaInicioPreparacion: produccion.horaInicioPreparacion ? produccion.horaInicioPreparacion.slice(11,16) : "",
+        horaFinPreparacion: produccion.horaFinPreparacion ? produccion.horaFinPreparacion.slice(11,16) : "",
+        horaInicioOperacion: produccion.horaInicioOperacion ? produccion.horaInicioOperacion.slice(11,16) : "",
+        horaFinOperacion: produccion.horaFinOperacion ? produccion.horaFinOperacion.slice(11,16) : ""
+      });
+    } else {
+      // Estado inicial para agregar actividad
+      setRegistroEditado({
+        oti: { numeroOti: "" },
+        proceso: "",
+        insumos: "",
+        maquina: "",
+        areaProduccion: "",
+        fecha: "",
+        tiempoPreparacion: "",
+        tiempoOperacion: "",
+        horaInicioPreparacion: "",
+        horaFinPreparacion: "",
+        horaInicioOperacion: "",
+        horaFinOperacion: "",
+        observaciones: ""
       });
     }
   }, [produccion]);
@@ -181,10 +202,14 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
-      <Card className="w-full max-w-lg p-6 rounded-2xl shadow-2xl bg-white">
-        <h2 className="text-2xl font-semibold text-center mb-6 text-gray-800">Editar Producción</h2>
-        <form className="space-y-4" onSubmit={handleSubmit}>
+    <div className="fixed inset-0 z-50 flex justify-center items-center">
+      {/* Overlay con animación */}
+      <div className="fixed inset-0 bg-black bg-opacity-60 transition-opacity duration-300" />
+
+      {/* Modal Card con animación y mejor diseño */}
+      <Card className="w-full max-w-lg p-8 rounded-3xl shadow-2xl bg-white transform transition-all duration-300 scale-100 opacity-100 translate-y-0 animate-fade-in-up border border-blue-100">
+        <h2 className="text-3xl font-bold text-center mb-8 text-blue-700 tracking-tight">Editar Producción</h2>
+        <form className="space-y-5" onSubmit={handleSubmit}>
           <Input
             label="OTI"
             value={registroEditado.oti?.numeroOti || ''}
@@ -192,6 +217,7 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
               ...prev,
               oti: { ...prev.oti, numeroOti: e.target.value }
             }))}
+            className="focus:ring-2 focus:ring-blue-400"
           />
           <Input
             label="Fecha"
@@ -199,12 +225,13 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
             value={registroEditado.fecha?.split('T')[0] || ''}
             onChange={handleChange}
             name="fecha"
+            className="focus:ring-2 focus:ring-blue-400"
           />
           <div className="space-y-2">
-            <label htmlFor="proceso" className="block text-sm font-medium text-gray-700">Proceso</label>
+            <label htmlFor="proceso" className="block text-sm font-semibold text-gray-700">Proceso</label>
             <select
               id="proceso"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
               value={registroEditado.proceso || ''}
               onChange={handleChangeRelacion}
               name="proceso"
@@ -216,10 +243,10 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
             </select>
           </div>
           <div className="space-y-2">
-            <label htmlFor="insumos" className="block text-sm font-medium text-gray-700">Insumo</label>
+            <label htmlFor="insumos" className="block text-sm font-semibold text-gray-700">Insumo</label>
             <select
               id="insumos"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
               value={registroEditado.insumos || ''}
               onChange={handleChangeRelacion}
               name="insumos"
@@ -231,10 +258,10 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
             </select>
           </div>
           <div className="space-y-2">
-            <label htmlFor="maquina" className="block text-sm font-medium text-gray-700">Máquina</label>
+            <label htmlFor="maquina" className="block text-sm font-semibold text-gray-700">Máquina</label>
             <select
               id="maquina"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
               value={registroEditado.maquina || ''}
               onChange={handleChangeRelacion}
               name="maquina"
@@ -246,10 +273,10 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
             </select>
           </div>
           <div className="space-y-2">
-            <label htmlFor="areaProduccion" className="block text-sm font-medium text-gray-700">Área de Producción</label>
+            <label htmlFor="areaProduccion" className="block text-sm font-semibold text-gray-700">Área de Producción</label>
             <select
               id="areaProduccion"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
               value={registroEditado.areaProduccion || ''}
               onChange={handleChangeRelacion}
               name="areaProduccion"
@@ -266,6 +293,7 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
             value={registroEditado.tiempoPreparacion || ''}
             onChange={handleChange}
             name="tiempoPreparacion"
+            className="focus:ring-2 focus:ring-blue-400"
           />
           <Input
             label="Tiempo de Operación (min)"
@@ -273,21 +301,59 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
             value={registroEditado.tiempoOperacion || ''}
             onChange={handleChange}
             name="tiempoOperacion"
+            className="focus:ring-2 focus:ring-blue-400"
           />
+          <div className="flex gap-4">
+            <Input
+              label="Hora Inicio Preparación"
+              type="time"
+              value={registroEditado.horaInicioPreparacion || ''}
+              onChange={e => setRegistroEditado(prev => ({ ...prev, horaInicioPreparacion: e.target.value }))}
+              name="horaInicioPreparacion"
+              className="focus:ring-2 focus:ring-blue-400"
+            />
+            <Input
+              label="Hora Fin Preparación"
+              type="time"
+              value={registroEditado.horaFinPreparacion || ''}
+              onChange={e => setRegistroEditado(prev => ({ ...prev, horaFinPreparacion: e.target.value }))}
+              name="horaFinPreparacion"
+              className="focus:ring-2 focus:ring-blue-400"
+            />
+          </div>
+          <div className="flex gap-4">
+            <Input
+              label="Hora Inicio Operación"
+              type="time"
+              value={registroEditado.horaInicioOperacion || ''}
+              onChange={e => setRegistroEditado(prev => ({ ...prev, horaInicioOperacion: e.target.value }))}
+              name="horaInicioOperacion"
+              className="focus:ring-2 focus:ring-blue-400"
+            />
+            <Input
+              label="Hora Fin Operación"
+              type="time"
+              value={registroEditado.horaFinOperacion || ''}
+              onChange={e => setRegistroEditado(prev => ({ ...prev, horaFinOperacion: e.target.value }))}
+              name="horaFinOperacion"
+              className="focus:ring-2 focus:ring-blue-400"
+            />
+          </div>
           <Input
             label="Observaciones"
             value={registroEditado.observaciones || ''}
             onChange={handleChange}
             name="observaciones"
+            className="focus:ring-2 focus:ring-blue-400"
           />
-          <div className="flex justify-end gap-4 pt-4">
+          <div className="flex justify-end gap-4 pt-6">
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg shadow-md transition-all"
             >
               Guardar Cambios
             </Button>
-            <Button variant="secondary" onClick={onClose} className="border-gray-300">
+            <Button variant="secondary" onClick={onClose} className="border-gray-300 px-6 py-2 rounded-lg">
               Cancelar
             </Button>
           </div>

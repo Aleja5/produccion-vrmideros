@@ -94,6 +94,16 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Nueva ruta protegida: Registrar Producción con jornadaId */}
+        <Route
+          path="/registro-produccion/:jornadaId"
+          element={
+            <ProtectedRoute allowedRoles={['production']}>
+              <RegistroProduccion />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </Router>
   );

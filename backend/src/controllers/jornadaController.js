@@ -34,7 +34,7 @@ exports.crearJornada = async (req, res) => {
 // obtener todas las Jornadas
 exports.obtenerJornadas = async (req, res) => {
     try {
-        const jornadas = await Jornada.find().populate('actividades');
+        const jornadas = await Jornada.find().populate('registros');
         res.status(200).json(jornadas);
     } catch (error) {
         console.error(error);
@@ -46,13 +46,36 @@ exports.obtenerJornadas = async (req, res) => {
 exports.obtenerJornada = async (req, res) => {
     try {
         const { id } = req.params;
-        const jornada = await Jornada.findById(id).populate('actividades');
+
+        // Validate the ID
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            console.error(`Invalid Jornada ID: ${id}`);
+            return res.status(400).json({ error: 'Jornada ID is invalid' });
+        }
+
+        console.log(`Fetching Jornada with ID: ${id}`);
+
+        // Fetch the Jornada and populate registros and their references
+        const jornada = await Jornada.findById(id).populate({
+            path: 'registros',
+            populate: [
+                { path: 'oti', select: 'numeroOti' },
+                { path: 'proceso', select: 'nombre' },
+                { path: 'areaProduccion', select: 'nombre' },
+                { path: 'maquina', select: 'nombre' },
+                { path: 'insumos', select: 'nombre' }
+            ]
+        });
+
         if (!jornada) {
+            console.error(`Jornada not found for ID: ${id}`);
             return res.status(404).json({ error: 'Jornada not found' });
         }
+
+        console.log(`Jornada fetched successfully:`, jornada);
         res.status(200).json(jornada);
     } catch (error) {
-        console.error(error);
+        console.error(`Error fetching Jornada with ID ${req.params.id}:`, error);
         res.status(500).json({ error: 'Error fetching Jornada' });
     }
 };
@@ -77,9 +100,24 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
             path: 'registros',
             populate: {
                 path: 'proceso areaProduccion maquina insumos oti', // Popular los detalles de cada registro
-                model: 'Produccion' // Asegúrate de que el modelo sea 'Produccion'
+                model: 'Produccion'
             }
         }).sort({ fecha: -1 }); // Ordenar por fecha descendente (la más reciente primero)
+
+        // Log de las fechas y horas para diagnóstico
+        jornadas.forEach(j => {
+            console.log('Jornada:', {
+                fecha: j.fecha,
+                horaInicio: j.horaInicio,
+                horaFin: j.horaFin,
+                registros: j.registros.map(r => ({
+                    horaInicioPreparacion: r.horaInicioPreparacion,
+                    horaFinPreparacion: r.horaFinPreparacion,
+                    horaInicioOperacion: r.horaInicioOperacion,
+                    horaFinOperacion: r.horaFinOperacion
+                }))
+            });
+        });
 
         console.log(`✅ Jornadas encontradas para el operario ${operarioExiste.name}: ${jornadas.length}`);
         res.json(jornadas);
@@ -94,10 +132,10 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
 exports.actualizarJornada = async (req, res) => {
     try {
         const { id } = req.params;
-        const { horaInicio, horaFin, actividades } = req.body;
+        const { horaInicio, horaFin, registros } = req.body;
         const jornada = await Jornada.findByIdAndUpdate(
             id,
-            { horaInicio, horaFin, actividades },
+            { horaInicio, horaFin, registros },
             { new: true }
         );
         if (!jornada) {
@@ -114,7 +152,7 @@ exports.actualizarJornada = async (req, res) => {
 exports.eliminarJornada = async (req, res) => {
     try {
         const { id } = req.params;
-        const jornada = await JornadaProduccion.findByIdAndDelete(id);
+        const jornada = await Jornada.findByIdAndDelete(id);
         if (!jornada) {
             return res.status(404).json({ error: 'Jornada not found' });
         }
@@ -127,7 +165,7 @@ exports.eliminarJornada = async (req, res) => {
 
 exports.registrarJornadaConActividades = async (req, res) => {
     try {
-        const { operario, fecha, horaInicio, horaFin, actividades, observacionesJornada } = req.body;
+        const { operario, fecha, horaInicio, horaFin, actividades} = req.body;
 
         // Validate and convert ObjectId for operario
         if (!mongoose.Types.ObjectId.isValid(operario)) {
@@ -173,7 +211,7 @@ exports.registrarJornadaConActividades = async (req, res) => {
             }
         }
 
-        const jornada = new Jornada({ operario: operarioId, horaInicio, horaFin, actividades, fecha, observacionesJornada });
+        const jornada = new Jornada({ operario: operarioId, horaInicio, horaFin, fecha });
         await jornada.save();
 
         let totalTiempoPreparacion = 0;
@@ -182,6 +220,7 @@ exports.registrarJornadaConActividades = async (req, res) => {
 
         // Crear los registros de producción asociados a la jornada
         for (const actividad of actividades) {
+            console.log('Actividad recibida para registro:', actividad); // DEBUG: Verificar campos de hora
             const nuevoRegistro = new Produccion({
                 operario: operarioId,
                 fecha,
@@ -192,6 +231,10 @@ exports.registrarJornadaConActividades = async (req, res) => {
                 insumos: actividad.insumos,
                 tiempoPreparacion: actividad.tiempoPreparacion || 0,
                 tiempoOperacion: actividad.tiempoOperacion || 0,
+                horaInicioPreparacion: actividad.horaInicioPreparacion,
+                horaFinPreparacion: actividad.horaFinPreparacion,
+                horaInicioOperacion: actividad.horaInicioOperacion,
+                horaFinOperacion: actividad.horaFinOperacion,
                 observaciones: actividad.observaciones,
                 jornada: jornada._id // Asocia el registro a la jornada
             });
@@ -237,13 +280,73 @@ exports.agregarActividadAJornada = async (req, res) => {
         }
 
         // Buscar la jornada
-        const jornada = await Jornada.findById(jornadaId);
+        const jornada = await Jornada.findById(jornadaId).populate('registros');
         if (!jornada) {
             return res.status(404).json({ error: 'Jornada not found' });
         }
 
-        // Agregar la nueva actividad a la jornada
-        jornada.actividades.push(actividad);
+        // Crear un nuevo registro de producción para la actividad
+        const nuevoRegistro = new Produccion({
+            ...actividad,
+            jornada: jornadaId
+        });
+        await nuevoRegistro.save();
+
+        // Agregar el nuevo registro a la jornada
+        jornada.registros.push(nuevoRegistro._id);
+
+        // Calcular la nueva hora de inicio y fin de la jornada correctamente
+        const horasInicio = await Promise.all(jornada.registros.map(async (registroId) => {
+            const registro = await Produccion.findById(registroId);
+            if (registro) {
+                // Tomar ambos campos de inicio si existen
+                const inicios = [];
+                if (registro.horaInicioPreparacion) inicios.push(new Date(registro.horaInicioPreparacion));
+                if (registro.horaInicioOperacion) inicios.push(new Date(registro.horaInicioOperacion));
+                if (inicios.length > 0) {
+                    // Retornar la más temprana
+                    return new Date(Math.min(...inicios.map(h => h.getTime())));
+                } else {
+                    // Si no hay horas registradas, usar createdAt
+                    return registro.createdAt;
+                }
+            } else {
+                return null;
+            }
+        }));
+
+        const horasFin = await Promise.all(jornada.registros.map(async (registroId) => {
+            const registro = await Produccion.findById(registroId);
+            if (registro) {
+                // Tomar ambos campos de fin si existen
+                const fines = [];
+                if (registro.horaFinPreparacion) fines.push(new Date(registro.horaFinPreparacion));
+                if (registro.horaFinOperacion) fines.push(new Date(registro.horaFinOperacion));
+                if (fines.length > 0) {
+                    // Retornar la más tardía
+                    return new Date(Math.max(...fines.map(h => h.getTime())));
+                } else {
+                    // Si no hay horas registradas, usar updatedAt
+                    return registro.updatedAt;
+                }
+            } else {
+                return null;
+            }
+        }));
+
+        // Filtrar valores válidos
+        const inicioJornadaValidos = horasInicio.filter(h => h && !isNaN(new Date(h).getTime()));
+        const finJornadaValidos = horasFin.filter(h => h && !isNaN(new Date(h).getTime()));
+
+        // Determinar la mínima y máxima
+        jornada.horaInicio = inicioJornadaValidos.length > 0 ? new Date(Math.min(...inicioJornadaValidos.map(h => new Date(h).getTime()))) : null;
+        jornada.horaFin = finJornadaValidos.length > 0 ? new Date(Math.max(...finJornadaValidos.map(h => new Date(h).getTime()))) : null;
+
+        // Log para verificar las horas de inicio y fin calculadas
+        console.log('Hora de inicio calculada para la jornada:', jornada.horaInicio);
+        console.log('Hora de fin calculada para la jornada:', jornada.horaFin);
+
+        // Guardar la jornada actualizada
         await jornada.save();
 
         res.status(200).json({ msg: 'Actividad agregada con éxito', jornada });

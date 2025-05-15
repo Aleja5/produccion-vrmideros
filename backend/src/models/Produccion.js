@@ -9,7 +9,12 @@ const produccionSchema = new mongoose.Schema({
     maquina: { type: mongoose.Schema.Types.ObjectId, ref: 'Maquina', required: true },
     insumos: { type: mongoose.Schema.Types.ObjectId, ref: 'Insumo', required: true },
     jornada: {type:mongoose.Schema.Types.ObjectId, ref: 'JornadaProduccion', required: true},
-    
+
+    horaInicioPreparacion: { type: Date },
+    horaFinPreparacion: { type: Date },
+    horaInicioOperacion: { type: Date },
+    horaFinOperacion: { type: Date },
+
     tiempoPreparacion: {
         type: Number,
         required: true,

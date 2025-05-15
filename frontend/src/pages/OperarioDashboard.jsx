@@ -58,7 +58,9 @@ const OperarioDashboard = () => {
         }
     }, [actualizar, operarioId]);
 
+    // Filtrar solo jornadas con al menos una actividad
     const jornadasFiltradas = jornadas.filter((jornada) =>
+        (jornada.registros && jornada.registros.length > 0) &&
         new Date(jornada.fecha).toLocaleDateString().includes(filtro)
     );
 
@@ -148,6 +150,35 @@ const OperarioDashboard = () => {
         }
     };
 
+    // Handlers para editar y eliminar actividad desde el modal de detalle
+    const [actividadAEditar, setActividadAEditar] = useState(null);
+
+    const handleEditarActividad = (actividad) => {
+        setActividadAEditar(actividad);
+    };
+
+    const handleEliminarActividad = (actividad) => {
+        confirmAlert({
+            title: '¿Eliminar actividad?',
+            message: '¿Estás seguro de eliminar esta actividad? Esta acción no se puede deshacer.',
+            buttons: [
+                {
+                    label: 'Sí',
+                    onClick: async () => {
+                        try {
+                            await axiosInstance.delete(`/produccion/eliminar/${actividad._id}`);
+                            toast.success('Actividad eliminada con éxito');
+                            setActualizar((prev) => !prev);
+                        } catch (error) {
+                            toast.error('No se pudo eliminar la actividad.');
+                        }
+                    }
+                },
+                { label: 'Cancelar', onClick: () => {} }
+            ]
+        });
+    };
+
     useEffect(() => {
         let timeoutId;
 
@@ -190,6 +221,19 @@ const OperarioDashboard = () => {
                 <DetalleJornadaModal
                     jornadaId={jornadaDetalleId}
                     onClose={handleCerrarDetalleJornada}
+                    onEditarActividad={handleEditarActividad}
+                    onEliminarActividad={handleEliminarActividad}
+                />
+            )}
+
+            {actividadAEditar && (
+                <EditarProduccion
+                    produccion={actividadAEditar}
+                    onClose={() => setActividadAEditar(null)}
+                    onGuardar={() => {
+                        setActividadAEditar(null);
+                        setActualizar((prev) => !prev);
+                    }}
                 />
             )}
 
@@ -228,6 +272,12 @@ const OperarioDashboard = () => {
                             <p className="text-gray-600 mb-2">
                                 <span className="font-semibold">Tiempo Total:</span> {calcularTotalTiempo(jornadaActual)} min
                             </p>
+                            <p className="text-gray-600 mb-1">
+                                <span className="font-semibold">Hora de Inicio:</span> {new Date(jornadaActual.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            <p className="text-gray-600 mb-1">
+                                <span className="font-semibold">Hora de Fin:</span> {new Date(jornadaActual.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
                             <div className="flex space-x-2 mt-4">
                                 <Button onClick={(e) => { e.stopPropagation(); handleAgregarActividad(jornadaActual._id); }}>Añadir actividad</Button>
                                 <Button onClick={(e) => { e.stopPropagation(); handleGuardarJornadaCompleta(jornadaActual._id); }} variant="secondary">Guardar jornada completa</Button>
@@ -243,22 +293,23 @@ const OperarioDashboard = () => {
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {jornadasAnteriores.map((jornada) => (
-                        <Card key={jornada._id} className="cursor-pointer" onClick={() => handleVerDetalleJornada(jornada._id)}>
-                            <div className="p-4">
-                                <h3 className="font-semibold mb-1">Fecha: {new Date(jornada.fecha).toLocaleDateString()}</h3>
-                                <p className="text-gray-600 mb-1">Actividades: {jornada.registros ? jornada.registros.length : 0}</p>
-                                <p className="text-gray-600 mb-2">Tiempo Total: {calcularTotalTiempo(jornada)} min</p>
-                                {/* Condicional para mostrar el icono de registrado */}
-                                {jornada.estado === 'completa' && (
-                                    <div className="flex items-center text-green-500">
-                                        <CheckCircleIcon className="h-5 w-5 mr-1" />
-                                        <span>Registrado</span>
-                                    </div>
-                                )}
+                        <Card key={jornada._id} className="relative group">
+                        {/* Contenido clickeable para ver el detalle */}
+                        <div className="p-4 cursor-pointer" onClick={() => handleVerDetalleJornada(jornada._id)}>
+                            <h3 className="font-semibold mb-1">Fecha: {new Date(jornada.fecha).toLocaleDateString()}</h3>
+                            <p className="text-gray-600 mb-1">Actividades: {jornada.registros ? jornada.registros.length : 0}</p>
+                            <p className="text-gray-600 mb-2">Tiempo Total: {calcularTotalTiempo(jornada)} min</p>
+                            {jornada.estado === 'completa' && (
+                            <div className="flex items-center text-green-500">
+                                <CheckCircleIcon className="h-5 w-5 mr-1" />
+                                <span>Registrado</span>
                             </div>
+                            )}
+                        </div>
                         </Card>
                     ))}
-                </div>
+                    </div>
+
 
                 {loading && <p className="mt-4">Cargando jornadas...</p>}
                 {error && <p className="mt-4 text-red-500">{error}</p>}

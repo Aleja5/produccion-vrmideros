@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axiosInstance from '../utils/axiosInstance';
+import { Pencil, Trash2 } from 'lucide-react';
 
-const DetalleJornadaModal = ({ jornadaId, onClose }) => {
+// Utilidad para extraer hora en formato HH:mm de un string ISO o Date
+const getHora = (valor) => {
+    if (!valor) return 'N/A';
+    try {
+        const date = new Date(valor);
+        if (isNaN(date.getTime())) return 'N/A';
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+        return 'N/A';
+    }
+};
+
+const DetalleJornadaModal = ({ jornadaId, onClose, onEditarActividad, onEliminarActividad }) => {
     const [jornada, setJornada] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -12,6 +25,7 @@ const DetalleJornadaModal = ({ jornadaId, onClose }) => {
             try {
                 const response = await axiosInstance.get(`/jornadas/${jornadaId}`);
                 if (response.data) {
+                    console.log('Detalle jornada API:', response.data); // <-- DEBUG: Ver los datos reales
                     setJornada(response.data);
                 } else {
                     setError('No se encontraron detalles para esta jornada.');
@@ -27,49 +41,68 @@ const DetalleJornadaModal = ({ jornadaId, onClose }) => {
         fetchDetalleJornada();
     }, [jornadaId]);
 
-    if (loading) {
-        return <div>Cargando detalles...</div>;
-    }
-
-    if (error) {
-        return <div>Error: {error}</div>;
-    }
-
-    if (!jornada) {
-        return null; // No mostrar nada si no hay jornada cargada
-    }
+    if (loading) return <div className="text-center mt-6">Cargando detalles...</div>;
+    if (error) return <div className="text-center text-red-500 mt-6">Error: {error}</div>;
+    if (!jornada) return null;
 
     return (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center">
-            <div className="bg-white rounded-lg shadow-lg w-4/5 md:w-3/4 lg:w-2/3 p-6">
-                <h2 className="text-xl font-bold mb-4">Detalle de la Jornada</h2>
-                <p className="mb-2"><strong>Fecha:</strong> {new Date(jornada.fecha).toLocaleDateString()}</p>
-                <p className="mb-4"><strong>Observaciones:</strong> {jornada.observacionesJornada || 'N/A'}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+            {/* Fondo oscuro */}
+            <div className="fixed inset-0 bg-black bg-opacity-60 transition-opacity" />
 
-                <h3 className="text-lg font-semibold mb-2">Actividades:</h3>
-                {jornada.actividades && jornada.actividades.length > 0 ? (
-                    <ul>
-                        {jornada.actividades.map((actividad, index) => (
-                            <li key={actividad._id} className="mb-2 border-b pb-2">
-                                <strong>Actividad #{index + 1}</strong>
-                                <p><strong>OTI:</strong> {actividad.oti?.numeroOti || 'N/A'}</p>
-                                <p><strong>Área:</strong> {actividad.areaProduccion?.nombre || 'N/A'}</p>
-                                <p><strong>Máquina:</strong> {actividad.maquina?.nombre || 'N/A'}</p>
-                                <p><strong>Proceso:</strong> {actividad.proceso?.nombre || 'N/A'}</p>
-                                <p><strong>Insumo:</strong> {actividad.insumos?.nombre || 'N/A'}</p>
-                                <p><strong>Tiempo Preparación:</strong> {actividad.tiempoPreparacion} min</p>
-                                <p><strong>Tiempo Operación:</strong> {actividad.tiempoOperacion} min</p>
-                                <p><strong>Observaciones Actividad:</strong> {actividad.observacionesActividad || 'N/A'}</p>
-                            </li>
+            {/* Contenedor modal */}
+            <div className="relative bg-white rounded-2xl shadow-2xl w-11/12 md:w-3/4 lg:w-2/3 p-6 z-10 max-h-[90vh] overflow-y-auto">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">Detalle de la Jornada</h2>
+                <p className="mb-6 text-sm text-gray-600"><strong>Fecha:</strong> {new Date(jornada.fecha).toLocaleDateString()}</p>
+
+                <h3 className="text-lg font-semibold text-gray-700 mb-4">Actividades:</h3>
+
+                {jornada.registros && jornada.registros.length > 0 ? (
+                    <div className="space-y-4">
+                        {jornada.registros.map((registro, index) => (
+                            <div key={registro._id} className="border rounded-lg p-4 bg-gray-50 shadow-sm relative">
+                                <div className="absolute top-2 right-2 flex gap-2">
+                                    <button
+                                        title="Editar actividad"
+                                        className="text-blue-600 hover:text-blue-800"
+                                        onClick={() => onEditarActividad?.(registro)}
+                                    >
+                                        <Pencil size={18} />
+                                    </button>
+                                    <button
+                                        title="Eliminar actividad"
+                                        className="text-red-600 hover:text-red-800"
+                                        onClick={() => onEliminarActividad?.(registro)}
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                </div>
+
+                                <h4 className="text-md font-semibold mb-2 text-gray-700">Actividad #{index + 1}</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-700">
+                                    <p><strong>OTI:</strong> {registro.oti?.numeroOti || registro.oti || 'N/A'}</p>
+                                    <p><strong>Área:</strong> {registro.areaProduccion?.nombre || registro.areaProduccion || 'N/A'}</p>
+                                    <p><strong>Máquina:</strong> {registro.maquina?.nombre || registro.maquina || 'N/A'}</p>
+                                    <p><strong>Proceso:</strong> {registro.proceso?.nombre || registro.proceso || 'N/A'}</p>
+                                    <p><strong>Insumo:</strong> {registro.insumos?.nombre || registro.insumos || 'N/A'}</p>
+                                    <p><strong>Tiempo Preparación:</strong> {registro.tiempoPreparacion ?? 'N/A'} min</p>
+                                    <p><strong>Tiempo Operación:</strong> {registro.tiempoOperacion ?? 'N/A'} min</p>
+                                    <p><strong>Hora Inicio Preparación:</strong> {getHora(registro.horaInicioPreparacion)}</p>
+                                    <p><strong>Hora Fin Preparación:</strong> {getHora(registro.horaFinPreparacion)}</p>
+                                    <p><strong>Hora Inicio Operación:</strong> {getHora(registro.horaInicioOperacion)}</p>
+                                    <p><strong>Hora Fin Operación:</strong> {getHora(registro.horaFinOperacion)}</p>
+                                    <p><strong>Observaciones:</strong> {registro.observaciones || 'N/A'}</p>
+                                </div>
+                            </div>
                         ))}
-                    </ul>
+                    </div>
                 ) : (
-                    <p>No hay actividades registradas para esta jornada.</p>
+                    <p className="text-gray-600">No hay actividades registradas para esta jornada.</p>
                 )}
 
                 <div className="mt-6 flex justify-end">
                     <button
-                        className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                        className="bg-gray-700 hover:bg-gray-800 text-white font-medium py-2 px-4 rounded transition-all"
                         onClick={onClose}
                     >
                         Cerrar
