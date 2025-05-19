@@ -21,6 +21,11 @@ const JornadaSchema = new Schema({
         type: Number,
         default: 0
     },
+    estado: {
+        type: String,
+        enum: ['en_progreso', 'completa'],
+        default: 'en_progreso'
+    },
     registros: [
         {
             type: mongoose.Schema.Types.ObjectId,

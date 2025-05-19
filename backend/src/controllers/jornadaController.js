@@ -140,16 +140,22 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
 exports.actualizarJornada = async (req, res) => {
     try {
         const { id } = req.params;
-        const { horaInicio, horaFin, registros } = req.body;
+        const { horaInicio, horaFin, registros, estado } = req.body;
         
         // Validar ID de la jornada
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: 'Jornada ID is invalid' });
         }
         
+        const updateFields = { };
+        if (horaInicio !== undefined) updateFields.horaInicio = horaInicio;
+        if (horaFin !== undefined) updateFields.horaFin = horaFin;
+        if (registros !== undefined) updateFields.registros = registros;
+        if (estado !== undefined) updateFields.estado = estado;
+
         const jornada = await Jornada.findByIdAndUpdate(
             id,
-            { horaInicio, horaFin, registros },
+            updateFields,
             { new: true }
         );
         if (!jornada) {

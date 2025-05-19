@@ -136,16 +136,16 @@ const OperarioDashboard = () => {
 
     const handleEliminarJornada = (id) => {
         confirmAlert({
-            title: '¿Estás seguro?',
-            message: '¿Quieres eliminar esta jornada y todas sus actividades?',
+            title: 'Confirmación de eliminación de jornada',
+            message: '¿Estás seguro de que deseas eliminar esta jornada y todas sus actividades asociadas? Esta acción no se puede deshacer.',
             buttons: [
                 {
                     label: 'Sí',
                     onClick: async () => {
                         try {
-                            await axiosInstance.delete(`/jornadas/eliminar/${id}`);
+                            await axiosInstance.delete(`/jornadas/${id}`);
                             setActualizar((prev) => !prev);
-                            toast.success("Jornada eliminada con éxito");
+                            toast.success('Jornada eliminada con éxito');
                         } catch (error) {
                             console.error('Error al eliminar la jornada:', error);
                             toast.error('No se pudo eliminar la jornada.');
@@ -154,7 +154,9 @@ const OperarioDashboard = () => {
                 },
                 {
                     label: 'Cancelar',
-                    onClick: () => { }
+                    onClick: () => {
+                        toast.info('Eliminación cancelada');
+                    }
                 }
             ]
         });
@@ -166,7 +168,7 @@ const OperarioDashboard = () => {
 
     const handleGuardarJornadaCompleta = async (jornadaId) => {
         try {
-            await axiosInstance.post(`/jornadas/completa`, { jornadaId });
+            await axiosInstance.put(`/jornadas/${jornadaId}`, { estado: "completa" });
             toast.success(`Jornada ${jornadaId} guardada como completa`);
             setActualizar((prev) => !prev);
         } catch (error) {
@@ -176,14 +178,31 @@ const OperarioDashboard = () => {
     };
 
     const handleEliminarJornadaActual = async (jornadaId) => {
-        try {
-            await axiosInstance.delete(`/jornadas/eliminar/${jornadaId}`);
-            toast.success('Jornada eliminada con éxito');
-            setActualizar((prev) => !prev);
-        } catch (error) {
-            console.error('Error al eliminar la jornada:', error);
-            toast.error('No se pudo eliminar la jornada.');
-        }
+        confirmAlert({
+            title: '¿Estás seguro?',
+            message: '¿Quieres eliminar la jornada actual y todas sus actividades?',
+            buttons: [
+                {
+                    label: 'Sí',
+                    onClick: async () => {
+                        try {
+                            await axiosInstance.delete(`/jornadas/${jornadaId}`);
+                            toast.success('Jornada eliminada con éxito');
+                            setActualizar((prev) => !prev);
+                        } catch (error) {
+                            console.error('Error al eliminar la jornada:', error);
+                            toast.error('No se pudo eliminar la jornada.');
+                        }
+                    }
+                },
+                {
+                    label: 'Cancelar',
+                    onClick: () => {
+                        toast.info('Eliminación cancelada');
+                    }
+                }
+            ]
+        });
     };
 
     // Handlers para editar y eliminar actividad desde el modal de detalle
@@ -195,8 +214,8 @@ const OperarioDashboard = () => {
 
     const handleEliminarActividad = (actividad) => {
         confirmAlert({
-            title: '¿Eliminar actividad?',
-            message: '¿Estás seguro de eliminar esta actividad? Esta acción no se puede deshacer.',
+            title: 'Confirmación de eliminación de actividad',
+            message: '¿Estás seguro de que deseas eliminar esta actividad? Esta acción no se puede deshacer.',
             buttons: [
                 {
                     label: 'Sí',
@@ -210,7 +229,12 @@ const OperarioDashboard = () => {
                         }
                     }
                 },
-                { label: 'Cancelar', onClick: () => {} }
+                {
+                    label: 'Cancelar',
+                    onClick: () => {
+                        toast.info('Eliminación cancelada');
+                    }
+                }
             ]
         });
     };
@@ -304,7 +328,13 @@ const OperarioDashboard = () => {
                                     <span>{ajustarFechaLocal(jornadaActual.fecha).toLocaleDateString()}</span>
                                 </div>
                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    En progreso {/* O el estado real de tu jornada */}
+                                    {jornadaActual.estado === 'completa' ? (
+                                        <>
+                                            <CheckCircleIcon className="h-4 w-4 mr-1 text-green-500 inline" /> Registrado
+                                        </>
+                                    ) : (
+                                        'En progreso'
+                                    )}
                                 </span>
                             </div>
                             <h2 className="text-xl font-semibold mb-2">Jornada Actual</h2>
