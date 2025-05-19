@@ -20,7 +20,7 @@ const AdminDashboard = () => {
 
   const calcularTotalHoras = (data) => {
     if (Array.isArray(data)) {
-      const total = data.reduce((sum, r) => sum + r.tiempoPreparacion + r.tiempoOperacion, 0);
+      const total = data.reduce((sum, r) => sum + (r.tiempo || 0), 0);
       setTotalHoras(total);
     } else {
       setTotalHoras(0);
@@ -110,9 +110,10 @@ const AdminDashboard = () => {
       Area: r.areaProduccion?.nombre || '',
       Insumos: r.insumos?.nombre || '',
       Observaciones: r.observaciones || '',
-      Preparación: r.tiempoPreparacion,
-      Operación: r.tiempoOperacion,
-      Total: r.tiempoPreparacion + r.tiempoOperacion,
+      'Tipo de Tiempo': r.tipoTiempo || '',
+      'Hora Inicio': r.horaInicio ? new Date(r.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      'Hora Fin': r.horaFin ? new Date(r.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+      Tiempo: r.tiempo,
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -172,9 +173,10 @@ const AdminDashboard = () => {
                         <th className="p-1">Insumos</th>
                         <th className="p-1">Máquina</th>
                         <th className="p-1">Área</th>
-                        <th className="p-1">Prep.</th>
-                        <th className="p-1">Oper.</th>
-                        <th className="p-1 font-bold">Total</th>
+                        <th className="p-1">Tipo de Tiempo</th>
+                        <th className="p-1">Hora Inicio</th>
+                        <th className="p-1">Hora Fin</th>
+                        <th className="p-1 font-bold">Tiempo (min)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -187,11 +189,10 @@ const AdminDashboard = () => {
                           <td className="p-1 whitespace-nowrap">{r.insumos?.nombre}</td>
                           <td className="p-1 whitespace-nowrap">{r.maquina?.nombre}</td>
                           <td className="p-1 whitespace-nowrap">{r.areaProduccion?.nombre}</td>
-                          <td className="p-1 whitespace-nowrap">{r.tiempoPreparacion} min</td>
-                          <td className="p-1 whitespace-nowrap">{r.tiempoOperacion} min</td>
-                          <td className="p-1 font-semibold text-green-600 whitespace-nowrap">
-                            {r.tiempoPreparacion + r.tiempoOperacion} min
-                          </td>
+                          <td className="p-1 whitespace-nowrap">{r.tipoTiempo || 'N/A'}</td>
+                          <td className="p-1 whitespace-nowrap">{r.horaInicio ? new Date(r.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</td>
+                          <td className="p-1 whitespace-nowrap">{r.horaFin ? new Date(r.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</td>
+                          <td className="p-1 font-semibold text-green-600 whitespace-nowrap">{r.tiempo} min</td>
                         </tr>
                       ))}
                     </tbody>

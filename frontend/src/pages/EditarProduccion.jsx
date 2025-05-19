@@ -53,10 +53,10 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
         maquina: produccion.maquina?._id || "",
         areaProduccion: produccion.areaProduccion?._id || "",
         observaciones: produccion.observaciones || "",
-        horaInicioPreparacion: produccion.horaInicioPreparacion ? produccion.horaInicioPreparacion.slice(11,16) : "",
-        horaFinPreparacion: produccion.horaFinPreparacion ? produccion.horaFinPreparacion.slice(11,16) : "",
-        horaInicioOperacion: produccion.horaInicioOperacion ? produccion.horaInicioOperacion.slice(11,16) : "",
-        horaFinOperacion: produccion.horaFinOperacion ? produccion.horaFinOperacion.slice(11,16) : ""
+        tipoTiempo: produccion.tipoTiempo || "",
+        horaInicio: produccion.horaInicio ? produccion.horaInicio.slice(11,16) : "",
+        horaFin: produccion.horaFin ? produccion.horaFin.slice(11,16) : "",
+        tiempo: produccion.tiempo || 0
       });
     } else {
       // Estado inicial para agregar actividad
@@ -67,12 +67,10 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
         maquina: "",
         areaProduccion: "",
         fecha: "",
-        tiempoPreparacion: "",
-        tiempoOperacion: "",
-        horaInicioPreparacion: "",
-        horaFinPreparacion: "",
-        horaInicioOperacion: "",
-        horaFinOperacion: "",
+        tipoTiempo: "",
+        horaInicio: "",
+        horaFin: "",
+        tiempo: 0,
         observaciones: ""
       });
     }
@@ -121,7 +119,7 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
   const guardarEdicion = async () => {
     try {
         // Validar que todos los campos obligatorios estén completos
-        if (!registroEditado.fecha || !registroEditado.proceso || !registroEditado.insumos || !registroEditado.maquina || !registroEditado.areaProduccion) {
+        if (!registroEditado.fecha || !registroEditado.proceso || !registroEditado.insumos || !registroEditado.maquina || !registroEditado.areaProduccion || !registroEditado.tipoTiempo || !registroEditado.horaInicio || !registroEditado.horaFin) {
             toast.error("⚠️ Por favor, completa todos los campos obligatorios antes de guardar.");
             return;
         }
@@ -151,8 +149,18 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
                             return;
                         }
 
+                        // Calcular el tiempo en minutos
+                        let tiempo = 0;
+                        if (registroEditado.horaInicio && registroEditado.horaFin) {
+                          const inicio = new Date(`1970-01-01T${registroEditado.horaInicio}:00`);
+                          const fin = new Date(`1970-01-01T${registroEditado.horaFin}:00`);
+                          if (fin > inicio) {
+                            tiempo = Math.floor((fin - inicio) / 60000);
+                          }
+                        }
+
                         const datosActualizados = {
-                            _id: produccion._id, // Usar el _id de la producción que se está editando
+                            _id: produccion._id,
                             oti: otiId,
                             operario: produccion.operario?._id || produccion.operario,
                             proceso: procesoId,
@@ -160,17 +168,19 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
                             areaProduccion: areaId,
                             maquina: maquinaId,
                             fecha: registroEditado.fecha || null,
-                            tiempoPreparacion: parseInt(registroEditado.tiempoPreparacion, 10),
-                            tiempoOperacion: parseInt(registroEditado.tiempoOperacion, 10),
-                            observaciones: registroEditado.observaciones // Agregar observaciones
+                            tipoTiempo: registroEditado.tipoTiempo,
+                            horaInicio: registroEditado.horaInicio,
+                            horaFin: registroEditado.horaFin,
+                            tiempo,
+                            observaciones: registroEditado.observaciones
                         };
 
                         const response = await axiosInstance.put(`/produccion/actualizar/${produccion._id}`, datosActualizados);
 
                         if (response.status >= 200 && response.status < 300) {
                             toast.success("✅ Producción actualizada con éxito");
-                            onGuardar(); // Llama a la función para recargar los datos en el dashboard
-                            onClose(); // Cierra el modal
+                            onGuardar();
+                            onClose();
                         } else {
                             throw new Error("⚠️ La respuesta del servidor no indica éxito.");
                         }
@@ -287,58 +297,59 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
               ))}
             </select>
           </div>
-          <Input
-            label="Tiempo de Preparación (min)"
-            type="number"
-            value={registroEditado.tiempoPreparacion || ''}
-            onChange={handleChange}
-            name="tiempoPreparacion"
-            className="focus:ring-2 focus:ring-blue-400"
-          />
-          <Input
-            label="Tiempo de Operación (min)"
-            type="number"
-            value={registroEditado.tiempoOperacion || ''}
-            onChange={handleChange}
-            name="tiempoOperacion"
-            className="focus:ring-2 focus:ring-blue-400"
-          />
+          <div className="space-y-2">
+          <label htmlFor="tipoTiempo" className="block text-sm font-semibold text-gray-700">Tipo de Tiempo</label>
+          <select
+            id="tipoTiempo"
+            className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
+            value={registroEditado.tipoTiempo || ''}
+            onChange={handleChangeRelacion}
+            name="tipoTiempo"
+            required
+          >
+            <option value="">Seleccionar Tipo de Tiempo</option>
+            <option value="Preparación">Preparación</option>
+            <option value="Operación">Operación</option>
+            <option value="Alimentacion">Alimentación</option>
+          </select>
+        </div>
           <div className="flex gap-4">
             <Input
-              label="Hora Inicio Preparación"
+              label="Hora Inicio"
               type="time"
-              value={registroEditado.horaInicioPreparacion || ''}
-              onChange={e => setRegistroEditado(prev => ({ ...prev, horaInicioPreparacion: e.target.value }))}
-              name="horaInicioPreparacion"
+              value={registroEditado.horaInicio || ''}
+              onChange={handleChange}
+              name="horaInicio"
               className="focus:ring-2 focus:ring-blue-400"
+              required
             />
             <Input
-              label="Hora Fin Preparación"
+              label="Hora Fin"
               type="time"
-              value={registroEditado.horaFinPreparacion || ''}
-              onChange={e => setRegistroEditado(prev => ({ ...prev, horaFinPreparacion: e.target.value }))}
-              name="horaFinPreparacion"
+              value={registroEditado.horaFin || ''}
+              onChange={handleChange}
+              name="horaFin"
               className="focus:ring-2 focus:ring-blue-400"
+              required
             />
           </div>
-          <div className="flex gap-4">
-            <Input
-              label="Hora Inicio Operación"
-              type="time"
-              value={registroEditado.horaInicioOperacion || ''}
-              onChange={e => setRegistroEditado(prev => ({ ...prev, horaInicioOperacion: e.target.value }))}
-              name="horaInicioOperacion"
-              className="focus:ring-2 focus:ring-blue-400"
-            />
-            <Input
-              label="Hora Fin Operación"
-              type="time"
-              value={registroEditado.horaFinOperacion || ''}
-              onChange={e => setRegistroEditado(prev => ({ ...prev, horaFinOperacion: e.target.value }))}
-              name="horaFinOperacion"
-              className="focus:ring-2 focus:ring-blue-400"
-            />
-          </div>
+          <Input
+            label="Tiempo (minutos)"
+            type="number"
+            value={(() => {
+              if (registroEditado.horaInicio && registroEditado.horaFin) {
+                const inicio = new Date(`1970-01-01T${registroEditado.horaInicio}:00`);
+                const fin = new Date(`1970-01-01T${registroEditado.horaFin}:00`);
+                if (fin > inicio) {
+                  return Math.floor((fin - inicio) / 60000);
+                }
+              }
+              return 0;
+            })()}
+            readOnly
+            disabled
+            className="focus:ring-2 focus:ring-blue-400 bg-gray-100 cursor-not-allowed"
+          />
           <Input
             label="Observaciones"
             value={registroEditado.observaciones || ''}

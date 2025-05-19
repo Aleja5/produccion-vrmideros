@@ -64,13 +64,49 @@ const OperarioDashboard = () => {
         new Date(jornada.fecha).toLocaleDateString().includes(filtro)
     );
 
-    const jornadaActual = jornadasFiltradas.find(jornada => new Date(jornada.fecha).toDateString() === new Date().toDateString());
-    const jornadasAnteriores = jornadasFiltradas.filter(jornada => new Date(jornada.fecha).toDateString() !== new Date().toDateString());
 
+    const ajustarFechaLocal = (fechaUTC) => {
+        const fecha = new Date(fechaUTC);
+        return new Date(fecha.getTime() + fecha.getTimezoneOffset() * 60000);
+    };
+
+    const jornadaActual = jornadasFiltradas.find(jornada => {
+        const fechaJornada = ajustarFechaLocal(jornada.fecha).toDateString();
+        const fechaHoy = ajustarFechaLocal(new Date()).toDateString();
+        return fechaJornada === fechaHoy;
+    });
+
+    const jornadasAnteriores = jornadasFiltradas.filter(jornada => {
+        const fechaJornada = ajustarFechaLocal(jornada.fecha).toDateString();
+        const fechaHoy = ajustarFechaLocal(new Date()).toDateString();
+        return fechaJornada !== fechaHoy;
+    });
+
+    // Calcula la diferencia en minutos entre dos horas (horaInicio y horaFin de la jornada)
+    const calcularTiempoTotalJornada = (jornada) => {
+        if (!jornada.horaInicio || !jornada.horaFin) return 0;
+        let inicio, fin;
+        // Si es string tipo '08:00', convertir a fecha base
+        if (/^\d{2}:\d{2}$/.test(jornada.horaInicio) && /^\d{2}:\d{2}$/.test(jornada.horaFin)) {
+            inicio = new Date(`1970-01-01T${jornada.horaInicio}:00`);
+            fin = new Date(`1970-01-01T${jornada.horaFin}:00`);
+        } else {
+            // Si es string tipo fecha completa
+            inicio = new Date(jornada.horaInicio);
+            fin = new Date(jornada.horaFin);
+        }
+        if (isNaN(inicio) || isNaN(fin) || fin <= inicio) return 0;
+        return Math.floor((fin - inicio) / 60000);
+    };
+
+    // Suma los tiempos de las actividades, asegurando que sean números válidos
     const calcularTotalTiempo = (jornada) => {
-        return jornada.registros ? jornada.registros.reduce((total, registro) => {
-            return total + (registro.tiempoPreparacion || 0) + (registro.tiempoOperacion || 0);
-        }, 0) : 0;
+        return jornada.registros && Array.isArray(jornada.registros)
+            ? jornada.registros.reduce((total, registro) => {
+                const t = Number(registro.tiempo);
+                return total + (isNaN(t) ? 0 : t);
+            }, 0)
+            : 0;
     };
 
     const handleRegistroProduccion = () => {
@@ -260,28 +296,68 @@ const OperarioDashboard = () => {
 
                 {/* Jornada Actual Card */}
                 {jornadaActual && (
-                    <Card className="mb-6 cursor-pointer" onClick={() => handleVerDetalleJornada(jornadaActual._id)}>
+                    <Card className="mb-6">
                         <div className="p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center">
+                                    <svg className="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    <span>{ajustarFechaLocal(jornadaActual.fecha).toLocaleDateString()}</span>
+                                </div>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    En progreso {/* O el estado real de tu jornada */}
+                                </span>
+                            </div>
                             <h2 className="text-xl font-semibold mb-2">Jornada Actual</h2>
-                            <p className="text-gray-600 mb-1">
-                                <span className="font-semibold">Fecha:</span> {new Date(jornadaActual.fecha).toLocaleDateString()}
-                            </p>
-                            <p className="text-gray-600 mb-1">
-                                <span className="font-semibold">Actividades Registradas:</span> {jornadaActual.registros ? jornadaActual.registros.length : 0}
-                            </p>
-                            <p className="text-gray-600 mb-2">
-                                <span className="font-semibold">Tiempo Total:</span> {calcularTotalTiempo(jornadaActual)} min
-                            </p>
-                            <p className="text-gray-600 mb-1">
-                                <span className="font-semibold">Hora de Inicio:</span> {new Date(jornadaActual.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                            <p className="text-gray-600 mb-1">
-                                <span className="font-semibold">Hora de Fin:</span> {new Date(jornadaActual.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                            <div className="flex space-x-2 mt-4">
-                                <Button onClick={(e) => { e.stopPropagation(); handleAgregarActividad(jornadaActual._id); }}>Añadir actividad</Button>
-                                <Button onClick={(e) => { e.stopPropagation(); handleGuardarJornadaCompleta(jornadaActual._id); }} variant="secondary">Guardar jornada completa</Button>
-                                <Button onClick={(e) => { e.stopPropagation(); handleEliminarJornadaActual(jornadaActual._id); }} variant="destructive">Eliminar jornada</Button>
+                           <div className="mb-4 flex justify-between items-center">
+                            
+                            <div className="flex items-center">
+                                <svg className="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span className="text-s">{jornadaActual.registros ? jornadaActual.registros.length : 0} actividades registradas</span>
+                            </div>                            
+                            {jornadaActual.registros && jornadaActual.registros.length > 0 && (
+                                <span className="text-s">
+                                Tiempo total: <span className="font-semibold">{calcularTotalTiempo(jornadaActual)} min</span>
+                                </span>
+                            )}
+                            </div>
+
+                            {jornadaActual.registros && jornadaActual.registros
+                                .sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio)) // Orden por horaInicio ascendente
+                                .map((actividad) => (
+                                <div key={actividad._id} className="bg-gray-50 rounded-md p-3 mb-2 border border-gray-200">
+                                    <div className="flex justify-between items-center text-gray-700 text-sm">
+                                    {/* Izquierda: Proceso y OTI */}
+                                    <div className="flex flex-col">
+                                        <h4 className="font-semibold text-gray-700">{actividad.proceso?.nombre}</h4>
+                                        <p className="text-gray-600 text-sm">OTI: {actividad.oti?.numeroOti}</p>
+                                    </div>
+
+                                    {/* Derecha: Horario */}
+                                    <span className="text-gray-600 font-medium whitespace-nowrap">
+                                        {actividad.horaInicio && !isNaN(new Date(actividad.horaInicio))
+                                        ? new Date(actividad.horaInicio).toLocaleTimeString('en-GB', {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            })
+                                        : 'Sin inicio'}{' '}
+                                        -
+                                        {actividad.horaFin && !isNaN(new Date(actividad.horaFin))
+                                        ? new Date(actividad.horaFin).toLocaleTimeString('en-GB', {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            })
+                                        : 'Sin fin'}
+                                    </span>
+                                    </div>
+                                </div>
+                            ))}
+
+                            <div className="mt-6 flex items-center space-x-4">
+                                <Button onClick={handleRegistroProduccion}>Añadir actividad</Button>
+                                <Button primary onClick={() => handleGuardarJornadaCompleta(jornadaActual._id)}>Guardar jornada completa</Button>
+                                <Button variant="destructive" onClick={() => handleEliminarJornadaActual(jornadaActual._id)}>Eliminar jornada</Button>
                             </div>
                         </div>
                     </Card>
@@ -289,21 +365,22 @@ const OperarioDashboard = () => {
 
                 {/* Jornadas Anteriores Cards */}
                 {jornadasAnteriores.length > 0 && (
-                    <h2 className="text-lg font-semibold mb-3">Jornadas Anteriores</h2>
+                    <h2 className="text-xl font-semibold mb-3">Jornadas Anteriores</h2>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {jornadasAnteriores.map((jornada) => (
                         <Card key={jornada._id} className="relative group">
                         {/* Contenido clickeable para ver el detalle */}
                         <div className="p-4 cursor-pointer" onClick={() => handleVerDetalleJornada(jornada._id)}>
-                            <h3 className="font-semibold mb-1">Fecha: {new Date(jornada.fecha).toLocaleDateString()}</h3>
+                            <h3 className="font-semibold mb-1">Fecha: {ajustarFechaLocal(jornada.fecha).toLocaleDateString()}</h3>
                             <p className="text-gray-600 mb-1">Actividades: {jornada.registros ? jornada.registros.length : 0}</p>
-                            <p className="text-gray-600 mb-2">Tiempo Total: {calcularTotalTiempo(jornada)} min</p>
+                            <p className="text-gray-600 mb-2">Tiempo Total Actividades: {calcularTotalTiempo(jornada)} min</p>
+                            <p className="text-gray-600 mb-2">Tiempo Total Jornada: {calcularTiempoTotalJornada(jornada)} min</p>
                             {jornada.estado === 'completa' && (
-                            <div className="flex items-center text-green-500">
-                                <CheckCircleIcon className="h-5 w-5 mr-1" />
-                                <span>Registrado</span>
-                            </div>
+                                <div className="flex items-center text-green-500">
+                                    <CheckCircleIcon className="h-5 w-5 mr-1" />
+                                    <span>Registrado</span>
+                                </div>
                             )}
                         </div>
                         </Card>

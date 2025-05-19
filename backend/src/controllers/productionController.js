@@ -58,14 +58,14 @@ exports.getAllProduccion = async (req, res) => {
 // 📌 Registrar Producción
 exports.registrarProduccion = async (req, res) => {
     try {
-        const { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, horaInicioPreparacion, horaFinPreparacion, horaInicioOperacion, horaFinOperacion, observaciones } = req.body;
+        const { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin, tiempo, observaciones } = req.body;
 
         // Log de datos recibidos
         logger.info('Datos recibidos en registrarProduccion:', req.body);
 
         // Validar campos requeridos
-        if (!operario || !fecha || !oti || !proceso || !areaProduccion || !maquina || !insumos) {
-            logger.warn('Faltan campos requeridos:', { operario, fecha, oti, proceso, areaProduccion, maquina, insumos });
+        if (!operario || !fecha || !oti || !proceso || !areaProduccion || !maquina || !insumos || !tipoTiempo || !horaInicio || !horaFin || !tiempo) {
+            logger.warn('Faltan campos requeridos:', { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin, tiempo });
             return res.status(400).json({ msg: 'Faltan campos requeridos' });
         }
 
@@ -82,36 +82,7 @@ exports.registrarProduccion = async (req, res) => {
 
         logger.info('Jornada creada o encontrada:', jornada);
 
-        // Calcular tiempos de preparación y operación
-        let tiempoPreparacion = 0;
-        let tiempoOperacion = 0;
-
-        if (horaInicioPreparacion && horaFinPreparacion) {
-            const inicioPreparacion = new Date(`1970-01-01T${horaInicioPreparacion}:00`);
-            const finPreparacion = new Date(`1970-01-01T${horaFinPreparacion}:00`);
-
-            if (finPreparacion > inicioPreparacion) {
-                tiempoPreparacion = Math.floor((finPreparacion - inicioPreparacion) / 60000); // Convertir a minutos
-            } else {
-                logger.warn('Hora de fin de preparación menor que hora de inicio:', { horaInicioPreparacion, horaFinPreparacion });
-                return res.status(400).json({ msg: 'La hora de fin de preparación debe ser mayor que la hora de inicio' });
-            }
-        }
-
-        if (horaInicioOperacion && horaFinOperacion) {
-            const inicioOperacion = new Date(`1970-01-01T${horaInicioOperacion}:00`);
-            const finOperacion = new Date(`1970-01-01T${horaFinOperacion}:00`);
-
-            if (finOperacion > inicioOperacion) {
-                tiempoOperacion = Math.floor((finOperacion - inicioOperacion) / 60000); // Convertir a minutos
-            } else {
-                logger.warn('Hora de fin de operación menor que hora de inicio:', { horaInicioOperacion, horaFinOperacion });
-                return res.status(400).json({ msg: 'La hora de fin de operación debe ser mayor que la hora de inicio' });
-            }
-        }
-
         const otiId = await verificarYCrearOti(oti);
-
 
         // Asignar el ObjectId de OTI al registro de producción
         const nuevaProduccion = new Produccion({
@@ -123,9 +94,11 @@ exports.registrarProduccion = async (req, res) => {
             maquina,
             insumos,
             jornada: jornada._id,
-            tiempoPreparacion,
-            tiempoOperacion,
-            observaciones
+            tipoTiempo,
+            horaInicio,
+            horaFin,
+            tiempo,
+            observaciones: observaciones || null
         });
 
         logger.info('Creando nueva producción:', nuevaProduccion);
@@ -214,7 +187,7 @@ exports.listarProduccion = async (req, res) => {
 exports.actualizarProduccion = async (req, res) => {
     try {
         console.log("🛠 Datos recibidos en backend para actualización:", req.body);
-        const { _id, operario, oti, proceso, areaProduccion, maquina, insumos, fecha, tiempoPreparacion, tiempoOperacion } = req.body;
+        const { _id, operario, oti, proceso, areaProduccion, maquina, insumos, fecha, tiempo, horaInicio, horaFin, tipoTiempo} = req.body;
 
         // Validar que el ID de la producción esté presente
         if (!_id) {

@@ -4,8 +4,7 @@ const jornadaController = require('../controllers/jornadaController');
 
 
 // 📌 registro de produccion en jornada
-router.post('/nueva', jornadaController.crearJornada); // Para crear la jornada inicial
-router.post('/completa', jornadaController.registrarJornadaConActividades);// Para guardar jornada con actividades (al final)
+router.post('/', jornadaController.crearJornada); // Para crear la jornada inicial
 router.post('/:jornadaId/actividades', jornadaController.agregarActividadAJornada); // Para agregar una actividad a una jornada existente
 router.get('/operario/:id', jornadaController.obtenerJornadasPorOperario);
 router.get('/', jornadaController.obtenerJornadas);

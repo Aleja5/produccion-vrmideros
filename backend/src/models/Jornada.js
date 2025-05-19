@@ -11,22 +11,11 @@ const JornadaSchema = new Schema({
         type: Date,
         required: true
     },
-    horaInicio: {
-        type: Date,        
+    horaInicio: { // Agregamos horaInicio
+        type: Date
     },
-    horaFin: {
-        type: Date,        
-    },
-    observacionesJornada:{
-        type:String
-    },
-    totalTiempoPreparacion: {
-        type: Number,
-        default: 0
-    },
-    totalTiempoOperacion: {
-        type: Number,
-        default: 0
+    horaFin: { // Agregamos horaFin
+        type: Date
     },
     totalTiempoActividades: {
         type: Number,
@@ -46,21 +35,22 @@ JornadaSchema.pre('save', async function (next) {
             const Produccion = mongoose.model('Produccion');
             const registros = await Produccion.find({ _id: { $in: this.registros } });
 
+            // Calcular horaInicio y horaFin de la jornada
+            const horasInicio = registros.map(registro => registro.horaInicio).filter(Boolean);
+            const horasFin = registros.map(registro => registro.horaFin).filter(Boolean);
+
+            this.horaInicio = horasInicio.length > 0 ? new Date(Math.min(...horasInicio.map(h => h.getTime()))) : null;
+            this.horaFin = horasFin.length > 0 ? new Date(Math.max(...horasFin.map(h => h.getTime()))) : null;
+
+            // Calcular los tiempos totales
             this.totalTiempoActividades = registros.reduce((total, registro) => {
                 return total + (registro.tiempoOperacion || 0) + (registro.tiempoPreparacion || 0);
             }, 0);
 
-            this.totalTiempoPreparacion = registros.reduce((total, registro) => {
-                return total + (registro.tiempoPreparacion || 0);
-            }, 0);
-
-            this.totalTiempoOperacion = registros.reduce((total, registro) => {
-                return total + (registro.tiempoOperacion || 0);
-            }, 0);
         } else {
             this.totalTiempoActividades = 0;
-            this.totalTiempoPreparacion = 0;
-            this.totalTiempoOperacion = 0;
+            this.horaInicio = null;
+            this.horaFin = null;
         }
 
         next();

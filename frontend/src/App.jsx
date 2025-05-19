@@ -29,7 +29,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-
+        {/* ADMIN */}
         {/* Ruta protegida: Admin Dashboard */}
         <Route
           path="/admin-dashboard"
@@ -38,23 +38,15 @@ function App() {
               <AdminDashboard />
             </ProtectedRoute>
           }
-        />
-                {/* Ruta protegida: Admin Dashboard */}
-                <Route
-                    path="/admin-dashboard"
-                    element={
-                        <ProtectedRoute allowedRoles={['admin']}>
-                            <AdminDashboard />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route path="/admin/maquinas" element={<MaquinasPage />} />
-                <Route path="/admin/insumos" element={<InsumosPage />} />
-                <Route path="/admin/procesos" element={<ProcesosPage />} />
-                <Route path="/admin/areas" element={<AreasPage />} />
-                <Route path="/admin/operarios" element={<OperariosPage />} />
-                <Route path="/admin/usuarios" element={<UsuariosPage />} />
+        />                
+        <Route path="/admin/maquinas" element={<MaquinasPage />} />
+        <Route path="/admin/insumos" element={<InsumosPage />} />
+        <Route path="/admin/procesos" element={<ProcesosPage />} />
+        <Route path="/admin/areas" element={<AreasPage />} />
+        <Route path="/admin/operarios" element={<OperariosPage />} />
+        <Route path="/admin/usuarios" element={<UsuariosPage />} />
 
+        {/* PRODUCCIÓN */}
         {/* Ruta protegida: Validar Cédula */}
         <Route
           path="/validate-cedula"

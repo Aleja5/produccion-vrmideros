@@ -14,6 +14,11 @@ const getHora = (valor) => {
     }
 };
 
+const ajustarFechaLocal = (fechaUTC) => {
+    const fecha = new Date(fechaUTC);
+    return new Date(fecha.getTime() + fecha.getTimezoneOffset() * 60000);
+};
+
 const DetalleJornadaModal = ({ jornadaId, onClose, onEditarActividad, onEliminarActividad }) => {
     const [jornada, setJornada] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -36,9 +41,7 @@ const DetalleJornadaModal = ({ jornadaId, onClose, onEditarActividad, onEliminar
             } finally {
                 setLoading(false);
             }
-        };
-
-        fetchDetalleJornada();
+        }; fetchDetalleJornada();
     }, [jornadaId]);
 
     if (loading) return <div className="text-center mt-6">Cargando detalles...</div>;
@@ -53,7 +56,7 @@ const DetalleJornadaModal = ({ jornadaId, onClose, onEditarActividad, onEliminar
             {/* Contenedor modal */}
             <div className="relative bg-white rounded-2xl shadow-2xl w-11/12 md:w-3/4 lg:w-2/3 p-6 z-10 max-h-[90vh] overflow-y-auto">
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">Detalle de la Jornada</h2>
-                <p className="mb-6 text-sm text-gray-600"><strong>Fecha:</strong> {new Date(jornada.fecha).toLocaleDateString()}</p>
+                <p className="mb-6 text-sm text-gray-600"><strong>Fecha:</strong> {ajustarFechaLocal(jornada.fecha).toLocaleDateString()}</p>
 
                 <h3 className="text-lg font-semibold text-gray-700 mb-4">Actividades:</h3>
 
@@ -85,12 +88,10 @@ const DetalleJornadaModal = ({ jornadaId, onClose, onEditarActividad, onEliminar
                                     <p><strong>Máquina:</strong> {registro.maquina?.nombre || registro.maquina || 'N/A'}</p>
                                     <p><strong>Proceso:</strong> {registro.proceso?.nombre || registro.proceso || 'N/A'}</p>
                                     <p><strong>Insumo:</strong> {registro.insumos?.nombre || registro.insumos || 'N/A'}</p>
-                                    <p><strong>Tiempo Preparación:</strong> {registro.tiempoPreparacion ?? 'N/A'} min</p>
-                                    <p><strong>Tiempo Operación:</strong> {registro.tiempoOperacion ?? 'N/A'} min</p>
-                                    <p><strong>Hora Inicio Preparación:</strong> {getHora(registro.horaInicioPreparacion)}</p>
-                                    <p><strong>Hora Fin Preparación:</strong> {getHora(registro.horaFinPreparacion)}</p>
-                                    <p><strong>Hora Inicio Operación:</strong> {getHora(registro.horaInicioOperacion)}</p>
-                                    <p><strong>Hora Fin Operación:</strong> {getHora(registro.horaFinOperacion)}</p>
+                                    <p><strong>Tipo de Tiempo:</strong> {registro.tipoTiempo || 'N/A'}</p>
+                                    <p><strong>Hora Inicio:</strong> {getHora(registro.horaInicio)}</p>
+                                    <p><strong>Hora Fin:</strong> {getHora(registro.horaFin)}</p>
+                                    <p><strong>Tiempo:</strong> {registro.tiempo} min</p>
                                     <p><strong>Observaciones:</strong> {registro.observaciones || 'N/A'}</p>
                                 </div>
                             </div>
