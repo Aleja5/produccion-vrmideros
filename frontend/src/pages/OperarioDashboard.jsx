@@ -167,14 +167,29 @@ const OperarioDashboard = () => {
     };
 
     const handleGuardarJornadaCompleta = async (jornadaId) => {
-        try {
-            await axiosInstance.put(`/jornadas/${jornadaId}`, { estado: "completa" });
-            toast.success(`Jornada ${jornadaId} guardada como completa`);
-            setActualizar((prev) => !prev);
-        } catch (error) {
-            console.error('Error al guardar la jornada como completa:', error);
-            toast.error('No se pudo guardar la jornada como completa.');
-        }
+        confirmAlert({
+            title: 'Confirmación',
+            message: '¿Está seguro de dar la jornada por completada?',
+            buttons: [
+                {
+                    label: 'Sí',
+                    onClick: async () => {
+                        try {
+                            await axiosInstance.put(`/jornadas/${jornadaId}`, { estado: "completa" });
+                            toast.success(`Jornada ${jornadaId} guardada como completa`);
+                            setActualizar((prev) => !prev);
+                        } catch (error) {
+                            console.error('Error al guardar la jornada como completa:', error);
+                            toast.error('No se pudo guardar la jornada como completa.');
+                        }
+                    }
+                },
+                {
+                    label: 'No',
+                    onClick: () => console.log('Acción cancelada')
+                }
+            ]
+        });
     };
 
     const handleEliminarJornadaActual = async (jornadaId) => {
@@ -357,29 +372,42 @@ const OperarioDashboard = () => {
                                 .sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio)) // Orden por horaInicio ascendente
                                 .map((actividad) => (
                                 <div key={actividad._id} className="bg-gray-50 rounded-md p-3 mb-2 border border-gray-200">
-                                    <div className="flex justify-between items-center text-gray-700 text-sm">
-                                    {/* Izquierda: Proceso y OTI */}
-                                    <div className="flex flex-col">
-                                        <h4 className="font-semibold text-gray-700">{actividad.proceso?.nombre}</h4>
-                                        <p className="text-gray-600 text-sm">OTI: {actividad.oti?.numeroOti}</p>
-                                    </div>
-
-                                    {/* Derecha: Horario */}
-                                    <span className="text-gray-600 font-medium whitespace-nowrap">
-                                        {actividad.horaInicio && !isNaN(new Date(actividad.horaInicio))
-                                        ? new Date(actividad.horaInicio).toLocaleTimeString('en-GB', {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                            })
-                                        : 'Sin inicio'}{' '}
-                                        -
-                                        {actividad.horaFin && !isNaN(new Date(actividad.horaFin))
-                                        ? new Date(actividad.horaFin).toLocaleTimeString('en-GB', {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                            })
-                                        : 'Sin fin'}
-                                    </span>
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex flex-col">
+                                            <h4 className="font-semibold text-gray-700">{actividad.proceso?.nombre}</h4>
+                                            <p className="text-gray-600 text-sm">OTI: {actividad.oti?.numeroOti}</p>
+                                            <span className="text-gray-600 font-medium whitespace-nowrap">
+                                                {actividad.horaInicio && !isNaN(new Date(actividad.horaInicio))
+                                                ? new Date(actividad.horaInicio).toLocaleTimeString('en-US', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                    hour12: true
+                                                  })
+                                                : 'Sin inicio'}{' '}
+                                                -
+                                                {actividad.horaFin && !isNaN(new Date(actividad.horaFin))
+                                                ? new Date(actividad.horaFin).toLocaleTimeString('en-US', {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit',
+                                                    hour12: true
+                                                  })
+                                                : 'Sin fin'}
+                                            </span>
+                                        </div>
+                                        <div className="flex space-x-2">
+                                            <Button
+                                                className="bg-transparent text-gray-800 hover:bg-gray-200 px-3 py-1 rounded"
+                                                onClick={() => handleEditarActividad(actividad)}
+                                            >
+                                                Editar
+                                            </Button>
+                                            <Button
+                                                className="bg-transparent text-gray-800 hover:bg-gray-200 px-3 py-1 rounded"
+                                                onClick={() => handleEliminarActividad(actividad)}
+                                            >
+                                                Eliminar
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
