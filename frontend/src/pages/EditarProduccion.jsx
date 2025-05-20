@@ -212,163 +212,165 @@ function EditarProduccion({ produccion, onClose, onGuardar }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center items-center">
+    <div className="fixed inset-0 z-50 flex justify-center items-center overflow-y-auto">
       {/* Overlay con animación */}
       <div className="fixed inset-0 bg-black bg-opacity-60 transition-opacity duration-300" />
 
       {/* Modal Card con animación y mejor diseño */}
       <Card className="w-full max-w-lg p-8 rounded-3xl shadow-2xl bg-white transform transition-all duration-300 scale-100 opacity-100 translate-y-0 animate-fade-in-up border border-blue-100">
-        <h2 className="text-3xl font-bold text-center mb-8 text-blue-700 tracking-tight">Editar Producción</h2>
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <Input
-            label="OTI"
-            value={registroEditado.oti?.numeroOti || ''}
-            onChange={(e) => setRegistroEditado(prev => ({
-              ...prev,
-              oti: { ...prev.oti, numeroOti: e.target.value }
-            }))}
-            className="focus:ring-2 focus:ring-blue-400"
-          />
-          <Input
-            label="Fecha"
-            type="date"
-            value={registroEditado.fecha?.split('T')[0] || ''}
-            onChange={handleChange}
-            name="fecha"
-            className="focus:ring-2 focus:ring-blue-400"
-          />
-          <div className="space-y-2">
-            <label htmlFor="proceso" className="block text-sm font-semibold text-gray-700">Proceso</label>
-            <select
-              id="proceso"
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
-              value={registroEditado.proceso || ''}
-              onChange={handleChangeRelacion}
-              name="proceso"
-            >
-              <option value="">Seleccionar Proceso</option>
-              {procesos.map((proceso) => (
-                <option key={proceso._id} value={proceso._id}>{proceso.nombre}</option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="insumos" className="block text-sm font-semibold text-gray-700">Insumo</label>
-            <select
-              id="insumos"
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
-              value={registroEditado.insumos || ''}
-              onChange={handleChangeRelacion}
-              name="insumos"
-            >
-              <option value="">Seleccionar Insumo</option>
-              {insumosColeccion.map((insumo) => (
-                <option key={insumo._id} value={insumo._id}>{insumo.nombre}</option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="maquina" className="block text-sm font-semibold text-gray-700">Máquina</label>
-            <select
-              id="maquina"
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
-              value={registroEditado.maquina || ''}
-              onChange={handleChangeRelacion}
-              name="maquina"
-            >
-              <option value="">Seleccionar Máquina</option>
-              {maquinas.map((maquina) => (
-                <option key={maquina._id} value={maquina._id}>{maquina.nombre}</option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="areaProduccion" className="block text-sm font-semibold text-gray-700">Área de Producción</label>
-            <select
-              id="areaProduccion"
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
-              value={registroEditado.areaProduccion || ''}
-              onChange={handleChangeRelacion}
-              name="areaProduccion"
-            >
-              <option value="">Seleccionar Área de Producción</option>
-              {areasProduccion.map((area) => (
-                <option key={area._id} value={area._id}>{area.nombre}</option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-          <label htmlFor="tipoTiempo" className="block text-sm font-semibold text-gray-700">Tipo de Tiempo</label>
-          <select
-            id="tipoTiempo"
-            className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
-            value={registroEditado.tipoTiempo || ''}
-            onChange={handleChangeRelacion}
-            name="tipoTiempo"
-            required
-          >
-            <option value="">Seleccionar Tipo de Tiempo</option>
-            <option value="Preparación">Preparación</option>
-            <option value="Operación">Operación</option>
-            <option value="Alimentacion">Alimentación</option>
-          </select>
-        </div>
-          <div className="flex gap-4">
+        <div className="max-w-4xl mx-auto p-4 bg-white rounded-lg shadow-md">
+          <h2 className="text-3xl font-bold text-center mb-8 text-blue-700 tracking-tight">Editar Producción</h2>
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <Input
-              label="Hora Inicio"
-              type="time"
-              value={registroEditado.horaInicio || ''}
-              onChange={handleChange}
-              name="horaInicio"
-              className="focus:ring-2 focus:ring-blue-400"
-              required
+              label="OTI"
+              value={registroEditado.oti?.numeroOti || ''}
+              onChange={(e) => setRegistroEditado(prev => ({
+                ...prev,
+                oti: { ...prev.oti, numeroOti: e.target.value }
+              }))}
+              className="focus:ring-2 focus:ring-blue-400 w-full"
             />
             <Input
-              label="Hora Fin"
-              type="time"
-              value={registroEditado.horaFin || ''}
+              label="Fecha"
+              type="date"
+              value={registroEditado.fecha?.split('T')[0] || ''}
               onChange={handleChange}
-              name="horaFin"
-              className="focus:ring-2 focus:ring-blue-400"
-              required
+              name="fecha"
+              className="focus:ring-2 focus:ring-blue-400 w-full"
             />
-          </div>
-          <Input
-            label="Tiempo (minutos)"
-            type="number"
-            value={(() => {
-              if (registroEditado.horaInicio && registroEditado.horaFin) {
-                const inicio = new Date(`1970-01-01T${registroEditado.horaInicio}:00`);
-                const fin = new Date(`1970-01-01T${registroEditado.horaFin}:00`);
-                if (fin > inicio) {
-                  return Math.floor((fin - inicio) / 60000);
+            <div className="space-y-2">
+              <label htmlFor="proceso" className="block text-sm font-semibold text-gray-700">Proceso</label>
+              <select
+                id="proceso"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
+                value={registroEditado.proceso || ''}
+                onChange={handleChangeRelacion}
+                name="proceso"
+              >
+                <option value="">Seleccionar Proceso</option>
+                {procesos.map((proceso) => (
+                  <option key={proceso._id} value={proceso._id}>{proceso.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="insumos" className="block text-sm font-semibold text-gray-700">Insumo</label>
+              <select
+                id="insumos"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
+                value={registroEditado.insumos || ''}
+                onChange={handleChangeRelacion}
+                name="insumos"
+              >
+                <option value="">Seleccionar Insumo</option>
+                {insumosColeccion.map((insumo) => (
+                  <option key={insumo._id} value={insumo._id}>{insumo.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="maquina" className="block text-sm font-semibold text-gray-700">Máquina</label>
+              <select
+                id="maquina"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
+                value={registroEditado.maquina || ''}
+                onChange={handleChangeRelacion}
+                name="maquina"
+              >
+                <option value="">Seleccionar Máquina</option>
+                {maquinas.map((maquina) => (
+                  <option key={maquina._id} value={maquina._id}>{maquina.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="areaProduccion" className="block text-sm font-semibold text-gray-700">Área de Producción</label>
+              <select
+                id="areaProduccion"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
+                value={registroEditado.areaProduccion || ''}
+                onChange={handleChangeRelacion}
+                name="areaProduccion"
+              >
+                <option value="">Seleccionar Área de Producción</option>
+                {areasProduccion.map((area) => (
+                  <option key={area._id} value={area._id}>{area.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="tipoTiempo" className="block text-sm font-semibold text-gray-700">Tipo de Tiempo</label>
+              <select
+                id="tipoTiempo"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
+                value={registroEditado.tipoTiempo || ''}
+                onChange={handleChangeRelacion}
+                name="tipoTiempo"
+                required
+              >
+                <option value="">Seleccionar Tipo de Tiempo</option>
+                <option value="Preparación">Preparación</option>
+                <option value="Operación">Operación</option>
+                <option value="Alimentacion">Alimentación</option>
+              </select>
+            </div>
+            <div className="flex gap-4">
+              <Input
+                label="Hora Inicio"
+                type="time"
+                value={registroEditado.horaInicio || ''}
+                onChange={handleChange}
+                name="horaInicio"
+                className="focus:ring-2 focus:ring-blue-400"
+                required
+              />
+              <Input
+                label="Hora Fin"
+                type="time"
+                value={registroEditado.horaFin || ''}
+                onChange={handleChange}
+                name="horaFin"
+                className="focus:ring-2 focus:ring-blue-400"
+                required
+              />
+            </div>
+            <Input
+              label="Tiempo (minutos)"
+              type="number"
+              value={(() => {
+                if (registroEditado.horaInicio && registroEditado.horaFin) {
+                  const inicio = new Date(`1970-01-01T${registroEditado.horaInicio}:00`);
+                  const fin = new Date(`1970-01-01T${registroEditado.horaFin}:00`);
+                  if (fin > inicio) {
+                    return Math.floor((fin - inicio) / 60000);
+                  }
                 }
-              }
-              return 0;
-            })()}
-            readOnly
-            disabled
-            className="focus:ring-2 focus:ring-blue-400 bg-gray-100 cursor-not-allowed"
-          />
-          <Input
-            label="Observaciones"
-            value={registroEditado.observaciones || ''}
-            onChange={handleChange}
-            name="observaciones"
-            className="focus:ring-2 focus:ring-blue-400"
-          />
-          <div className="flex justify-end gap-4 pt-6">
-            <Button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg shadow-md transition-all"
-            >
-              Guardar Cambios
-            </Button>
-            <Button variant="secondary" onClick={onClose} className="border-gray-300 px-6 py-2 rounded-lg">
-              Cancelar
-            </Button>
-          </div>
-        </form>
+                return 0;
+              })()}
+              readOnly
+              disabled
+              className="focus:ring-2 focus:ring-blue-400 bg-gray-100 cursor-not-allowed"
+            />
+            <Input
+              label="Observaciones"
+              value={registroEditado.observaciones || ''}
+              onChange={handleChange}
+              name="observaciones"
+              className="focus:ring-2 focus:ring-blue-400"
+            />
+            <div className="flex justify-end gap-4 pt-6">
+              <Button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg shadow-md transition-all"
+              >
+                Guardar Cambios
+              </Button>
+              <Button variant="secondary" onClick={onClose} className="border-gray-300 px-6 py-2 rounded-lg">
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </div>
       </Card>
     </div>
   );

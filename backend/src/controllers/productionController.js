@@ -189,6 +189,12 @@ exports.actualizarProduccion = async (req, res) => {
         console.log("🛠 Datos recibidos en backend para actualización:", req.body);
         const { _id, operario, oti, proceso, areaProduccion, maquina, insumos, fecha, tiempo, horaInicio, horaFin, tipoTiempo} = req.body;
 
+        // Definir tiempoPreparacion con un valor predeterminado o lógica específica
+        const tiempoPreparacion = req.body.tiempoPreparacion || 0;
+
+        // Definir tiempoOperacion con un valor predeterminado o lógica específica
+        const tiempoOperacion = req.body.tiempoOperacion || 0;
+
         // Validar que el ID de la producción esté presente
         if (!_id) {
             return res.status(400).json({ msg: 'El ID de la producción es requerido' });
