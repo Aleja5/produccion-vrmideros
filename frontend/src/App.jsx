@@ -8,6 +8,8 @@ import ValidateCedula from './pages/ValidateCedula';
 import OperarioDashboard from './pages/OperarioDashboard';
 import RegistroProduccion from './components/RegistroProduccion';
 import EditarProduccion from './pages/EditarProduccion';
+import MiJornada from './pages/MiJornada';
+import HistorialJornadas from './pages/HistorialJornadas';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import MaquinasPage from './pages/Maquinas';
@@ -96,6 +98,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/mi-jornada" element={<MiJornada />} />
+        <Route path="/historial-jornadas" element={<HistorialJornadas />} />
       </Routes>
     </Router>
   );
