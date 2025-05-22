@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 const Produccion = require('../models/Produccion');
 const Jornada = require('../models/Jornada');
 const Operario = require('../models/Operario');
-
+const { recalcularTiempoTotal } = require('../utils/recalcularTiempo');
+const { recalcularHorasJornada } = require('../utils/recalcularHoras');
 
 exports.crearJornada = async (req, res) => {
     try {
@@ -24,7 +25,9 @@ exports.crearJornada = async (req, res) => {
         const nuevaJornada = new Jornada({ 
             operario, 
             fecha: new Date(fecha + 'T00:00:00.000Z'), 
-            registros: [] });
+            registros: [],
+            totalTiempoActividades: { horas: 0, minutos: 0 }
+        });
 
         await nuevaJornada.save();
 
@@ -38,8 +41,27 @@ exports.crearJornada = async (req, res) => {
 // obtener todas las Jornadas
 exports.obtenerJornadas = async (req, res) => {
     try {
-        const jornadas = await Jornada.find().populate('registros');
-        res.status(200).json(jornadas);
+        const jornadas = await Jornada.find().
+        populate({
+            path: 'registros',
+            populate: [
+                { path: 'oti', select: 'numeroOti' },
+                { path: 'proceso', select: 'nombre' },
+                { path: 'areaProduccion', select: 'nombre' },
+                { path: 'maquina', select: 'nombre' },
+                { path: 'insumos', select: 'nombre' }
+            ],
+            
+        });
+        
+        const jornadasConTiempo = jornadas.map(jornada => {
+            return {
+                ...jornada.toObject(),
+                totalTiempoActividades: jornada.totalTiempoActividades || { horas: 0, minutos: 0 }
+            };
+        });
+
+        res.status(200).json(jornadasConTiempo);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Error fetching Jornadas' });
@@ -56,15 +78,15 @@ exports.obtenerJornada = async (req, res) => {
             console.error(`Invalid Jornada ID: ${id}`);
             return res.status(400).json({ error: 'Jornada ID is invalid' });
         }
-        // Fetch the Jornada and populate registros and their references
+        // Asegurarse de que todos los campos relacionados se populen correctamente
         const jornada = await Jornada.findById(id).populate({
             path: 'registros',
             populate: [
-                { path: 'oti', select: 'numeroOti' },
-                { path: 'proceso', select: 'nombre' },
-                { path: 'areaProduccion', select: 'nombre' },
-                { path: 'maquina', select: 'nombre' },
-                { path: 'insumos', select: 'nombre' }
+                { path: 'oti', model: 'Oti', select: 'numeroOti' },
+                { path: 'proceso', model: 'Proceso', select: 'nombre' },
+                { path: 'areaProduccion', model: 'AreaProduccion', select: 'nombre' },
+                { path: 'maquina', model: 'Maquina', select: 'nombre' },
+                { path: 'insumos', model: 'Insumo', select: 'nombre' }
             ]
         });
 
@@ -73,29 +95,7 @@ exports.obtenerJornada = async (req, res) => {
             return res.status(404).json({ error: 'Jornada not found' });
         }
 
-        // Recalcular las horas de la jornada
-        await recalcularHorasJornada(id);
-
-        console.log(`Jornada fetched successfully:`, await Jornada.findById(id).populate({
-            path: 'registros',
-            populate: [
-                { path: 'oti', select: 'numeroOti' },
-                { path: 'proceso', select: 'nombre' },
-                { path: 'areaProduccion', select: 'nombre' },
-                { path: 'maquina', select: 'nombre' },
-                { path: 'insumos', select: 'nombre' }
-            ]
-        }));
-        res.status(200).json(await Jornada.findById(id).populate({
-            path: 'registros',
-            populate: [
-                { path: 'oti', select: 'numeroOti' },
-                { path: 'proceso', select: 'nombre' },
-                { path: 'areaProduccion', select: 'nombre' },
-                { path: 'maquina', select: 'nombre' },
-                { path: 'insumos', select: 'nombre' }
-            ]
-        }));
+        res.status(200).json(jornada);
 
     } catch (error) {
         console.error(`Error fetching Jornada with ID ${req.params.id}:`, error);
@@ -113,22 +113,31 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
         // Verificar si el operario existe
         const operarioExiste = await Operario.findById(id);
         if (!operarioExiste) {
-            logger.error(`❌ Operario con ID ${id} no encontrado`);
+            console.error(`❌ Operario con ID ${id} no encontrado`);
             return res.status(404).json({ msg: 'Operario no encontrado' });
         }
         console.log(`✅ Operario encontrado:`, operarioExiste);
 
-        // Buscar las jornadas del operario y popular los registros (actividades)
-        const jornadas = await Jornada.find({ operario: id }).populate({
-            path: 'registros',
-            populate: [
-                { path: 'proceso', select: 'nombre' },
-                { path: 'oti', select: 'numeroOti' }
-            ]
-        }).sort({ fecha: -1 }); // Ordenar por fecha descendente (la más reciente primero)
+        // Obtener las jornadas sin populate por ahora
+        const jornadas = await Jornada.find({ operario: id }).sort({ fecha: -1 });
 
-        console.log(`✅ Jornadas encontradas para el operario ${operarioExiste.name}: ${jornadas.length}`);
-        res.json(jornadas);
+        // Recalcular tiempo y hacer populate completo para cada jornada
+        const jornadasConTiempo = await Promise.all(jornadas.map(async (jornada) => {
+
+            return await Jornada.findById(jornada._id).populate({
+                path: 'registros',
+                populate: [
+                    { path: 'proceso', select: 'nombre' },
+                    { path: 'oti', select: 'numeroOti' },
+                    { path: 'areaProduccion', select: 'nombre' },
+                    { path: 'maquina', select: 'nombre' },
+                    { path: 'insumos', select: 'nombre' }
+                ]
+            });
+        }));
+
+        console.log(`✅ Jornadas encontradas para ${operarioExiste.name}: ${jornadas.length}`);
+        res.json(jornadasConTiempo);
 
     } catch (error) {
         console.error(`🚨 Error al obtener las jornadas del operario ${id}:`, error);
@@ -164,6 +173,8 @@ exports.actualizarJornada = async (req, res) => {
 
         // Recalcular las horas de la jornada después de la actualización
         await recalcularHorasJornada(id);
+        // Recalcular el tiempo total de actividades
+        await recalcularTiempoTotal(id);
 
         res.status(200).json(await Jornada.findById(id).populate('registros'));
 
@@ -187,23 +198,6 @@ exports.eliminarJornada = async (req, res) => {
         res.status(500).json({ error: 'Error deleting Jornada' });
     }
 };
-// Función auxiliar para recalcular las horas de inicio y fin de la jornada
-async function recalcularHorasJornada(jornadaId) {
-    const jornada = await Jornada.findById(jornadaId).populate('registros');
-    if (!jornada) {
-        console.error(`Jornada no encontrada con ID: ${jornadaId} al recalcular horas.`);
-        return;
-    }
-
-    const horasInicio = jornada.registros.map(registro => registro.horaInicio).filter(Boolean);
-    const horasFin = jornada.registros.map(registro => registro.horaFin).filter(Boolean);
-
-    jornada.horaInicio = horasInicio.length > 0 ? new Date(Math.min(...horasInicio.map(h => new Date(h).getTime()))) : null;
-    jornada.horaFin = horasFin.length > 0 ? new Date(Math.max(...horasFin.map(h => new Date(h).getTime()))) : null;
-
-    await jornada.save();
-    console.log(`Horas de la jornada ${jornadaId} recalculadas: Inicio: ${jornada.horaInicio}, Fin: ${jornada.horaFin}`);
-}
 
 exports.agregarActividadAJornada = async (req, res) => {
     try {
@@ -222,9 +216,10 @@ exports.agregarActividadAJornada = async (req, res) => {
         }
 
         // Validar los campos de la actividad
-        if (!operario || !fecha || !oti || !proceso || !areaProduccion || !maquina || !insumos || !tipoTiempo || !horaInicio || !horaFin) {
-            return res.status(400).json({ error: 'Faltan campos requeridos para la actividad' });
-        }
+        const camposRequeridos = { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin };
+        for (const [clave, valor] of Object.entries(camposRequeridos)) {
+            if (!valor) return res.status(400).json({ error: `Falta el campo: ${clave}` });
+}
         if (proceso && !mongoose.Types.ObjectId.isValid(proceso)) return res.status(400).json({ error: 'Proceso ID is invalid' });
         if (areaProduccion && !mongoose.Types.ObjectId.isValid(areaProduccion)) return res.status(400).json({ error: 'Area ID is invalid' });
         if (maquina && !mongoose.Types.ObjectId.isValid(maquina)) return res.status(400).json({ error: 'Maquina ID is invalid' });
@@ -254,6 +249,8 @@ exports.agregarActividadAJornada = async (req, res) => {
 
         // Recalcular la hora de inicio y fin de la jornada
         await recalcularHorasJornada(jornadaId);
+        // Recalcular el tiempo total de actividades
+        await recalcularTiempoTotal(jornadaId);
 
         res.status(200).json({ msg: 'Actividad agregada con éxito', jornada: await Jornada.findById(jornadaId).populate('registros') });
               

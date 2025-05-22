@@ -3,7 +3,8 @@ const winston = require('winston');
 const Produccion = require("../models/Produccion");
 const Jornada = require("../models/Jornada");
 const verificarYCrearOti = require('../utils/verificarYCrearEntidad');
-
+const recalcularHorasJornada = require('../utils/recalcularHoras');
+const recalcularTiempoTotal = require('../utils/recalcularTiempo');
 
 // Configuración del logger
 const logger = winston.createLogger({
@@ -265,8 +266,10 @@ exports.actualizarProduccion = async (req, res) => {
         produccion.areaProduccion = areaExistente._id;
         produccion.maquina = maquinaExistente._id;
         produccion.insumos = insumosExistente._id;
-        produccion.tiempoPreparacion = tiempoPreparacion;
-        produccion.tiempoOperacion = tiempoOperacion;
+        produccion.tipoTiempo = tipoTiempo || produccion.tipoTiempo;
+        produccion.horaInicio = horaInicio || produccion.horaInicio;
+        produccion.horaFin = horaFin || produccion.horaFin;
+        produccion.tiempo = tiempo || produccion.tiempo;
 
         // Validar Observaciones
         produccion.observaciones = req.body.observaciones || produccion.observaciones;
@@ -279,6 +282,12 @@ exports.actualizarProduccion = async (req, res) => {
             msg: "Producción actualizada exitosamente",
             produccion: produccionActualizada
         });
+
+        // Recalcular horas y tiempo total de la jornada
+        if (produccion.jornada) {
+            await recalcularHorasJornada(produccion.jornada);
+            await recalcularTiempoTotal(produccion.jornada);
+        }
 
     } catch (error) {
         console.error("❌ Error al actualizar producción:", error);
@@ -299,6 +308,12 @@ exports.eliminarProduccion = async (req, res) => {
 
         if (!registroEliminado) {
             return res.status(404).json({ msg: 'Registro de producción no encontrado' });
+        }
+
+        // Recalcular horas y tiempo total de la jornada
+        if (registroEliminado.jornada) {
+            await recalcularHorasJornada(registroEliminado.jornada);
+            await recalcularTiempoTotal(registroEliminado.jornada);
         }
 
         res.json({ msg: 'Registro de producción eliminado exitosamente' });

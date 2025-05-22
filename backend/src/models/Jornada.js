@@ -18,8 +18,8 @@ const JornadaSchema = new Schema({
         type: Date
     },
     totalTiempoActividades: {
-        type: Number,
-        default: 0
+        type: Object,
+        default: { horas: 0, minutos: 0 }
     },
     estado: {
         type: String,
@@ -47,13 +47,18 @@ JornadaSchema.pre('save', async function (next) {
             this.horaInicio = horasInicio.length > 0 ? new Date(Math.min(...horasInicio.map(h => h.getTime()))) : null;
             this.horaFin = horasFin.length > 0 ? new Date(Math.max(...horasFin.map(h => h.getTime()))) : null;
 
-            // Calcular los tiempos totales
-            this.totalTiempoActividades = registros.reduce((total, registro) => {
-                return total + (registro.tiempoOperacion || 0) + (registro.tiempoPreparacion || 0);
+            // Calcular los tiempos totales en horas y minutos
+            const totalMinutos = registros.reduce((total, registro) => {
+                return total + (registro.tiempo || 0);
             }, 0);
 
+            this.totalTiempoActividades = {
+                horas: Math.floor(totalMinutos / 60),
+                minutos: totalMinutos % 60
+            };
+
         } else {
-            this.totalTiempoActividades = 0;
+            this.totalTiempoActividades = { horas: 0, minutos: 0 };
             this.horaInicio = null;
             this.horaFin = null;
         }

@@ -14,6 +14,9 @@ const MiJornada = () => {
   const [jornadaActual, setJornadaActual] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  
+  const storedOperario = JSON.parse(localStorage.getItem('operario'));
+  const operarioName = storedOperario?.name || 'Operario';
 
   useEffect(() => {
     const fetchJornadas = async () => {
@@ -37,11 +40,11 @@ const MiJornada = () => {
         const jornadaActual = jornadas.find((jornada) => {
           const fechaJornada = ajustarFechaLocal(jornada.fecha).toDateString();
           const fechaHoy = ajustarFechaLocal(new Date()).toDateString();
-          console.log("Comparing:", { fechaJornada, fechaHoy }); // Debugging log
+          console.log("Comparing:", { fechaJornada, fechaHoy }); 
           return fechaJornada === fechaHoy;
         });
 
-        console.log("Jornada actual identified:", jornadaActual); // Debugging log
+        console.log("Jornada actual identified:", jornadaActual); 
 
         setJornadaActual(jornadaActual);
       } catch (error) {
@@ -55,112 +58,160 @@ const MiJornada = () => {
     fetchJornadas();
   }, [navigate]);
 
+
   const handleEditarActividad = (actividadId) => {
-    navigate(`/editar-actividad/${actividadId}`);
+    navigate(`/produccion/actualizar/${actividadId}`);
   };
 
   const handleEliminarActividad = async (actividadId) => {
     try {
+      // 1. Eliminar la actividad
       await axiosInstance.delete(`/produccion/eliminar/${actividadId}`);
       toast.success("Actividad eliminada con éxito");
-      setJornadaActual((prev) => ({
-        ...prev,
-        registros: prev.registros.filter((registro) => registro._id !== actividadId),
-      }));
+
+      // 2. Volver a consultar la jornada actualizada desde el backend
+      const { data: jornadaActualizada } = await axiosInstance.get(`/jornadas/${jornadaActual._id}`);
+
+      // 3. Actualizar el estado del frontend con los datos frescos (incluye registros, horaInicio, horaFin, tiempo total, etc.)
+      setJornadaActual(jornadaActualizada);
+      
     } catch (error) {
       console.error("Error al eliminar la actividad:", error);
       toast.error("No se pudo eliminar la actividad.");
     }
   };
 
-  if (loading) return <p>Cargando jornada actual...</p>;
 
   return (
-    <div className="flex bg-gray-100 h-screen">
-      <Sidebar />
-      <div className="flex-1">
-        <div className="container mx-auto px-4 py-6">
-          <h1 className="text-2xl font-bold mb-4">Mi Jornada Actual</h1>
+  <div className="flex bg-gray-100 h-screen">
+    <Sidebar />
+    <div className="flex-1 overflow-auto">
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-extrabold text-gray-800">Mi Jornada Actual</h1>
+            <p className="text-md text-gray-500">
+              Bienvenido, <span className="font-semibold">{operarioName}</span>
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate("/registro-produccion")}
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300"
+          >
+            Agregar actividad
+          </Button>
+        </div>
 
-          {jornadaActual ? (
-            <Card className="mb-6">
-              <div className="p-4">
-                <h2 className="text-xl font-semibold mb-2">Detalles de la Jornada</h2>
-                <p>
-                  <strong>Fecha:</strong> {ajustarFechaLocal(jornadaActual.fecha).toLocaleDateString()}
-                </p>
-                <p>
-                  <strong>Estado:</strong> {jornadaActual.estado}
-                </p>
-                <p>
-                  <strong>Tiempo Total:</strong> {jornadaActual.tiempoTotal} minutos
-                </p>
-                <p>
-                  <strong>Operario:</strong> {jornadaActual.operario?.name || 'N/A'}
-                </p>
-
-                <h2 className="text-xl font-semibold mt-4 mb-2">Actividades</h2>
-                {jornadaActual.registros.map((actividad) => (
-                  <div
-                    key={actividad._id}
-                    className="bg-gray-50 rounded-md p-3 mb-2 border border-gray-200"
-                  >
-                    <div className="flex justify-between items-center text-gray-700 text-sm">
-                      <div className="flex flex-col">
-                        <h4 className="font-semibold text-gray-700">
-                          {actividad.proceso?.nombre || 'N/A'}
-                        </h4>
-                        <p className="text-gray-600 text-sm">
-                          OTI: {actividad.oti?.numeroOti || 'N/A'}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          Área de Producción: {actividad.areaProduccion?.nombre || 'N/A'}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          Máquina: {actividad.maquina?.nombre || 'N/A'}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          Insumos: {actividad.insumos?.nombre || 'N/A'}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          Tipo de Tiempo: {actividad.tipoTiempo || 'N/A'}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          Hora Inicio: {actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString() : 'N/A'}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          Hora Fin: {actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString() : 'N/A'}
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          Tiempo: {actividad.tiempo} minutos
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          Observaciones: {actividad.observaciones || 'N/A'}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button onClick={() => handleEditarActividad(actividad._id)}>
-                          Editar
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleEliminarActividad(actividad._id)}
-                        >
-                          Eliminar
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+        {loading ? (
+          <div className="flex justify-center items-center h-48">
+            <p className="text-lg text-gray-600">Cargando información de la jornada...</p>
+          </div>
+        ) : jornadaActual && jornadaActual.registros && jornadaActual.registros.length > 0 ? (
+          <>
+            <Card className="mb-6 bg-white shadow-xl rounded-2xl border border-gray-100">
+              <div className="p-6 space-y-4">
+                <h2 className="text-2xl font-semibold text-gray-800 border-b pb-2 border-gray-300">Detalles de la Jornada</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-gray-700">
+                  <div><strong>Fecha:</strong> {ajustarFechaLocal(jornadaActual.fecha).toLocaleDateString()}</div>                  
+                  <div><strong>Tiempo Total:</strong> {jornadaActual.totalTiempoActividades.horas} horas {jornadaActual.totalTiempoActividades.minutos} minutos</div>
+                  <div><strong>Inicio de Jornada:</strong> {jornadaActual.horaInicio ? new Date(jornadaActual.horaInicio).toLocaleTimeString() : 'N/A'}</div>
+                  <div><strong>Fin de Jornada:</strong> {jornadaActual.horaFin ? new Date(jornadaActual.horaFin).toLocaleTimeString() : 'N/A'}</div>
+                </div>
               </div>
             </Card>
-          ) : (
-            <p>No hay una jornada activa actualmente.</p>
-          )}
-        </div>
+
+            <h2 className="text-2xl font-semibold mt-8 mb-4 text-gray-800 border-b pb-2 border-gray-300">
+              Actividades Registradas
+            </h2>
+
+            {jornadaActual.registros
+            .sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio))
+            .map((actividad) => (
+              <Card
+                key={actividad._id}
+                className="mb-4 bg-white rounded-xl border hover:shadow-md transition-all"
+              >
+                <div className="p-5">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h4 className="text-lg font-semibold text-blue-700">
+                        {actividad.proceso?.nombre || "Proceso no especificado"}
+                      </h4>
+                      <p className="text-sm text-gray-500">
+                        Tiempo: <span className="text-green-600 font-semibold">{actividad.tiempo} min</span>
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        onClick={() => handleEditarActividad(actividad._id)}
+                        className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 text-sm rounded-md"
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleEliminarActividad(actividad._id)}
+                        className="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md transition duration-200"
+                      >
+                        Eliminar
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-gray-600">
+                    {actividad.oti?.numeroOti && (
+                      <p><span className="font-semibold">OTI:</span> {actividad.oti.numeroOti}</p>
+                    )}
+                    {actividad.areaProduccion?.nombre && (
+                      <p><span className="font-semibold">Área:</span> {actividad.areaProduccion.nombre}</p>
+                    )}
+                    {actividad.maquina?.nombre && (
+                      <p><span className="font-semibold">Máquina:</span> {actividad.maquina.nombre}</p>
+                    )}
+                    {actividad.insumos?.nombre && (
+                      <p><span className="font-semibold">Insumos:</span> {actividad.insumos.nombre}</p>
+                    )}
+                    {actividad.tipoTiempo && (
+                      <p><span className="font-semibold">Tiempo de:</span> {actividad.tipoTiempo}</p>
+                    )}
+                    {(actividad.horaInicio || actividad.horaFin) && (
+                      <p className="md:col-span-2 lg:col-span-1">
+                        <span className="font-semibold">Horario:</span>{" "}
+                        {actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'} -{" "}
+                        {actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                      </p>
+                    )}
+                  </div>
+
+                  {actividad.observaciones && (
+                    <div className="mt-4 pt-4 border-t border-gray-200 text-sm text-gray-600">
+                      <span className="font-semibold">Observaciones:</span> {actividad.observaciones}
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </>
+        ) : (
+          <Card className="flex flex-col items-center justify-center p-8 text-center bg-white shadow-md rounded-lg">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800">¡Hola, {operarioName}!</h2>
+            <p className="text-lg text-gray-600 mb-6">
+              Parece que no tienes una jornada activa registrada para hoy.
+            </p>
+            <Button
+              onClick={() => navigate("/registro-produccion")}
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300"
+            >
+              Comenzar Nueva Jornada
+            </Button>
+          </Card>
+        )}
       </div>
     </div>
-  );
+  </div>
+);
+
 };
 
 export default MiJornada;
+
