@@ -4,7 +4,6 @@ const Produccion = require("../models/Produccion");
 const Jornada = require("../models/Jornada");
 const verificarYCrearOti = require('../utils/verificarYCrearEntidad');
 
-
 // Configuración del logger
 const logger = winston.createLogger({
     level: 'info',
@@ -22,8 +21,204 @@ const Maquina = require('../models/Maquina');
 const Operario = require("../models/Operario")
 const Insumos = require('../models/Insumos');
 
+// Convierte { horas, minutos } o número a minutos
+function aMinutos(tiempo) {
+    if (!tiempo) return 0;
+    if (typeof tiempo === "number") return tiempo;
+    if (typeof tiempo === "object") {
+        return (tiempo.horas || 0) * 60 + (tiempo.minutos || 0);
+    }
+    return 0;
+}
 
-// Obtener todos los registros de producción
+// 📌 FUNCIÓN CORREGIDA: Registrar Producción
+exports.registrarProduccion = async (req, res) => {
+    try {
+        const { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin, tiempo, tiempoOperacion, tiempoPreparacion, observaciones } = req.body;
+
+        // Log de datos recibidos
+        logger.info('Datos recibidos en registrarProduccion:', req.body);
+
+        // Validar campos requeridos
+        if (!operario || !oti || !proceso || !areaProduccion || !maquina || !insumos || !tipoTiempo || !horaInicio || !horaFin || !tiempo) {
+            logger.warn('Faltan campos requeridos:', { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin, tiempo });
+            return res.status(400).json({ msg: 'Faltan campos requeridos' });
+        }
+
+        // CORRECCIÓN 1: Usar horaInicio para determinar la fecha si no se proporciona fecha
+        const fechaParaJornada = fecha || horaInicio;
+        
+        // CORRECCIÓN 2: Calcular fecha correctamente respetando zona horaria local
+        const fechaLocal = new Date(fechaParaJornada);
+        const fechaISO = `${fechaLocal.getFullYear()}-${String(fechaLocal.getMonth() + 1).padStart(2, '0')}-${String(fechaLocal.getDate()).padStart(2, '0')}`;
+        
+        logger.info('Fecha calculada para jornada:', {
+            fechaOriginal: fechaParaJornada,
+            fechaLocal: fechaLocal.toISOString(),
+            fechaISO: fechaISO
+        });
+
+        // Buscar o crear la jornada correspondiente
+        let jornada = await Jornada.findOne({ 
+            operario, 
+            fecha: {
+                $gte: new Date(fechaISO + 'T00:00:00.000Z'),
+                $lt: new Date(fechaISO + 'T23:59:59.999Z')
+            }
+        });
+        
+        if (!jornada) {
+            logger.info('No se encontró jornada, creando una nueva.');
+            jornada = new Jornada({ 
+                operario, 
+                fecha: new Date(fechaISO + 'T00:00:00.000Z'), 
+                registros: [] 
+            });
+            await jornada.save();
+            logger.info('Nueva jornada creada:', jornada);
+        } else {
+            logger.info('Jornada existente encontrada:', jornada);
+        }
+
+        // CORRECCIÓN 3: Verificar y crear OTI de manera más robusta
+        let otiId;
+        try {
+            otiId = await verificarYCrearOti(oti);
+            logger.info('OTI verificada/creada:', otiId);
+        } catch (error) {
+            logger.error('Error al verificar/crear OTI:', error);
+            return res.status(400).json({ msg: 'Error al procesar OTI', error: error.message });
+        }
+
+        // CORRECCIÓN 4: Validar que todas las referencias existan
+        const validaciones = await Promise.all([
+            Operario.findById(operario),
+            Proceso.findById(proceso),
+            AreaProduccion.findById(areaProduccion),
+            Maquina.findById(maquina),
+            Insumos.findById(insumos)
+        ]);
+
+        const [operarioDoc, procesoDoc, areaDoc, maquinaDoc, insumosDoc] = validaciones;
+
+        if (!operarioDoc) {
+            logger.error('Operario no encontrado:', operario);
+            return res.status(404).json({ msg: 'Operario no encontrado' });
+        }
+        if (!procesoDoc) {
+            logger.error('Proceso no encontrado:', proceso);
+            return res.status(404).json({ msg: 'Proceso no encontrado' });
+        }
+        if (!areaDoc) {
+            logger.error('Área de producción no encontrada:', areaProduccion);
+            return res.status(404).json({ msg: 'Área de producción no encontrada' });
+        }
+        if (!maquinaDoc) {
+            logger.error('Máquina no encontrada:', maquina);
+            return res.status(404).json({ msg: 'Máquina no encontrada' });
+        }
+        if (!insumosDoc) {
+            logger.error('Insumos no encontrados:', insumos);
+            return res.status(404).json({ msg: 'Insumos no encontrados' });
+        }
+
+        // CORRECCIÓN 5: Validar y convertir fechas de hora correctamente
+        const horaInicioDate = new Date(horaInicio);
+        const horaFinDate = new Date(horaFin);
+
+        if (isNaN(horaInicioDate.getTime()) || isNaN(horaFinDate.getTime())) {
+            logger.error('Fechas de hora inválidas:', { horaInicio, horaFin });
+            return res.status(400).json({ msg: 'Fechas de hora inválidas' });
+        }
+
+        // Crear el registro de producción
+        const nuevaProduccion = new Produccion({
+            operario,
+            fecha: horaInicioDate, // CORRECCIÓN: Usar horaInicio como fecha del registro
+            oti: otiId,
+            proceso,
+            areaProduccion,
+            maquina,
+            insumos,
+            jornada: jornada._id,
+            tipoTiempo,
+            horaInicio: horaInicioDate,
+            horaFin: horaFinDate,
+            tiempo: aMinutos(tiempo),
+            tiempoOperacion: aMinutos(tiempoOperacion || 0),
+            tiempoPreparacion: aMinutos(tiempoPreparacion || 0),
+            observaciones: observaciones || ""
+        });
+
+        logger.info('Creando nueva producción:', {
+            ...nuevaProduccion.toObject(),
+            horaInicio: nuevaProduccion.horaInicio.toISOString(),
+            horaFin: nuevaProduccion.horaFin.toISOString()
+        });
+
+        const produccionGuardada = await nuevaProduccion.save();
+        logger.info('Producción guardada exitosamente:', produccionGuardada._id);
+
+        // Asociar el registro a la jornada
+        jornada.registros.push(produccionGuardada._id);
+        await jornada.save();
+        logger.info('Registro asociado a jornada. Total registros en jornada:', jornada.registros.length);
+
+        // CORRECCIÓN 6: Devolver respuesta más completa
+        const produccionCompleta = await Produccion.findById(produccionGuardada._id)
+            .populate('oti', 'numeroOti')
+            .populate('operario', 'name')
+            .populate('proceso', 'nombre')
+            .populate('areaProduccion', 'nombre')
+            .populate('maquina', 'nombre')
+            .populate('insumos', 'nombre');
+
+        logger.info('Producción registrada exitosamente:', {
+            id: produccionGuardada._id,
+            jornadaId: jornada._id,
+            fecha: fechaISO
+        });
+
+        res.status(201).json({ 
+            msg: 'Producción registrada y vinculada a la jornada exitosamente', 
+            produccion: produccionCompleta,
+            jornada: {
+                id: jornada._id,
+                fecha: jornada.fecha,
+                totalRegistros: jornada.registros.length
+            }
+        });
+
+    } catch (error) {
+        logger.error('Error completo al registrar producción:', {
+            message: error.message,
+            stack: error.stack,
+            body: req.body
+        });
+        
+        // Devolver error más específico
+        let errorMessage = 'Error interno del servidor';
+        let statusCode = 500;
+
+        if (error.name === 'ValidationError') {
+            errorMessage = 'Error de validación: ' + Object.values(error.errors).map(e => e.message).join(', ');
+            statusCode = 400;
+        } else if (error.name === 'CastError') {
+            errorMessage = 'ID inválido proporcionado';
+            statusCode = 400;
+        } else if (error.code === 11000) {
+            errorMessage = 'Registro duplicado';
+            statusCode = 409;
+        }
+
+        res.status(statusCode).json({ 
+            msg: errorMessage, 
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+        });
+    }
+};
+
+// Resto de funciones sin cambios...
 exports.getAllProduccion = async (req, res) => {
     try {
         let { page = 1, limit = 10 } = req.query;
@@ -32,7 +227,6 @@ exports.getAllProduccion = async (req, res) => {
         limit = isNaN(parseInt(limit)) ? 10 : parseInt(limit);
 
         const skip = (page - 1) * limit;
-
 
         const totalResults = await Produccion.countDocuments({});
 
@@ -47,7 +241,6 @@ exports.getAllProduccion = async (req, res) => {
             .populate("maquina", "nombre")
             .populate("insumos", "nombre");
 
-
         res.json({ totalResults, resultados: registros });
     } catch (error) {
         console.error("error en getAllProduccion:", error);
@@ -55,68 +248,6 @@ exports.getAllProduccion = async (req, res) => {
     }
 };
 
-// 📌 Registrar Producción
-exports.registrarProduccion = async (req, res) => {
-    try {
-        const { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin, tiempo, observaciones } = req.body;
-
-        // Log de datos recibidos
-        logger.info('Datos recibidos en registrarProduccion:', req.body);
-
-        // Validar campos requeridos
-        if (!operario || !fecha || !oti || !proceso || !areaProduccion || !maquina || !insumos || !tipoTiempo || !horaInicio || !horaFin || !tiempo) {
-            logger.warn('Faltan campos requeridos:', { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin, tiempo });
-            return res.status(400).json({ msg: 'Faltan campos requeridos' });
-        }
-
-        // Buscar o crear la jornada correspondiente
-        const fechaISO = new Date(fecha).toISOString().split('T')[0];
-        logger.info('Fecha ISO calculada:', fechaISO);
-
-        let jornada = await Jornada.findOne({ operario, fecha: fechaISO });
-        if (!jornada) {
-            logger.info('No se encontró jornada, creando una nueva.');
-            jornada = new Jornada({ operario, fecha: fechaISO, registros: [] });
-            await jornada.save();
-        }
-
-        logger.info('Jornada creada o encontrada:', jornada);
-
-        const otiId = await verificarYCrearOti(oti);
-
-        // Asignar el ObjectId de OTI al registro de producción
-        const nuevaProduccion = new Produccion({
-            operario,
-            fecha,
-            oti: otiId,
-            proceso,
-            areaProduccion,
-            maquina,
-            insumos,
-            jornada: jornada._id,
-            tipoTiempo,
-            horaInicio,
-            horaFin,
-            tiempo,
-            observaciones: observaciones || null
-        });
-
-        logger.info('Creando nueva producción:', nuevaProduccion);
-        const produccionGuardada = await nuevaProduccion.save();
-
-        // Asociar el registro a la jornada
-        jornada.registros.push(produccionGuardada._id);
-        await jornada.save();
-
-        logger.info('Producción registrada y vinculada a la jornada:', produccionGuardada);
-        res.status(201).json({ msg: 'Producción registrada y vinculada a la jornada', produccion: produccionGuardada });
-    } catch (error) {
-        logger.error('Error al registrar producción:', error);
-        res.status(500).json({ msg: 'Error interno del servidor' });
-    }
-};
-
-// 📌 Obtener Producciones por Operario
 exports.obtenerProducciones = async (req, res) => {
     try {
         const { operario } = req.query;
@@ -142,7 +273,6 @@ exports.obtenerProducciones = async (req, res) => {
     }
 };
 
-// 📌 Listar Producción con detalles para operario
 exports.listarProduccion = async (req, res) => {
     try {
         const { operario, oti } = req.query;
@@ -183,24 +313,20 @@ exports.listarProduccion = async (req, res) => {
     }
 };
 
-// 📌 Actualizar Producción
 exports.actualizarProduccion = async (req, res) => {
     try {
         console.log("🛠 Datos recibidos en backend para actualización:", req.body);
         const { _id, operario, oti, proceso, areaProduccion, maquina, insumos, fecha, tiempo, horaInicio, horaFin, tipoTiempo} = req.body;
 
-        // Validar que el ID de la producción esté presente
         if (!_id) {
             return res.status(400).json({ msg: 'El ID de la producción es requerido' });
         }
 
-        // Buscar la producción existente
         const produccion = await Produccion.findById(_id);
         if (!produccion) {
             return res.status(404).json({ msg: "Producción no encontrada" });
         }
 
-        // Validar Operario
         if (!operario || !mongoose.Types.ObjectId.isValid(operario)) {
             return res.status(400).json({ msg: "Operario no válido" });
         }
@@ -209,7 +335,6 @@ exports.actualizarProduccion = async (req, res) => {
             return res.status(404).json({ msg: "Operario no encontrado" });
         }
 
-        // Validar y/o buscar OTI
         let otiExistente = await Oti.findById(oti);
         if (!otiExistente) {
             console.warn(`⚠️ OTI con ID ${oti} no encontrada. Creando nueva OTI.`);
@@ -217,42 +342,35 @@ exports.actualizarProduccion = async (req, res) => {
             await otiExistente.save();
         }
 
-        // Validar Proceso
         const procesoExistente = await Proceso.findById(proceso);
         if (!procesoExistente) {
             return res.status(404).json({ msg: "Proceso no encontrado" });
         }
 
-        // Validar Área de Producción
         const areaExistente = await AreaProduccion.findById(areaProduccion);
         if (!areaExistente) {
             return res.status(404).json({ msg: "Área de producción no encontrada" });
         }
 
-        // Validar Máquina
         const maquinaExistente = await Maquina.findById(maquina);
         if (!maquinaExistente) {
             return res.status(404).json({ msg: "Máquina no encontrada" });
         }
 
-        // Validar Insumos
         const insumosExistente = await Insumos.findById(insumos);
         if (!insumosExistente) {
             return res.status(404).json({ msg: "Insumo no encontrado" });
         }
 
-        // Validar Fecha
         const fechaValida = new Date(fecha);
         if (isNaN(fechaValida.getTime())) {
             return res.status(400).json({ msg: "Fecha inválida" });
         }
 
-        // Ajustar la fecha para la zona horaria local
         const fechaLocal = new Date(fecha);
         fechaLocal.setMinutes(fechaLocal.getMinutes() + fechaLocal.getTimezoneOffset());
         produccion.fecha = fechaLocal;
 
-        // Actualizar los datos de la producción
         produccion.oti = otiExistente._id;
         produccion.operario = operarioDB._id;
         produccion.proceso = procesoExistente._id;
@@ -261,11 +379,8 @@ exports.actualizarProduccion = async (req, res) => {
         produccion.insumos = insumosExistente._id;
         produccion.tiempoPreparacion = tiempoPreparacion;
         produccion.tiempoOperacion = tiempoOperacion;
-
-        // Validar Observaciones
         produccion.observaciones = req.body.observaciones || produccion.observaciones;
 
-        // Guardar cambios
         const produccionActualizada = await produccion.save();
         console.log("✅ Producción actualizada en BD:", produccionActualizada);
 
@@ -280,7 +395,6 @@ exports.actualizarProduccion = async (req, res) => {
     }
 };
 
-// 📌 Eliminar Producción
 exports.eliminarProduccion = async (req, res) => {
     try {
         const { id } = req.params;
@@ -301,7 +415,7 @@ exports.eliminarProduccion = async (req, res) => {
         res.status(500).json({ msg: 'Error al eliminar producción', error: error.message });
     }
 };
-// 📌 Buscar Producción con filtros dinámicos para FilterPanel
+
 exports.buscarProduccion = async (req, res) => {
     try {
         const { oti, operario, fechaInicio, fechaFin, proceso, areaProduccion, maquina, insumos, page = 1, limit = 10 } = req.query;
@@ -311,11 +425,11 @@ exports.buscarProduccion = async (req, res) => {
         console.log("📥 Filtros recibidos en el backend:", req.query);
 
         if (oti && oti.trim() !== '') {
-            query.oti = oti; // Espera el _id directamente
+            query.oti = oti;
         }
 
         if (operario && operario.trim() !== '') {
-            query.operario = operario; // Espera el _id directamente
+            query.operario = operario;
         }
 
         if (fechaInicio && fechaFin) {
@@ -332,19 +446,19 @@ exports.buscarProduccion = async (req, res) => {
         }
 
         if (proceso && proceso.trim() !== '') {
-            query.proceso = proceso; // Espera el _id directamente
+            query.proceso = proceso;
         }
 
         if (areaProduccion && areaProduccion.trim() !== '') {
-            query.areaProduccion = areaProduccion; // Espera el _id directamente
+            query.areaProduccion = areaProduccion;
         }
 
         if (maquina && maquina.trim() !== '') {
-            query.maquina = maquina; // Espera el _id directamente
+            query.maquina = maquina;
         }
 
         if (insumos && insumos.trim() !== '') {
-            query.insumos = insumos; // Espera el _id directamente
+            query.insumos = insumos;
         }
 
         console.log("🔍 Query final construida para la búsqueda:", query);
@@ -397,11 +511,9 @@ exports.buscarPorFechas = async (req, res) => {
             .populate("maquina", "nombre")
             .populate("insumos", "nombre");
 
-
         res.status(200).json(producciones);
     } catch (error) {
         console.error("Error al buscar por fechas:", error);
         res.status(500).json({ msg: "Error al buscar registros" });
     }
 };
-

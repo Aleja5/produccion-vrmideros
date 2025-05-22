@@ -7,9 +7,9 @@ import AdminDashboard from './pages/AdminDashboard';
 import ValidateCedula from './pages/ValidateCedula';
 import OperarioDashboard from './pages/OperarioDashboard';
 import RegistroProduccion from './components/RegistroProduccion';
-import EditarProduccion from './pages/EditarProduccion';
+
 import MiJornada from './pages/MiJornada';
-import HistorialJornadas from './pages/HistorialJornadas';
+
 
 import ProtectedRoute from './components/ProtectedRoute';
 import MaquinasPage from './pages/Maquinas';
@@ -79,15 +79,7 @@ function App() {
           }
         />
 
-        {/* Ruta protegida: Editar Producción */}
-        <Route
-          path="/editar-produccion/:id"
-          element={
-            <ProtectedRoute allowedRoles={['production']}>
-              <EditarProduccion />
-            </ProtectedRoute>
-          }
-        />
+       
 
         {/* Nueva ruta protegida: Registrar Producción con jornadaId */}
         <Route
@@ -100,7 +92,7 @@ function App() {
         />
 
         <Route path="/mi-jornada" element={<MiJornada />} />
-        <Route path="/historial-jornadas" element={<HistorialJornadas />} />
+
       </Routes>
     </Router>
   );
