@@ -44,7 +44,7 @@ const MiJornada = () => {
           return fechaJornada === fechaHoy;
         });
 
-        console.log("Jornada actual identified:", jornadaActual); 
+        console.log("Jornada actual identified:", jornadaActual); // Debugging log
 
         setJornadaActual(jornadaActual);
       } catch (error) {
@@ -62,25 +62,24 @@ const MiJornada = () => {
   const handleEditarActividad = (actividadId) => {
     navigate(`/produccion/actualizar/${actividadId}`);
   };
-
   const handleEliminarActividad = async (actividadId) => {
     try {
-      // 1. Eliminar la actividad
-      await axiosInstance.delete(`/produccion/eliminar/${actividadId}`);
-      toast.success("Actividad eliminada con éxito");
-
-      // 2. Volver a consultar la jornada actualizada desde el backend
-      const { data: jornadaActualizada } = await axiosInstance.get(`/jornadas/${jornadaActual._id}`);
-
-      // 3. Actualizar el estado del frontend con los datos frescos (incluye registros, horaInicio, horaFin, tiempo total, etc.)
-      setJornadaActual(jornadaActualizada);
+      console.log(`Intentando eliminar actividad con ID: ${actividadId}`);
       
+      // 1. Eliminar la actividad
+      const response = await axiosInstance.delete(`/produccion/eliminar/${actividadId}`);
+      console.log("Respuesta de eliminación:", response.data);
+      
+      toast.success("Actividad eliminada con éxito");
+      setJornadaActual((prev) => ({
+        ...prev,
+        registros: prev.registros.filter((registro) => registro._id !== actividadId),
+      }));
     } catch (error) {
       console.error("Error al eliminar la actividad:", error);
       toast.error("No se pudo eliminar la actividad.");
     }
   };
-
 
   return (
   <div className="flex bg-gray-100 h-screen">
@@ -106,14 +105,14 @@ const MiJornada = () => {
           <div className="flex justify-center items-center h-48">
             <p className="text-lg text-gray-600">Cargando información de la jornada...</p>
           </div>
-        ) : jornadaActual && jornadaActual.registros && jornadaActual.registros.length > 0 ? (
+        ) : jornadaActual ? (
           <>
             <Card className="mb-6 bg-white shadow-xl rounded-2xl border border-gray-100">
               <div className="p-6 space-y-4">
                 <h2 className="text-2xl font-semibold text-gray-800 border-b pb-2 border-gray-300">Detalles de la Jornada</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-gray-700">
                   <div><strong>Fecha:</strong> {ajustarFechaLocal(jornadaActual.fecha).toLocaleDateString()}</div>                  
-                  <div><strong>Tiempo Total:</strong> {jornadaActual.totalTiempoActividades.horas} horas {jornadaActual.totalTiempoActividades.minutos} minutos</div>
+                  <div><strong>Tiempo Total:</strong> {jornadaActual.totalTiempoActividades && typeof jornadaActual.totalTiempoActividades.horas === 'number' && typeof jornadaActual.totalTiempoActividades.minutos === 'number' ? `${jornadaActual.totalTiempoActividades.horas}h ${jornadaActual.totalTiempoActividades.minutos}m` : (jornadaActual.totalTiempoActividades || 'N/A')}</div>
                   <div><strong>Inicio de Jornada:</strong> {jornadaActual.horaInicio ? new Date(jornadaActual.horaInicio).toLocaleTimeString() : 'N/A'}</div>
                   <div><strong>Fin de Jornada:</strong> {jornadaActual.horaFin ? new Date(jornadaActual.horaFin).toLocaleTimeString() : 'N/A'}</div>
                 </div>
@@ -124,73 +123,75 @@ const MiJornada = () => {
               Actividades Registradas
             </h2>
 
-            {jornadaActual.registros
-            .sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio))
-            .map((actividad) => (
-              <Card
-                key={actividad._id}
-                className="mb-4 bg-white rounded-xl border hover:shadow-md transition-all"
-              >
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h4 className="text-lg font-semibold text-blue-700">
-                        {actividad.proceso?.nombre || "Proceso no especificado"}
-                      </h4>
-                      <p className="text-sm text-gray-500">
-                        Tiempo: <span className="text-green-600 font-semibold">{actividad.tiempo} min</span>
-                      </p>
+            {jornadaActual.registros && jornadaActual.registros.length > 0 ? (
+              jornadaActual.registros.map((actividad) => (
+                <Card
+                  key={actividad._id}
+                  className="mb-4 bg-white rounded-xl border hover:shadow-md transition-all"
+                >
+                  <div className="p-5">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="text-lg font-semibold text-blue-700">
+                          {actividad.proceso?.nombre || "Proceso no especificado"}
+                        </h4>
+                        <p className="text-sm text-gray-500">
+                          Tiempo: <span className="text-green-600 font-semibold">{actividad.tiempo} min</span>
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          onClick={() => handleEditarActividad(actividad._id)}
+                          className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 text-sm rounded-md"
+                        >
+                          Editar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => handleEliminarActividad(actividad._id)}
+                          className="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md transition duration-200"
+                        >
+                          Eliminar
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        onClick={() => handleEditarActividad(actividad._id)}
-                        className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 text-sm rounded-md"
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => handleEliminarActividad(actividad._id)}
-                        className="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md transition duration-200"
-                      >
-                        Eliminar
-                      </Button>
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-gray-600">
-                    {actividad.oti?.numeroOti && (
-                      <p><span className="font-semibold">OTI:</span> {actividad.oti.numeroOti}</p>
-                    )}
-                    {actividad.areaProduccion?.nombre && (
-                      <p><span className="font-semibold">Área:</span> {actividad.areaProduccion.nombre}</p>
-                    )}
-                    {actividad.maquina?.nombre && (
-                      <p><span className="font-semibold">Máquina:</span> {actividad.maquina.nombre}</p>
-                    )}
-                    {actividad.insumos?.nombre && (
-                      <p><span className="font-semibold">Insumos:</span> {actividad.insumos.nombre}</p>
-                    )}
-                    {actividad.tipoTiempo && (
-                      <p><span className="font-semibold">Tiempo de:</span> {actividad.tipoTiempo}</p>
-                    )}
-                    {(actividad.horaInicio || actividad.horaFin) && (
-                      <p className="md:col-span-2 lg:col-span-1">
-                        <span className="font-semibold">Horario:</span>{" "}
-                        {actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'} -{" "}
-                        {actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
-                      </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-gray-600">
+                      {actividad.oti?.numeroOti && (
+                        <p><span className="font-semibold">OTI:</span> {actividad.oti.numeroOti}</p>
+                      )}
+                      {actividad.areaProduccion?.nombre && (
+                        <p><span className="font-semibold">Área:</span> {actividad.areaProduccion.nombre}</p>
+                      )}
+                      {actividad.maquina?.nombre && (
+                        <p><span className="font-semibold">Máquina:</span> {actividad.maquina.nombre}</p>
+                      )}
+                      {actividad.insumos?.nombre && (
+                        <p><span className="font-semibold">Insumos:</span> {actividad.insumos.nombre}</p>
+                      )}
+                      {actividad.tipoTiempo && (
+                        <p><span className="font-semibold">Tipo:</span> {actividad.tipoTiempo}</p>
+                      )}
+                      {(actividad.horaInicio || actividad.horaFin) && (
+                        <p className="md:col-span-2 lg:col-span-1">
+                          <span className="font-semibold">Horario:</span>{" "}
+                          {actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'} -{" "}
+                          {actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                        </p>
+                      )}
+                    </div>
+
+                    {actividad.observaciones && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 text-sm text-gray-600">
+                        <span className="font-semibold">Observaciones:</span> {actividad.observaciones}
+                      </div>
                     )}
                   </div>
-
-                  {actividad.observaciones && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 text-sm text-gray-600">
-                      <span className="font-semibold">Observaciones:</span> {actividad.observaciones}
-                    </div>
-                  )}
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))
+            ) : (
+              <p className="text-gray-600">No hay actividades registradas.</p>
+            )}
           </>
         ) : (
           <Card className="flex flex-col items-center justify-center p-8 text-center bg-white shadow-md rounded-lg">
@@ -202,7 +203,9 @@ const MiJornada = () => {
               onClick={() => navigate("/registro-produccion")}
               className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300"
             >
-              Comenzar Nueva Jornada
+              <span className="flex items-center space-x-2">
+                <span>Comenzar Nueva Jornada</span>
+              </span>
             </Button>
           </Card>
         )}

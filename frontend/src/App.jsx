@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword'; // Componente de recuperación
 import AdminDashboard from './pages/AdminDashboard';
+import AdminHome from './pages/AdminHome';
 import ValidateCedula from './pages/ValidateCedula';
 import OperarioDashboard from './pages/OperarioDashboard';
 import RegistroProduccion from './components/RegistroProduccion';
@@ -29,9 +30,16 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
-
-        {/* ADMIN */}
+        <Route path="/reset-password/:token" element={<ResetPassword />} />        {/* ADMIN */}
+        {/* Ruta protegida: Admin Home (Nueva página de inicio) */}
+        <Route
+          path="/admin-home"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminHome />
+            </ProtectedRoute>
+          }
+        />
         {/* Ruta protegida: Admin Dashboard */}
         <Route
           path="/admin-dashboard"

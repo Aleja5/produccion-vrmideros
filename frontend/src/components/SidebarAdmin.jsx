@@ -23,9 +23,9 @@ export const SidebarAdmin = () => {
     setCollapsed(newState);
     localStorage.setItem("sidebarCollapsed", newState);
   };
-
   const menuItems = [
-  { to: "/admin-dashboard", icon: Home, label: "Inicio" },
+  { to: "/admin-home", icon: Home, label: "Dashboard" },
+  { to: "/admin-dashboard", icon: LayoutDashboard, label: "Consultas" },
   { to: "/admin/usuarios", icon: User, label: "Usuarios" },
   { to: "/admin/maquinas", icon: Cpu, label: "Máquinas" },
   { to: "/admin/areas", icon: LayoutDashboard, label: "Áreas de Producción" },
