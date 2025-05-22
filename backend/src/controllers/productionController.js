@@ -2,9 +2,12 @@ const mongoose = require("mongoose");
 const winston = require('winston');
 const Produccion = require("../models/Produccion");
 const Jornada = require("../models/Jornada");
+const { recalcularHorasJornada } = require('../utils/recalcularHoras');
+const { recalcularTiempoTotal } = require('../utils/recalcularTiempo');
+const fs = require('fs');
+const path = require('path');
 const verificarYCrearOti = require('../utils/verificarYCrearEntidad');
-const recalcularHorasJornada = require('../utils/recalcularHoras');
-const recalcularTiempoTotal = require('../utils/recalcularTiempo');
+
 
 // Configuración del logger
 const logger = winston.createLogger({
@@ -23,6 +26,13 @@ const Maquina = require('../models/Maquina');
 const Operario = require("../models/Operario")
 const Insumos = require('../models/Insumos');
 
+const logFilePath = path.join(__dirname, '..', '..', 'logs', 'produccion.log');
+
+// Función para registrar mensajes en el archivo de log y en la consola
+const logMessage = (message) => {
+  console.log(message);
+  fs.appendFileSync(logFilePath, `\${new Date().toISOString()} - \${message}\\n`);
+};
 
 // Obtener todos los registros de producción
 exports.getAllProduccion = async (req, res) => {
@@ -283,12 +293,6 @@ exports.actualizarProduccion = async (req, res) => {
             produccion: produccionActualizada
         });
 
-        // Recalcular horas y tiempo total de la jornada
-        if (produccion.jornada) {
-            await recalcularHorasJornada(produccion.jornada);
-            await recalcularTiempoTotal(produccion.jornada);
-        }
-
     } catch (error) {
         console.error("❌ Error al actualizar producción:", error);
         res.status(500).json({ msg: "Error al actualizar la producción", error: error.message });
@@ -297,31 +301,70 @@ exports.actualizarProduccion = async (req, res) => {
 
 // 📌 Eliminar Producción
 exports.eliminarProduccion = async (req, res) => {
-    try {
-        const { id } = req.params;
+  const { id } = req.params;
+  logMessage('[eliminarProduccion] Iniciando eliminación para el ID: ' + id);
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ msg: 'ID de producción no válido' });
-        }
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    logMessage('[eliminarProduccion] ID no válido: ' + id);
+    return res.status(400).json({ msg: "ID no válido" });
+  }
 
-        const registroEliminado = await Produccion.findByIdAndDelete(id);
+  try {
+    logMessage('[eliminarProduccion] Buscando producción con ID: ' + id);
+    const produccion = await Produccion.findById(id);
 
-        if (!registroEliminado) {
-            return res.status(404).json({ msg: 'Registro de producción no encontrado' });
-        }
-
-        // Recalcular horas y tiempo total de la jornada
-        if (registroEliminado.jornada) {
-            await recalcularHorasJornada(registroEliminado.jornada);
-            await recalcularTiempoTotal(registroEliminado.jornada);
-        }
-
-        res.json({ msg: 'Registro de producción eliminado exitosamente' });
-    } catch (error) {
-        console.error('Error al eliminar producción:', error);
-        res.status(500).json({ msg: 'Error al eliminar producción', error: error.message });
+    if (!produccion) {
+      logMessage('[eliminarProduccion] Producción no encontrada con ID: ' + id);
+      return res.status(404).json({ msg: "Producción no encontrada" });
     }
+    logMessage('[eliminarProduccion] Producción encontrada: ' + JSON.stringify(produccion));
+
+    const jornadaId = produccion.jornada;
+    logMessage('[eliminarProduccion] ID de Jornada asociada: ' + jornadaId);
+
+    // Eliminar la referencia de la producción en la jornada
+    if (jornadaId) {
+      logMessage('[eliminarProduccion] Actualizando Jornada: ' + jornadaId + ' para quitar la producción: ' + id);
+      const jornadaActualizada = await Jornada.findByIdAndUpdate(
+        jornadaId,
+        { $pull: { registros: id } },
+        { new: true }
+      );
+      if (jornadaActualizada) {
+        logMessage('[eliminarProduccion] Jornada actualizada: ' + JSON.stringify(jornadaActualizada));
+        // Recalcular horas y tiempo total de la jornada
+        logMessage('[eliminarProduccion] Recalculando horas para Jornada ID: ' + jornadaId);
+        await recalcularHorasJornada(jornadaId.toString());
+        logMessage('[eliminarProduccion] Recalculando tiempo total para Jornada ID: ' + jornadaId);
+        await recalcularTiempoTotal(jornadaId.toString());
+        logMessage('[eliminarProduccion] Recalculos completados para Jornada ID: ' + jornadaId);
+      } else {
+        logMessage('[eliminarProduccion] No se encontró la Jornada con ID: ' + jornadaId + ' para actualizar.');
+      }
+    } else {
+      logMessage('[eliminarProduccion] La producción no está asociada a ninguna jornada.');
+    }
+
+    // Eliminar el registro de producción
+    logMessage('[eliminarProduccion] Eliminando Producción con ID: ' + id);
+    const resultadoDelete = await Produccion.findByIdAndDelete(id);
+
+    if (!resultadoDelete) {
+        logMessage('[eliminarProduccion] No se pudo eliminar la Producción con ID (findByIdAndDelete retornó null): ' + id);
+        // Considerar si esto debe ser un error 500 o si la lógica anterior de no encontrarla ya lo cubrió.
+        // Por ahora, si llegamos aquí después de encontrarla, es un error.
+        return res.status(500).json({ msg: "Error al eliminar la producción, no se encontró después de la búsqueda inicial." });
+    }
+
+    logMessage('[eliminarProduccion] Producción eliminada exitosamente: ' + id);
+    res.status(200).json({ msg: "Producción eliminada exitosamente" });
+
+  } catch (error) {
+    logMessage('[eliminarProduccion] Error durante la eliminación de producción ID ' + id + ': ' + error.message + '\\nStack: ' + error.stack);
+    res.status(500).json({ msg: "Error al eliminar la producción", error: error.message });
+  }
 };
+
 // 📌 Buscar Producción con filtros dinámicos para FilterPanel
 exports.buscarProduccion = async (req, res) => {
     try {

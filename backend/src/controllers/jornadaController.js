@@ -41,10 +41,28 @@ exports.crearJornada = async (req, res) => {
 // obtener todas las Jornadas
 exports.obtenerJornadas = async (req, res) => {
     try {
-        const jornadas = await Jornada.find().
+        const { limit, sort } = req.query;
+        let query = Jornada.find();
+
+        if (sort) {
+            const sortParams = {};
+            const parts = sort.split(':');
+            sortParams[parts[0]] = parts[1] === 'desc' ? -1 : 1;
+            query = query.sort(sortParams);
+        } else {
+            // Default sort if not provided
+            query = query.sort({ fecha: -1 });
+        }
+
+        if (limit) {
+            query = query.limit(parseInt(limit, 10));
+        }
+
+        const jornadas = await query.
         populate({
             path: 'registros',
             populate: [
+                { path: 'operario', select: 'name' },
                 { path: 'oti', select: 'numeroOti' },
                 { path: 'proceso', select: 'nombre' },
                 { path: 'areaProduccion', select: 'nombre' },

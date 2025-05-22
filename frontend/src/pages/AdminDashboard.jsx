@@ -82,6 +82,7 @@ const AdminDashboard = () => {
         setLoading(true);
         setError(null);
         try {
+          
             const response = await axiosInstance.get(`/admin/admin-producciones?page=${currentPage}&limit=${itemsPerPage}`);
             setResultados(response.data.resultados);
             setTotalResults(response.data.totalResults);
@@ -170,12 +171,9 @@ const AdminDashboard = () => {
                         <th className="p-1">Operario</th>
                         <th className="p-1">Fecha</th>
                         <th className="p-1">Proceso</th>
-                        <th className="p-1">Insumos</th>
                         <th className="p-1">Máquina</th>
                         <th className="p-1">Área</th>
                         <th className="p-1">Tipo de Tiempo</th>
-                        <th className="p-1">Hora Inicio</th>
-                        <th className="p-1">Hora Fin</th>
                         <th className="p-1 font-bold">Tiempo (min)</th>
                       </tr>
                     </thead>
@@ -186,12 +184,9 @@ const AdminDashboard = () => {
                           <td className="p-1 whitespace-nowrap">{r.operario?.name}</td>
                           <td className="p-1 whitespace-nowrap">{new Date(r.fecha).toISOString().split('T')[0]}</td>
                           <td className="p-1 whitespace-nowrap">{r.proceso?.nombre}</td>
-                          <td className="p-1 whitespace-nowrap">{r.insumos?.nombre}</td>
                           <td className="p-1 whitespace-nowrap">{r.maquina?.nombre}</td>
                           <td className="p-1 whitespace-nowrap">{r.areaProduccion?.nombre}</td>
                           <td className="p-1 whitespace-nowrap">{r.tipoTiempo || 'N/A'}</td>
-                          <td className="p-1 whitespace-nowrap">{r.horaInicio ? new Date(r.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</td>
-                          <td className="p-1 whitespace-nowrap">{r.horaFin ? new Date(r.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</td>
                           <td className="p-1 font-semibold text-green-600 whitespace-nowrap">{r.tiempo} min</td>
                         </tr>
                       ))}
