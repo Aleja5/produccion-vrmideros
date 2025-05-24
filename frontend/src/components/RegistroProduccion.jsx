@@ -1,10 +1,10 @@
 import { Sidebar } from "../components/Sidebar";
-import { Input, Textarea, Button } from "../components/ui/index";
-import React, { useState, useEffect } from "react";
+import { Input, Textarea, Button, Card } from "../components/ui/index"; // Added Card
+import React, { useState, useEffect, useCallback } from "react"; // Added useCallback
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useParams } from "react-router-dom";
-
+import Navbar from "./Navbar"; // Import Navbar
 
 export default function RegistroProduccion() {  
       
@@ -39,6 +39,10 @@ export default function RegistroProduccion() {
     const [areasProduccionData, setAreasProduccionData] = useState([]);
     const [procesosData, setProcesosData] = useState([]);
     const [insumosData, setInsumosData] = useState([]);
+
+    // New state for activity summary
+    const [actividadesResumen, setActividadesResumen] = useState([]);
+    const [loadingResumen, setLoadingResumen] = useState(false);
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -130,6 +134,52 @@ export default function RegistroProduccion() {
         loadInitialData();
         }, [navigate, jornadaId]);
 
+    // useEffect to fetch activity summary when date changes (only in create mode)
+    useEffect(() => {
+        const fetchActividadesResumen = async () => {
+            if (jornadaData.fecha && jornadaData.operario && !jornadaId) {
+                setLoadingResumen(true);
+                try {
+                    const response = await fetch(`http://localhost:5000/api/jornadas/operario/${jornadaData.operario}?fecha=${jornadaData.fecha}`);
+                    if (!response.ok) {
+                        // If no jornada found for the date, it might return 404, which is not an error in this context.
+                        if (response.status === 404) {
+                            setActividadesResumen([]);
+                        } else {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                    } else {
+                        const jornadasDelDia = await response.json();
+                        if (jornadasDelDia && jornadasDelDia.length > 0) {
+                            // Assuming the first jornada is the one for the specific date
+                            // Backend should ideally return only one or handle multiple if possible for a single date
+                            const jornadaEncontrada = jornadasDelDia.find(j => 
+                                new Date(j.fecha).toISOString().split('T')[0] === new Date(jornadaData.fecha).toISOString().split('T')[0]
+                            );
+                            if (jornadaEncontrada && jornadaEncontrada.registros) {
+                                setActividadesResumen(jornadaEncontrada.registros.sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio)));
+                            } else {
+                                setActividadesResumen([]);
+                            }
+                        } else {
+                            setActividadesResumen([]);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error fetching activities summary:", error);
+                    toast.error("No se pudo cargar el resumen de actividades.");
+                    setActividadesResumen([]);
+                } finally {
+                    setLoadingResumen(false);
+                }
+            } else {
+                setActividadesResumen([]); // Clear summary if no date/operario or if editing
+            }
+        };
+
+        fetchActividadesResumen();
+    }, [jornadaData.fecha, jornadaData.operario, jornadaId]);
+
 
     // Calcular horaInicio y horaFin de la jornada considerando todas las actividades (existentes + nuevas)
     useEffect(() => {
@@ -182,27 +232,6 @@ export default function RegistroProduccion() {
                 }
             }
         }setActividades(nuevasActividades);
-    };
-
-    const agregarActividad = () => {
-        setActividades(prev => [...prev, {
-            oti: "",
-            proceso: "",
-            areaProduccion: "",
-            maquina: "",
-            insumos: "",
-            tipoTiempo: "",
-            horaInicio: "",
-            horaFin: "",
-            tiempo: "",
-            observaciones: ""
-        }]);
-    };
-
-    const eliminarActividad = (index) => {
-        const nuevasActividades = [...actividades];
-        nuevasActividades.splice(index, 1);
-        setActividades(nuevasActividades);
     };
     
     // Combinar fecha con hora para crear una fecha completa válida
@@ -329,7 +358,7 @@ export default function RegistroProduccion() {
             }
 
             toast.success("Actividad guardada exitosamente");
-            navigate("/operario-dashboard");
+            navigate("/mi-jornada");
         } catch (error) {
             console.error("Error al enviar la actividad:", error);
             toast.error("Error al guardar la actividad");
@@ -339,131 +368,157 @@ export default function RegistroProduccion() {
     };
 
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex bg-gray-100 h-screen">
             <Sidebar />
-            <div className="flex-1 flex justify-center items-start py-10 px-6 overflow-y-auto">
-                <div className="w-full max-w-6xl bg-white rounded-2xl shadow-lg p-8">
-                    <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Registro de Producción</h1>
+            <div className="flex flex-col flex-1"> 
+                <Navbar /> 
+                <div className="flex-1 overflow-auto"> 
+                    <div className="container mx-auto px-4 py-10">
+                        <div className="w-full max-w-6xl bg-white rounded-2xl shadow-lg p-8">
+                            <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Registro de Producción</h1>
 
-                    <form onSubmit={handleSubmitJornada} className="grid grid-cols-1 gap-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-gray-700 font-medium mb-1">Operario:</label>
-                                <Input type="text" value={nombreOperario || "Cargando..."} disabled className="w-full" />
-                            </div>
-                            <div>
-                                <label className="block text-gray-700 font-medium mb-1">Fecha de la Jornada:</label>
-                                <Input type="date" name="fecha" value={jornadaData.fecha} onChange={handleJornadaChange} required className="w-full" />
-                            </div>
-                        </div>
-
-                        <h2 className="text-lg font-semibold mt-4 mb-2 text-gray-800">Actividades de la Jornada</h2>
-                        {actividades.map((actividad, index) => (
-                            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
-                                <h3 className="col-span-2 text-md font-medium text-gray-700">Actividad #{index + 1}</h3>
-
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-1">OTI:</label>
-                                    <Input type="text" name="oti" value={actividad.oti} onChange={(e) => handleActividadChange(index, e)} placeholder="OTI" required className="w-full" />
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-1">Área de Producción:</label>
-                                    <Input as="select" name="areaProduccion" value={actividad.areaProduccion} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
-                                        <option className="text-gray-400" value="">Seleccionar Área</option>
-                                        {areasProduccionData.map(area => <option key={area._id} value={area._id}>{area.nombre}</option>)}
-                                    </Input>
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-1">Proceso:</label>
-                                    <Input as="select" name="proceso" value={actividad.proceso} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
-                                        <option className="text-gray-400" value="">Seleccionar Proceso</option>
-                                        {procesosData.map(proceso => <option key={proceso._id} value={proceso._id}>{proceso.nombre}</option>)}
-                                    </Input>
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-1">Máquina:</label>
-                                    <Input as="select" name="maquina" value={actividad.maquina} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
-                                        <option className="text-gray-400" value="">Seleccionar Máquina</option>
-                                        {maquinasData.map(maquina => <option key={maquina._id} value={maquina._id}>{maquina.nombre}</option>)}
-                                    </Input>
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 font-medium mb-1">Insumos:</label>
-                                    <Input as="select" name="insumos" value={actividad.insumos} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
-                                        <option className="text-gray-400" value="">Seleccionar Insumo</option>
-                                        {insumosData.map(insumo => <option key={insumo._id} value={insumo._id}>{insumo.nombre}</option>)}
-                                    </Input>
-                                </div>
-
-                                
-                                <div className="col-span-3 md:col-span-3 grid grid-cols-3 gap-4">
+                            <form onSubmit={handleSubmitJornada} className="grid grid-cols-1 gap-4">
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-gray-700 font-medium mb-1">Tipo de Tiempo:</label>
-                                        <Input as="select" name="tipoTiempo" value={actividad.tipoTiempo} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
-                                            <option className="text-gray-400" value="">Seleccionar Tipo de Tiempo</option>
-                                            <option value="Preparación">Preparación</option>
-                                            <option value="Operación">Operación</option>
-                                            <option value="Alimentacion">Alimentación</option>
-                                        </Input>
+                                        <label className="block text-gray-700 font-medium mb-1">Operario:</label>
+                                        <Input type="text" value={nombreOperario || "Cargando..."} disabled className="w-full" />
                                     </div>
                                     <div>
-                                        <label htmlFor="horaInicio" className="block text-sm font-medium text-gray-700">Hora Inicio</label>
-                                        <input type="time" name="horaInicio" value={actividad.horaInicio || ''} onChange={(e) => handleActividadChange(index, e)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="horaFin" className="block text-sm font-medium text-gray-700">Hora Fin</label>
-                                        <input type="time" name="horaFin" value={actividad.horaFin || ''} onChange={(e) => handleActividadChange(index, e)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-gray-700 font-medium mb-1">Tiempo:</label>
-                                        <Input
-                                            type="number"
-                                            name="tiempo"
-                                            value={(() => {
-                                                const inicio = actividad.horaInicio;
-                                                const fin = actividad.horaFin;
-                                                if (inicio && fin) {
-                                                    const inicioDate = new Date(`1970-01-01T${inicio}:00`);
-                                                    const finDate = new Date(`1970-01-01T${fin}:00`);
-                                                    if (finDate > inicioDate) {
-                                                        return Math.floor((finDate - inicioDate) / 60000);
-                                                    }
-                                                }
-                                                return 0;
-                                            })()}
-                                            readOnly
-                                            disabled
-                                            className="w-full bg-gray-100 cursor-not-allowed"
-                                        />
+                                        <label className="block text-gray-700 font-medium mb-1">Fecha de la Jornada:</label>
+                                        <Input type="date" name="fecha" value={jornadaData.fecha} onChange={handleJornadaChange} required className="w-full" />
                                     </div>
                                 </div>
 
-                                {/* Observaciones */}
-                                <div className="col-span-3">
-                                    <label className="block text-gray-700 font-medium mb-1">Observaciones de la Actividad:</label>
-                                    <Textarea name="observaciones" value={actividad.observaciones} onChange={(e) => handleActividadChange(index, e)} placeholder="Observaciones de la actividad" className="w-full" />
-                                </div>
-
-                                {/* Botón de Eliminar */}
-                                {actividades.length > 1 && (
-                                    <div className="col-span-3 flex justify-end">
-                                        <Button type="button" variant="secondary" onClick={() => eliminarActividad(index)}>Eliminar Actividad</Button>
-                                    </div>
+                                {/* Card para Resumen de Actividades del Día Seleccionado */}
+                                {!jornadaId && (jornadaData.fecha && (loadingResumen || actividadesResumen.length > 0)) && (
+                                    <Card className="mt-6 mb-4 p-6 bg-gray-50 rounded-lg shadow">
+                                        <h2 className="text-xl font-semibold text-gray-700 mb-3">
+                                            Resumen de Actividades para {new Date(jornadaData.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' })}
+                                        </h2>
+                                        {loadingResumen ? (
+                                            <p className="text-gray-600">Cargando resumen...</p>
+                                        ) : actividadesResumen.length > 0 ? (
+                                            <div className="space-y-3 max-h-60 overflow-y-auto">
+                                                {actividadesResumen.map(act => (
+                                                    <div key={act._id} className="p-3 bg-white rounded-md shadow-sm border border-gray-200">
+                                                        <p className="font-medium text-blue-600">
+                                                            {act.proceso?.nombre || "Proceso no especificado"}
+                                                        </p>
+                                                        <div className="text-sm text-gray-600 grid grid-cols-2 gap-x-2">
+                                                            <span><strong>OTI:</strong> {act.oti?.numeroOti || "N/A"}</span>
+                                                            <span>
+                                                                <strong>Horario:</strong> 
+                                                                {act.horaInicio ? new Date(act.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} - 
+                                                                {act.horaFin ? new Date(act.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-gray-600">No hay actividades registradas para esta fecha.</p>
+                                        )}
+                                    </Card>
                                 )}
-                            </div>
-                        ))}
 
-                        <div className="flex justify-between items-center mt-4">
-                            <Button type="button" onClick={handleSubmitActividad}>Guardar Actividad</Button>
-                            <Button type="button" onClick={agregarActividad}>Agregar Nueva Actividad</Button>
-                            <div>
-                                <Button variant="ghost" onClick={() => navigate('/operario-dashboard')}>Atrás</Button>
-                                <Button type="submit" disabled={loading} className="ml-3">
-                                    {loading ? "Guardando..." : "Guardar Jornada Completa"}
-                                </Button>
-                            </div>
+                                <h2 className="text-lg font-semibold mt-4 mb-2 text-gray-800">
+                                    {jornadaId ? "Actividades de la Jornada (Editando)" : "Registrar Nuevas Actividades"}
+                                </h2>
+                                {actividades.map((actividad, index) => (
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
+                                        <h3 className="col-span-2 text-md font-medium text-gray-700">Actividad #{index + 1}</h3>
+
+                                        <div>
+                                            <label className="block text-gray-700 font-medium mb-1">OTI:</label>
+                                            <Input type="text" name="oti" value={actividad.oti} onChange={(e) => handleActividadChange(index, e)} placeholder="OTI" required className="w-full" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-700 font-medium mb-1">Área de Producción:</label>
+                                            <Input as="select" name="areaProduccion" value={actividad.areaProduccion} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
+                                                <option className="text-gray-400" value="">Seleccionar Área</option>
+                                                {areasProduccionData.map(area => <option key={area._id} value={area._id}>{area.nombre}</option>)}
+                                            </Input>
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-700 font-medium mb-1">Proceso:</label>
+                                            <Input as="select" name="proceso" value={actividad.proceso} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
+                                                <option className="text-gray-400" value="">Seleccionar Proceso</option>
+                                                {procesosData.map(proceso => <option key={proceso._id} value={proceso._id}>{proceso.nombre}</option>)}
+                                            </Input>
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-700 font-medium mb-1">Máquina:</label>
+                                            <Input as="select" name="maquina" value={actividad.maquina} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
+                                                <option className="text-gray-400" value="">Seleccionar Máquina</option>
+                                                {maquinasData.map(maquina => <option key={maquina._id} value={maquina._id}>{maquina.nombre}</option>)}
+                                            </Input>
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-700 font-medium mb-1">Insumos:</label>
+                                            <Input as="select" name="insumos" value={actividad.insumos} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
+                                                <option className="text-gray-400" value="">Seleccionar Insumo</option>
+                                                {insumosData.map(insumo => <option key={insumo._id} value={insumo._id}>{insumo.nombre}</option>)}
+                                            </Input>
+                                        </div>
+
+                                        
+                                        <div className="col-span-3 md:col-span-3 grid grid-cols-3 gap-4">
+                                            <div>
+                                                <label className="block text-gray-700 font-medium mb-1">Tipo de Tiempo:</label>
+                                                <Input as="select" name="tipoTiempo" value={actividad.tipoTiempo} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
+                                                    <option className="text-gray-400" value="">Seleccionar Tipo de Tiempo</option>
+                                                    <option value="Preparación">Preparación</option>
+                                                    <option value="Operación">Operación</option>
+                                                    <option value="Alimentacion">Alimentación</option>
+                                                </Input>
+                                            </div>
+                                            <div>
+                                                <label htmlFor="horaInicio" className="block text-sm font-medium text-gray-700">Hora Inicio</label>
+                                                <input type="time" name="horaInicio" value={actividad.horaInicio || ''} onChange={(e) => handleActividadChange(index, e)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="horaFin" className="block text-sm font-medium text-gray-700">Hora Fin</label>
+                                                <input type="time" name="horaFin" value={actividad.horaFin || ''} onChange={(e) => handleActividadChange(index, e)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-gray-700 font-medium mb-1">Tiempo:</label>
+                                                <Input
+                                                    type="number"
+                                                    name="tiempo"
+                                                    value={(() => {
+                                                        const inicio = actividad.horaInicio;
+                                                        const fin = actividad.horaFin;
+                                                        if (inicio && fin) {
+                                                            const inicioDate = new Date(`1970-01-01T${inicio}:00`);
+                                                            const finDate = new Date(`1970-01-01T${fin}:00`);
+                                                            if (finDate > inicioDate) {
+                                                                return Math.floor((finDate - inicioDate) / 60000);
+                                                            }
+                                                        }
+                                                        return 0;
+                                                    })()}
+                                                    readOnly
+                                                    disabled
+                                                    className="w-full bg-gray-100 cursor-not-allowed"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Observaciones */}
+                                        <div className="col-span-3">
+                                            <label className="block text-gray-700 font-medium mb-1">Observaciones de la Actividad:</label>
+                                            <Textarea name="observaciones" value={actividad.observaciones} onChange={(e) => handleActividadChange(index, e)} placeholder="Observaciones de la actividad" className="w-full" />
+                                        </div>                                        
+                                    </div>
+                                ))}
+
+                                <div className="flex justify-between items-center mt-4">
+                                    <Button type="button" onClick={handleSubmitActividad}>Guardar Actividad</Button>                                   
+                                    
+                                </div>
+                            </form>    
                         </div>
-                    </form>    
+                    </div>
                 </div>
             </div>
         </div>

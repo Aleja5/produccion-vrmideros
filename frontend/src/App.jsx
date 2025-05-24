@@ -89,7 +89,7 @@ function App() {
 
         {/* Ruta protegida: Editar Producción */}
         <Route
-          path="/editar-produccion/:id"
+          path="/produccion/actualizar/:id"
           element={
             <ProtectedRoute allowedRoles={['production']}>
               <EditarProduccion />

@@ -6,12 +6,12 @@ import 'react-toastify/dist/ReactToastify.css';
 import { debugLog } from '../utils/log';
 import { confirmAlert } from 'react-confirm-alert';
 import 'react-confirm-alert/src/react-confirm-alert.css';
+import { Sidebar } from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import { Input, Button, Card } from '../components/ui/index';
 import EditarProduccion from './EditarProduccion'; // Importa el nuevo componente
 import DetalleJornadaModal from '../components/DetalleJornadaModal'; // Importa el nuevo componente
 import {CheckCircleIcon} from '@heroicons/react/24/solid';
-import {Sidebar} from '../components/Sidebar';
 
 const OperarioDashboard = () => {
     const [jornadas, setJornadas] = useState([]);
@@ -241,11 +241,11 @@ const OperarioDashboard = () => {
     }, [navigate]);
 
     return (
-        <>
-            <Navbar />
-            <div className="flex bg-gray-100 h-screen">
-                <Sidebar/>
-                <div className="flex-1">
+        <div className="flex bg-gray-100 h-screen">
+            <Sidebar />
+            <div className="flex flex-col flex-1">
+                <Navbar />
+                <div className="flex-1 overflow-auto">
                     <ToastContainer />
 
                     {editandoId !== null && (
@@ -397,7 +397,7 @@ const OperarioDashboard = () => {
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 
