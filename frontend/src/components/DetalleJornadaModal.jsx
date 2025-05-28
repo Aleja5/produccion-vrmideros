@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import axiosInstance from '../utils/axiosInstance';
 import { Pencil, Trash2 } from 'lucide-react';
+import EditarProduccion from "../pages/EditarProduccion"; 
 
 // Utilidad para extraer hora en formato HH:mm de un string ISO o Date
 const getHora = (valor) => {
@@ -20,29 +22,65 @@ const ajustarFechaLocal = (fechaUTC) => {
 };
 
 const DetalleJornadaModal = ({ jornadaId, onClose, onEditarActividad, onEliminarActividad }) => {
+    const navigate = useNavigate(); // Initialize useNavigate
     const [jornada, setJornada] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [selectedProduccion, setSelectedProduccion] = useState(null);
+
+    const fetchDetalleJornada = async () => { // Renamed for clarity and consistency
+        setLoading(true);
+        try {
+            const response = await axiosInstance.get(`/jornadas/\\${jornadaId}`);
+            if (response.data) {
+                console.log('Detalle jornada API:', response.data);
+                setJornada(response.data);
+            } else {
+                setError('No se encontraron detalles para esta jornada.');
+            }
+        } catch (error) {
+            console.error('Error al cargar el detalle de la jornada:', error);
+            setError('Error al cargar los detalles.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchDetalleJornada = async () => {
-            setLoading(true);
-            try {
-                const response = await axiosInstance.get(`/jornadas/${jornadaId}`);
-                if (response.data) {
-                    console.log('Detalle jornada API:', response.data); // <-- DEBUG: Ver los datos reales
-                    setJornada(response.data);
-                } else {
-                    setError('No se encontraron detalles para esta jornada.');
-                }
-            } catch (error) {
-                console.error('Error al cargar el detalle de la jornada:', error);
-                setError('Error al cargar los detalles.');
-            } finally {
-                setLoading(false);
-            }
-        }; fetchDetalleJornada();
+        fetchDetalleJornada();
     }, [jornadaId]);
+
+    const handleOpenEditModal = (produccion) => {
+        setSelectedProduccion(produccion);
+        setShowEditModal(true);
+        // If onEditarActividad was intended to do something else, adjust accordingly
+        // For now, we assume it's primarily to trigger the modal opening here.
+        if (onEditarActividad) {
+            onEditarActividad(produccion); 
+        }
+    };
+
+    const handleCloseEditModal = () => {
+        setShowEditModal(false);
+        setSelectedProduccion(null);
+    };
+
+    const handleGuardarEditModal = async () => {
+        // First, ensure the EditarProduccion modal is hidden
+        setShowEditModal(false);
+        setSelectedProduccion(null);
+
+        // Then, call the onClose prop passed to DetalleJornadaModal.
+        // This should hide DetalleJornadaModal itself and its backdrop.
+        if (onClose) {
+            onClose();
+        }
+
+        // Finally, navigate to the dashboard.
+        // The fetchDetalleJornada() call is removed as we are navigating away.
+        navigate('/operario-dashboard'); 
+    };
 
     if (loading) return <div className="text-center mt-6">Cargando detalles...</div>;
     if (error) return <div className="text-center text-red-500 mt-6">Error: {error}</div>;
@@ -68,7 +106,7 @@ const DetalleJornadaModal = ({ jornadaId, onClose, onEditarActividad, onEliminar
                                     <button
                                         title="Editar actividad"
                                         className="text-blue-600 hover:text-blue-800"
-                                        onClick={() => onEditarActividad?.(registro)}
+                                        onClick={() => handleOpenEditModal(registro)} // Updated onClick
                                     >
                                         <Pencil size={18} />
                                     </button>
@@ -110,6 +148,15 @@ const DetalleJornadaModal = ({ jornadaId, onClose, onEditarActividad, onEliminar
                     </button>
                 </div>
             </div>
+
+            {showEditModal && selectedProduccion && (
+                <EditarProduccion
+                    produccionProp={selectedProduccion}
+                    onClose={handleCloseEditModal}
+                    onGuardar={handleGuardarEditModal}
+                    // isModalMode is implicitly true when rendered here
+                />
+            )}
         </div>
     );
 };

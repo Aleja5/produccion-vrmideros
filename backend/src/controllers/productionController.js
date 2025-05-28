@@ -277,16 +277,135 @@ exports.actualizarProduccion = async (req, res) => {
         produccion.maquina = maquinaExistente._id;
         produccion.insumos = insumosExistente._id;
         produccion.tipoTiempo = tipoTiempo || produccion.tipoTiempo;
-        produccion.horaInicio = horaInicio || produccion.horaInicio;
-        produccion.horaFin = horaFin || produccion.horaFin;
+
+        // Convert horaInicio (HH:mm string from req.body) to Date object
+        // 'horaInicio' here is the destructured variable from req.body
+        if (horaInicio !== undefined) { // Check if horaInicio was present in req.body
+            if (horaInicio === null) {
+                produccion.horaInicio = null; // Allow explicitly setting to null if schema permits
+            } else {
+                const isString = typeof horaInicio === 'string';
+                const isTimeFormat = isString ? /^\d{2}:\d{2}$/.test(horaInicio) : false;
+
+                if (isString && isTimeFormat) {
+                    const [hoursStr, minutesStr] = horaInicio.split(':');
+                    const hours = parseInt(hoursStr, 10);
+                    const minutes = parseInt(minutesStr, 10);
+
+                    if (produccion.fecha instanceof Date && !isNaN(produccion.fecha.getTime()) &&
+                        !isNaN(hours) && hours >= 0 && hours <= 23 &&
+                        !isNaN(minutes) && minutes >= 0 && minutes <= 59) {
+                        
+                        const newHoraInicio = new Date(produccion.fecha);
+                        newHoraInicio.setHours(hours, minutes, 0, 0);
+                        produccion.horaInicio = newHoraInicio;
+                    } else {
+                        console.warn(`Could not parse horaInicio "\\${horaInicio}" due to invalid time values or invalid base date (produccion.fecha: \\${produccion.fecha}).`);
+                        return res.status(400).json({ msg: `Formato de horaInicio \'\\${horaInicio}\' inválido o fecha base inválida.` });
+                    }
+                } else {
+                    console.warn(`horaInicio was provided but not in expected HH:mm format or null: \\${horaInicio}`);
+                    return res.status(400).json({ msg: `Formato de horaInicio \'\\${horaInicio}\' debe ser HH:mm o null.` });
+                }
+            }
+        } // If horaInicio was not in req.body (i.e., undefined), produccion.horaInicio (the existing value from DB) is preserved.
+
+        // Convert horaFin (HH:mm string from req.body) to Date object
+        // 'horaFin' here is the destructured variable from req.body
+        if (horaFin !== undefined) { // Check if horaFin was present in req.body
+            if (horaFin === null) {
+                produccion.horaFin = null; // Allow explicitly setting to null
+            } else {
+                const isString = typeof horaFin === 'string';
+                const isTimeFormat = isString ? /^\d{2}:\d{2}$/.test(horaFin) : false;
+
+                if (isString && isTimeFormat) {
+                    const [hoursStr, minutesStr] = horaFin.split(':');
+                    const hours = parseInt(hoursStr, 10);
+                    const minutes = parseInt(minutesStr, 10);
+
+                    if (produccion.fecha instanceof Date && !isNaN(produccion.fecha.getTime()) &&
+                        !isNaN(hours) && hours >= 0 && hours <= 23 &&
+                        !isNaN(minutes) && minutes >= 0 && minutes <= 59) {
+
+                        const newHoraFin = new Date(produccion.fecha);
+                        newHoraFin.setHours(hours, minutes, 0, 0);
+                        produccion.horaFin = newHoraFin;
+                    } else {
+                        console.warn(`Could not parse horaFin "\\${horaFin}" due to invalid time values or invalid base date (produccion.fecha: \\${produccion.fecha}).`);
+                        return res.status(400).json({ msg: `Formato de horaFin \'\\${horaFin}\' inválido o fecha base inválida.` });
+                    }
+                } else {
+                    console.warn(`horaFin was provided but not in expected HH:mm format or null: \\${horaFin}`);
+                    return res.status(400).json({ msg: `Formato de horaFin \'\\${horaFin}\' debe ser HH:mm o null.` });
+                }
+            }
+        } // If horaFin was not in req.body (i.e., undefined), produccion.horaFin (the existing value from DB) is preserved.
+        
         produccion.tiempo = tiempo || produccion.tiempo;
 
         // Validar Observaciones
         produccion.observaciones = req.body.observaciones || produccion.observaciones;
 
+
+        //  COMPROBAR SI LA FECHA DE LA PRODUCCIÓN CAMBIÓ Y ACTUALIZAR LA JORNADA
+        const oldJornadaId = produccion.jornada;
+        const newFecha = produccion.fecha;
+        let jornadaCambiada = false;
+
+        if (oldJornadaId) {
+        const oldJornada = await Jornada.findById(oldJornadaId);
+
+        // Comparar solo la fecha (sin hora)
+        const fechaJornada = oldJornada?.fecha?.toISOString().split('T')[0];
+        const fechaProduccion = newFecha.toISOString().split('T')[0];
+
+        if (fechaJornada !== fechaProduccion) {
+            jornadaCambiada = true;
+
+            // 🗑 Quitar la actividad de la jornada anterior
+            if (oldJornada) {
+            oldJornada.registros.pull(produccion._id);
+            await oldJornada.save();
+
+            // Si la jornada queda vacía, puedes eliminarla
+            if (oldJornada.registros.length === 0) {
+                await Jornada.findByIdAndDelete(oldJornada._id);
+            }
+            }
+
+            // 🔍 Buscar o crear nueva jornada con la nueva fecha
+            let nuevaJornada = await Jornada.findOne({ operario: operarioDB._id, fecha: newFecha });
+
+            if (!nuevaJornada) {
+            nuevaJornada = new Jornada({
+                operario: operarioDB._id,
+                fecha: newFecha,
+                registros: [],
+            });
+            }
+
+            // Asegurar que la actividad esté incluida
+            if (!nuevaJornada.registros.includes(produccion._id)) {
+            nuevaJornada.registros.push(produccion._id);
+            }
+
+            await nuevaJornada.save();
+            produccion.jornada = nuevaJornada._id;
+        }
+        }
         // Guardar cambios
         const produccionActualizada = await produccion.save();
         console.log("✅ Producción actualizada en BD:", produccionActualizada);
+
+        // Forzar el recálculo de la jornada asociada
+        const jornadaParaActualizar = await Jornada.findById(produccionActualizada.jornada);
+        if (jornadaParaActualizar) {
+            await jornadaParaActualizar.save(); // Esto disparará los hooks pre-save de Jornada
+            console.log("🔄 Jornada asociada actualizada para recálculos.");
+        } else {
+            console.warn(`⚠️ No se encontró la jornada con ID ${produccionActualizada.jornada} para forzar el recálculo.`);
+        }
 
         res.status(200).json({
             msg: "Producción actualizada exitosamente",
@@ -301,68 +420,47 @@ exports.actualizarProduccion = async (req, res) => {
 
 // 📌 Eliminar Producción
 exports.eliminarProduccion = async (req, res) => {
-  const { id } = req.params;
-  logMessage('[eliminarProduccion] Iniciando eliminación para el ID: ' + id);
+    try {
+        const { id } = req.params;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    logMessage('[eliminarProduccion] ID no válido: ' + id);
-    return res.status(400).json({ msg: "ID no válido" });
-  }
+        // Validar que el ID de la producción esté presente
+        if (!id) {
+            return res.status(400).json({ msg: 'El ID de la producción es requerido' });
+        }
 
-  try {
-    logMessage('[eliminarProduccion] Buscando producción con ID: ' + id);
-    const produccion = await Produccion.findById(id);
+        // Buscar la producción a eliminar
+        const produccion = await Produccion.findById(id);
+        if (!produccion) {
+            return res.status(404).json({ msg: "Producción no encontrada" });
+        }
 
-    if (!produccion) {
-      logMessage('[eliminarProduccion] Producción no encontrada con ID: ' + id);
-      return res.status(404).json({ msg: "Producción no encontrada" });
+        const jornadaId = produccion.jornada; // Guardar el ID de la jornada antes de eliminar la producción
+
+        // Eliminar la producción
+        await Produccion.findByIdAndDelete(id);
+
+        // Si la producción estaba asociada a una jornada, actualizar la jornada
+        if (jornadaId) {
+            const jornada = await Jornada.findById(jornadaId);
+            if (jornada) {
+                // Remover el ID de la producción eliminada de los registros de la jornada
+                jornada.registros = jornada.registros.filter(registroId => registroId.toString() !== id.toString());
+                
+                // Guardar la jornada para disparar el hook pre-save y recalcular totales
+                await jornada.save(); 
+                logger.info(`Jornada ${jornadaId} actualizada tras eliminación de producción ${id}.`);
+            } else {
+                logger.warn(`No se encontró la jornada con ID ${jornadaId} para actualizar tras eliminar producción ${id}.`);
+            }
+        }
+
+        logger.info(`Producción con ID: ${id} eliminada exitosamente.`);
+        res.status(200).json({ msg: "Producción eliminada exitosamente" });
+
+    } catch (error) {
+        logger.error("Error al eliminar producción:", error);
+        res.status(500).json({ msg: "Error interno del servidor" });
     }
-    logMessage('[eliminarProduccion] Producción encontrada: ' + JSON.stringify(produccion));
-
-    const jornadaId = produccion.jornada;
-    logMessage('[eliminarProduccion] ID de Jornada asociada: ' + jornadaId);
-
-    // Eliminar la referencia de la producción en la jornada
-    if (jornadaId) {
-      logMessage('[eliminarProduccion] Actualizando Jornada: ' + jornadaId + ' para quitar la producción: ' + id);
-      const jornadaActualizada = await Jornada.findByIdAndUpdate(
-        jornadaId,
-        { $pull: { registros: id } },
-        { new: true }
-      );
-      if (jornadaActualizada) {
-        logMessage('[eliminarProduccion] Jornada actualizada: ' + JSON.stringify(jornadaActualizada));
-        // Recalcular horas y tiempo total de la jornada
-        logMessage('[eliminarProduccion] Recalculando horas para Jornada ID: ' + jornadaId);
-        await recalcularHorasJornada(jornadaId.toString());
-        logMessage('[eliminarProduccion] Recalculando tiempo total para Jornada ID: ' + jornadaId);
-        await recalcularTiempoTotal(jornadaId.toString());
-        logMessage('[eliminarProduccion] Recalculos completados para Jornada ID: ' + jornadaId);
-      } else {
-        logMessage('[eliminarProduccion] No se encontró la Jornada con ID: ' + jornadaId + ' para actualizar.');
-      }
-    } else {
-      logMessage('[eliminarProduccion] La producción no está asociada a ninguna jornada.');
-    }
-
-    // Eliminar el registro de producción
-    logMessage('[eliminarProduccion] Eliminando Producción con ID: ' + id);
-    const resultadoDelete = await Produccion.findByIdAndDelete(id);
-
-    if (!resultadoDelete) {
-        logMessage('[eliminarProduccion] No se pudo eliminar la Producción con ID (findByIdAndDelete retornó null): ' + id);
-        // Considerar si esto debe ser un error 500 o si la lógica anterior de no encontrarla ya lo cubrió.
-        // Por ahora, si llegamos aquí después de encontrarla, es un error.
-        return res.status(500).json({ msg: "Error al eliminar la producción, no se encontró después de la búsqueda inicial." });
-    }
-
-    logMessage('[eliminarProduccion] Producción eliminada exitosamente: ' + id);
-    res.status(200).json({ msg: "Producción eliminada exitosamente" });
-
-  } catch (error) {
-    logMessage('[eliminarProduccion] Error durante la eliminación de producción ID ' + id + ': ' + error.message + '\\nStack: ' + error.stack);
-    res.status(500).json({ msg: "Error al eliminar la producción", error: error.message });
-  }
 };
 
 // 📌 Buscar Producción con filtros dinámicos para FilterPanel

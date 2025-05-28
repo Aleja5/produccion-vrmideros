@@ -126,7 +126,8 @@ exports.obtenerJornada = async (req, res) => {
 
 // obtener jornadas por operario
 exports.obtenerJornadasPorOperario = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // Operario ID
+    const { fecha } = req.query; // Optional date filter
 
     try {
         console.log(`🔎 Buscando jornadas para el operario con ID: ${id}`);
@@ -139,13 +140,23 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
         }
         console.log(`✅ Operario encontrado:`, operarioExiste);
 
-        // Obtener las jornadas sin populate por ahora
-        const jornadas = await Jornada.find({ operario: id }).sort({ fecha: -1 });
+        let queryConditions = { operario: id };
 
-        // Recalcular tiempo y hacer populate completo para cada jornada
-        const jornadasConTiempo = await Promise.all(jornadas.map(async (jornada) => {
+        if (fecha) {
+            console.log(`📅 Filtrando por fecha: ${fecha}`);
+            const fechaInicio = new Date(fecha);
+            fechaInicio.setUTCHours(0, 0, 0, 0);
 
-            return await Jornada.findById(jornada._id).populate({
+            const fechaFin = new Date(fecha);
+            fechaFin.setUTCHours(23, 59, 59, 999);
+            
+            queryConditions.fecha = { $gte: fechaInicio, $lte: fechaFin };
+        }
+        
+        // Obtener las jornadas y popular los registros directamente
+        const jornadas = await Jornada.find(queryConditions)
+            .sort({ fecha: -1 })
+            .populate({
                 path: 'registros',
                 populate: [
                     { path: 'proceso', select: 'nombre' },
@@ -155,10 +166,14 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
                     { path: 'insumos', select: 'nombre' }
                 ]
             });
-        }));
+
+        if (!jornadas) {
+            console.log(`ℹ️ No se encontraron jornadas para el operario ${id} con los filtros aplicados.`);
+            return res.json([]); // Devuelve un array vacío si no hay jornadas
+        }
 
         console.log(`✅ Jornadas encontradas para ${operarioExiste.name}: ${jornadas.length}`);
-        res.json(jornadasConTiempo);
+        res.json(jornadas);
 
     } catch (error) {
         console.error(`🚨 Error al obtener las jornadas del operario ${id}:`, error);
