@@ -8,6 +8,17 @@ import Pagination from '../components/Pagination';
 import { toast } from 'react-toastify';
 import { Button, Card } from '../components/ui';
 
+const ajustarFechaLocal = (fechaUTC) => {
+  const fecha = new Date(fechaUTC);
+  // Suma el desfase de la zona horaria para obtener la fecha local correcta.
+  // getTimezoneOffset() devuelve la diferencia en minutos entre UTC y la zona horaria local.
+  // Esta diferencia es negativa para zonas horarias al este de UTC y positiva para zonas al oeste.
+  // Multiplicamos por 60000 para convertir minutos a milisegundos.
+  // Si la fecha ya está en la zona horaria correcta o no necesita este ajuste específico,
+  // esta lógica podría necesitar ser adaptada.
+  return new Date(fecha.getTime() + fecha.getTimezoneOffset() * 60000);
+};
+
 const AdminDashboard = () => {
   const [resultados, setResultados] = useState([]);
   const [totalHoras, setTotalHoras] = useState(0);
@@ -216,7 +227,7 @@ const AdminDashboard = () => {
                 {jornadas.map((jornada) => (
                   <Card key={jornada._id} className="p-4">
                     <h2 className="text-lg font-semibold">Operario: {jornada.operario.name}</h2>
-                    <p>Fecha: {new Date(jornada.fecha).toLocaleDateString()}</p>
+                    <p>Fecha: {ajustarFechaLocal(jornada.fecha).toLocaleDateString()}</p>
                     <p>Actividades: {jornada.registros.length}</p>
                     <Button variant="secondary" onClick={() => console.log('Ver detalles')}>Ver detalles</Button>
                   </Card>

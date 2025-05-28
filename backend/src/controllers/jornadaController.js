@@ -58,17 +58,18 @@ exports.obtenerJornadas = async (req, res) => {
             query = query.limit(parseInt(limit, 10));
         }
 
-        const jornadas = await query.
-        populate({
-            path: 'registros',
-            populate: [
-                { path: 'operario', select: 'name' },
-                { path: 'oti', select: 'numeroOti' },
-                { path: 'proceso', select: 'nombre' },
-                { path: 'areaProduccion', select: 'nombre' },
-                { path: 'maquina', select: 'nombre' },
-                { path: 'insumos', select: 'nombre' }
-            ],
+        const jornadas = await query
+            .populate('operario', 'name') // Popular el campo operario de la jornada
+            .populate({
+                path: 'registros',
+                populate: [
+                    { path: 'operario', select: 'name' },
+                    { path: 'oti', select: 'numeroOti' },
+                    { path: 'proceso', select: 'nombre' },
+                    { path: 'areaProduccion', select: 'nombre' },
+                    { path: 'maquina', select: 'nombre' },
+                    { path: 'insumos', select: 'nombre' }
+                ],
             
         });
         
@@ -97,7 +98,9 @@ exports.obtenerJornada = async (req, res) => {
             return res.status(400).json({ error: 'Jornada ID is invalid' });
         }
         // Asegurarse de que todos los campos relacionados se populen correctamente
-        const jornada = await Jornada.findById(id).populate({
+        const jornada = await Jornada.findById(id)
+            .populate('operario', 'name') // <--- Añadir esta línea para popular el operario
+            .populate({
             path: 'registros',
             populate: [
                 { path: 'oti', model: 'Oti', select: 'numeroOti' },

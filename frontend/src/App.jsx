@@ -11,6 +11,7 @@ import RegistroProduccion from './components/RegistroProduccion';
 import EditarProduccion from './pages/EditarProduccion';
 import MiJornada from './pages/MiJornada';
 import HistorialJornadas from './pages/HistorialJornadas';
+import AdminJornadaDetalle from './pages/AdminJornadaDetalle'; // <--- Importar AdminJornadaDetalle
 
 import ProtectedRoute from './components/ProtectedRoute';
 import MaquinasPage from './pages/Maquinas';
@@ -55,6 +56,16 @@ function App() {
         <Route path="/admin/areas" element={<AreasPage />} />
         <Route path="/admin/operarios" element={<OperariosPage />} />
         <Route path="/admin/usuarios" element={<UsuariosPage />} />
+
+        {/* Nueva ruta para el detalle de la jornada del admin */}
+        <Route
+          path="/admin/jornada/:id"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminJornadaDetalle />
+            </ProtectedRoute>
+          }
+        />
 
         {/* PRODUCCIÓN */}
         {/* Ruta protegida: Validar Cédula */}
