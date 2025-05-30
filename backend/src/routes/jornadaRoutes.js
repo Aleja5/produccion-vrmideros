@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jornadaController = require('../controllers/jornadaController');
 
+router.get('/operario/:operarioId/fecha/:fecha', jornadaController.obtenerJornadasPorOperarioYFecha); // Ruta para obtener jornada por operario y fecha
 
 // 📌 registro de produccion en jornada
 router.post('/', jornadaController.crearJornada); // Para crear la jornada inicial

@@ -1,24 +1,22 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom"; // Asegúrate de importar useParams
+import { toast } from "react-toastify";
 import { Sidebar } from "../components/Sidebar";
 import { Input, Textarea, Button } from "../components/ui/index";
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import { useParams } from "react-router-dom";
 
 
-export default function RegistroProduccion() {  
-      
-    const { jornadaId } = useParams();
+export default function RegistroProduccion() {
+    const { jornadaId: urlJornadaId } = useParams(); // Renombrar para evitar conflicto con el estado local
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [nombreOperario, setNombreOperario] = useState("");
+    const [JornadaActualId, setJornadaActualId] = useState(urlJornadaId); // Nuevo estado para el ID de la jornada
     const [jornadaData, setJornadaData] = useState({
         fecha: new Date().toISOString().split('T')[0],
         horaInicio: "",
         horaFin: "",
         operario: ""
     });
-    // Lista de actividades nuevas a agregar (en el formulario)
     const [actividades, setActividades] = useState([
         {
             oti: "",
@@ -33,7 +31,6 @@ export default function RegistroProduccion() {
             observaciones: ""
         }
     ]);
-    // Lista de actividades ya existentes en la jornada (si aplica)
     const [actividadesExistentes, setActividadesExistentes] = useState([]);
     const [maquinasData, setMaquinasData] = useState([]);
     const [areasProduccionData, setAreasProduccionData] = useState([]);
@@ -42,93 +39,184 @@ export default function RegistroProduccion() {
 
     useEffect(() => {
         const loadInitialData = async () => {
-        const operario = localStorage.getItem("operario");
-        if (!operario) {
-            toast.error("No tienes acceso. Valida cédula.");
-            navigate("/validate-cedula");
-            return;
-        }
-
-        try {
-            const operarioData = JSON.parse(operario);
-            if (operarioData?.name) setNombreOperario(operarioData.name);
-            if (operarioData?._id || operarioData?.id) {
-            setJornadaData(prev => ({ ...prev, operario: operarioData._id || operarioData.id }));
+            const operario = localStorage.getItem("operario");
+            if (!operario) {
+                toast.error("No tienes acceso. Valida cédula.");
+                navigate("/validate-cedula");
+                return;
             }
-        } catch (error) {
-            console.error("Error al leer datos del operario:", error);
-        }
 
-        // Cargar datos de selectores
-        try {
-            const maquinasRes = await fetch("http://localhost:5000/api/produccion/maquinas");
-            if (maquinasRes.ok) setMaquinasData(await maquinasRes.json());
-
-            const areasRes = await fetch("http://localhost:5000/api/produccion/areas");
-            if (areasRes.ok) setAreasProduccionData(await areasRes.json());
-
-            const procesosRes = await fetch("http://localhost:5000/api/produccion/procesos");
-            if (procesosRes.ok) setProcesosData(await procesosRes.json());
-
-            const insumosRes = await fetch("http://localhost:5000/api/produccion/insumos");
-            if (insumosRes.ok) setInsumosData(await insumosRes.json());
-        } catch (error) {
-            console.error("Error al cargar datos:", error);
-        }
-
-        // Cargar jornada si hay jornadaId
-        if (jornadaId) {
+            let operarioData;
             try {
-            const res = await fetch(`http://localhost:5000/api/jornadas/${jornadaId}`);
-            if (res.ok) {
-                const jornada = await res.json();
-
-                // Normalizar actividades existentes
-                if (Array.isArray(jornada.registros)) {
-                const actividadesNorm = jornada.registros.map(act => ({
-                    ...act,
-                    horaInicio: act.horaInicio
-                    ? new Date(act.horaInicio).toLocaleTimeString("en-GB", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                        })
-                    : "",
-                    horaFin: act.horaFin
-                    ? new Date(act.horaFin).toLocaleTimeString("en-GB", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                        })
-                    : "",
-                    tiempo: act.tiempo || 0,
-                }));
-
-                setActividadesExistentes(actividadesNorm);
-                }
-
-                // Establecer fecha de la jornada
-                if (jornada.fecha) {
-                let fechaStr = jornada.fecha;
-                if (typeof fechaStr === "string" && fechaStr.length > 10) {
-                    fechaStr = fechaStr.substring(0, 10); // ISO -> YYYY-MM-DD
-                }
-                setJornadaData(prev => ({ ...prev, fecha: fechaStr }));
+                operarioData = JSON.parse(operario);
+                if (operarioData?.name) setNombreOperario(operarioData.name);
+                if (operarioData?._id || operarioData?.id) {
+                    setJornadaData(prev => ({ ...prev, operario: operarioData._id || operarioData.id }));
                 } else {
-                setJornadaData(prev => ({
-                    ...prev,
-                    fecha: new Date().toISOString().split("T")[0],
-                }));
+                    toast.error("Datos de operario incompletos. Vuelve a iniciar sesión.");
+                    navigate("/validate-cedula");
+                    return;
                 }
-            }
             } catch (error) {
-            console.error("Error al cargar actividades de la jornada:", error);
+                console.error("Error al leer datos del operario:", error);
+                toast.error("Error al cargar datos del operario.");
+                navigate("/validate-cedula");
+                return;
             }
-        }
+
+            const currentOperarioId = operarioData._id || operarioData.id;
+
+            // Cargar datos de selectores
+            try {
+                // Aquí, podrías usar Promise.all para cargar todos los datos en paralelo
+                const [maquinasRes, areasRes, procesosRes, insumosRes] = await Promise.all([
+                    fetch("http://localhost:5000/api/produccion/maquinas"),
+                    fetch("http://localhost:5000/api/produccion/areas"),
+                    fetch("http://localhost:5000/api/produccion/procesos"),
+                    fetch("http://localhost:5000/api/produccion/insumos")
+                ]);
+
+                if (maquinasRes.ok) setMaquinasData(await maquinasRes.json());
+                if (areasRes.ok) setAreasProduccionData(await areasRes.json());
+                if (procesosRes.ok) setProcesosData(await procesosRes.json());
+                if (insumosRes.ok) setInsumosData(await insumosRes.json());
+
+            } catch (error) {
+                console.error("Error al cargar datos de selectores:", error);
+                toast.error("Error al cargar datos de máquinas, áreas, procesos o insumos.");
+            }
+
+            // Lógica principal para obtener o crear la jornada
+            if (urlJornadaId) {
+                // Si hay un ID en la URL, cargar esa jornada específica
+                try {
+                    const res = await fetch(`http://localhost:5000/api/jornadas/${urlJornadaId}`);
+                    if (res.ok) {
+                        const jornada = await res.json();
+                        setJornadaActualId(jornada._id); // Asegura que el estado local tenga el ID
+                        
+                        // Normalizar actividades existentes
+                        if (Array.isArray(jornada.registros)) {
+                            const actividadesNorm = jornada.registros.map(act => ({
+                                ...act,
+                                horaInicio: act.horaInicio
+                                    ? new Date(act.horaInicio).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
+                                    : "",
+                                horaFin: act.horaFin
+                                    ? new Date(act.horaFin).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
+                                    : "",
+                                tiempo: act.tiempo || 0,
+                            }));
+                            setActividadesExistentes(actividadesNorm);
+                        }
+
+                        // Establecer fecha de la jornada
+                        if (jornada.fecha) {
+                            let fechaStr = jornada.fecha;
+                            if (typeof fechaStr === "string" && fechaStr.length > 10) {
+                                fechaStr = fechaStr.substring(0, 10); // ISO -> YYYY-MM-DD
+                            }
+                            setJornadaData(prev => ({ ...prev, fecha: fechaStr }));
+                        }
+                    } else {
+                        // Si la jornada del URL no se encuentra, crear una nueva para hoy
+                        console.warn(`Jornada con ID ${urlJornadaId} no encontrada. Intentando crear/obtener jornada de hoy.`);
+                        await ensureJornadaForToday(currentOperarioId);
+                    }
+                } catch (error) {
+                    console.error("Error al cargar jornada por ID:", error);
+                    toast.error("Error al cargar la jornada. Intentando crear/obtener jornada de hoy.");
+                    await ensureJornadaForToday(currentOperarioId);
+                }
+            } else {
+                // Si no hay ID en la URL, buscar o crear la jornada del día
+                await ensureJornadaForToday(currentOperarioId);
+            }
         };
 
+        const ensureJornadaForToday = async (operarioId) => {
+try {
+const today = new Date().toISOString().split('T')[0];
+const searchRes = await fetch(`http://localhost:5000/api/jornadas/operario/${operarioId}/fecha/${today}`);
+
+if (searchRes.ok) {
+ const existingJornada = await searchRes.json();
+if (existingJornada && existingJornada._id) {
+ setJornadaActualId(existingJornada._id);
+ // Normalizar actividades existentes
+if (Array.isArray(existingJornada.registros)) {
+ const actividadesNorm = existingJornada.registros.map(act => ({
+...act,
+horaInicio: act.horaInicio
+ ? new Date(act.horaInicio).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
+ : "",
+ horaFin: act.horaFin
+ ? new Date(act.horaFin).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
+: "",
+ tiempo: act.tiempo || 0,
+ }));
+ setActividadesExistentes(actividadesNorm);
+}
+setJornadaData(prev => ({ 
+...prev, 
+fecha: today,
+ horaInicio: existingJornada.horaInicio ? new Date(existingJornada.horaInicio).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
+ horaFin: existingJornada.horaFin ? new Date(existingJornada.horaFin).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false }) : "",
+ }));
+ toast.info("Cargando jornada existente para hoy.");
+ return; 
+}
+}
+
+console.log("No se encontró jornada para hoy, creando una nueva...");
+ const createRes = await fetch("http://localhost:5000/api/jornadas", {
+ method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify({ 
+ operario: operarioId,
+ fecha: today,
+})
+});
+
+if (createRes.ok) {
+const newJornada = await createRes.json();
+setJornadaActualId(newJornada._id);
+setJornadaData(prev => ({ 
+...prev, 
+ fecha: today,
+ }));
+ toast.success("Nueva jornada iniciada para hoy.");
+} else {
+const errorData = await createRes.json();
+ console.error('Error al crear jornada (backend response):', errorData); 
+
+                    // **** AQUI ES DONDE NECESITAS LA LOGICA ADICIONAL ****
+ if (errorData.error === 'Ya existe una jornada para este operario en la fecha actual' && errorData.jornadaId) {
+                        // Si la jornada ya existe, la manejamos como un "éxito" de inicialización
+                        setJornadaActualId(errorData.jornadaId);
+                        setJornadaData(prev => ({ 
+                            ...prev, 
+                            fecha: today,
+                            // Si el backend te enviara horaInicio/horaFin de la jornada existente,
+                            // podrías actualizar jornadaData aquí también.
+                            // Por ahora, solo nos aseguramos de tener el ID de la jornada.
+                        }));
+                        toast.info("Jornada de hoy ya iniciada. Reanudando registro.");
+                        // No es necesario navegar ni mostrar un error grave, solo informar y continuar
+                    } else {
+                        // Para cualquier otro tipo de error al crear la jornada
+                        toast.error(`Error al iniciar jornada: ${errorData.msg || errorData.error || "Error desconocido"}`);
+                        navigate("/operario-dashboard"); // Redirigir si no se puede iniciar jornada por otro error
+                    }
+}
+} catch (error) {
+console.error("Error en ensureJornadaForToday (network or unhandled):", error);
+toast.error("Problema al gestionar la jornada de hoy. Intenta de nuevo.");
+navigate("/operario-dashboard"); 
+ } };
+
         loadInitialData();
-        }, [navigate, jornadaId]);
+    }, [navigate, urlJornadaId]); // Dependencias: urlJornadaId es el parámetro de la URL
 
 
     // Calcular horaInicio y horaFin de la jornada considerando todas las actividades (existentes + nuevas)
@@ -304,9 +392,9 @@ export default function RegistroProduccion() {
 
         try {
             let response, result;
-            if (jornadaId) {
+            if (JornadaActualId) {
                 // Agregar actividad a jornada existente
-                response = await fetch(`http://localhost:5000/api/jornadas/${jornadaId}/actividades`, {
+                response = await fetch(`http://localhost:5000/api/jornadas/${JornadaActualId}/actividades`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(actividadToSend)

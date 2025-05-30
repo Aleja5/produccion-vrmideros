@@ -4,6 +4,8 @@ const { getAllProduccion } = require('../controllers/productionController');
 
 const router = express.Router();
 
+
+
 // Ruta protegida para el admin dashboard
 router.get('/admin-dashboard', protect, authorize('admin'), (req, res) => {
     res.status(200).json({ message: 'Bienvenido al panel de administrador' });

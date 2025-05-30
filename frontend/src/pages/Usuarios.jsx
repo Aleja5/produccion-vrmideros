@@ -113,7 +113,7 @@ const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
                     <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Usuarios</h1>
                     <div className="flex justify-between items-center mb-4">
                         <button onClick={handleCrear} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                        >Crear Usuario</button>
+                        >Crear Nuevo Usuario</button>
                         {modo === 'listar' && (
                         <div className="flex items-center">
                             <label htmlFor="searchText" className="mr-2 text-gray-700">Buscar por Nombre:</label>

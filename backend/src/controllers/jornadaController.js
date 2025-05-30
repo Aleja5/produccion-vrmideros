@@ -1,4 +1,4 @@
-// backend/controllers/jornadaController.js (o como lo tengas)
+// backend/controllers/jornadaController.js
 
 const mongoose = require('mongoose');
 const Produccion = require('../models/Produccion');
@@ -9,28 +9,24 @@ const { recalcularHorasJornada } = require('../utils/recalcularHoras');
 
 exports.crearJornada = async (req, res) => {
     try {
-        const { operario, fecha } = req.body; // 'actividades' no se pasa al crear una jornada vacía
+        const { operario, fecha } = req.body;
 
-        // Validar ObjectId para operario
         if (!mongoose.Types.ObjectId.isValid(operario)) {
             return res.status(400).json({ error: 'ID de operario inválido' });
         }
 
-        // Normalizar la fecha para la búsqueda (solo año, mes, día)
         const fechaNormalizada = new Date(fecha);
-        fechaNormalizada.setUTCHours(0, 0, 0, 0); // Establecer a medianoche UTC para evitar problemas de zona horaria
+        fechaNormalizada.setUTCHours(0, 0, 0, 0);
 
-        // Verificar si ya existe una jornada para este operario en esta fecha
         const jornadaExistente = await Jornada.findOne({ operario: operario, fecha: fechaNormalizada });
 
         if (jornadaExistente) {
             return res.status(400).json({ error: 'Ya existe una jornada para este operario en la fecha actual', jornadaId: jornadaExistente._id });
         }
 
-        // Si no existe, crear una nueva jornada con 'registros' inicializado como array vacío
-        const nuevaJornada = new Jornada({ 
-            operario, 
-            fecha: new Date(fecha + 'T00:00:00.000Z'), 
+        const nuevaJornada = new Jornada({
+            operario,
+            fecha: new Date(fecha + 'T00:00:00.000Z'),
             registros: [],
             totalTiempoActividades: { horas: 0, minutos: 0 }
         });
@@ -60,9 +56,9 @@ exports.obtenerJornadas = async (req, res) => {
                 { path: 'maquina', select: 'nombre' },
                 { path: 'insumos', select: 'nombre' }
             ],
-            
+
         });
-        
+
         const jornadasConTiempo = jornadas.map(jornada => {
             return {
                 ...jornada.toObject(),
@@ -136,7 +132,6 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
 
         // Recalcular tiempo y hacer populate completo para cada jornada
         const jornadasConTiempo = await Promise.all(jornadas.map(async (jornada) => {
-
             return await Jornada.findById(jornada._id).populate({
                 path: 'registros',
                 populate: [
@@ -158,6 +153,54 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
     }
 };
 
+
+// @desc    Obtener jornadas por operario y fecha
+// @route   GET /api/jornadas/operario/:operarioId/fecha/:fecha
+// @access  Public (o según tu autenticación)
+exports.obtenerJornadasPorOperarioYFecha = async (req, res) => {
+    try {
+        const { operarioId, fecha } = req.params;
+        console.log(`🔎 Buscando jornadas para el operario con ID: ${operarioId} y fecha: ${fecha}`);
+
+        // Opcional: Verificar si el operario existe (solo para logs, no es estrictamente necesario para la query)
+        const operario = await Operario.findById(operarioId);
+        if (operario) {
+            console.log(`✅ Operario encontrado: ${operario.name}`);
+        } else {
+            console.log(`⚠️ Operario no encontrado con ID: ${operarioId}`);
+        }
+
+        const targetDate = new Date(fecha);
+        const startOfDay = new Date(targetDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(targetDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
+        const jornadas = await Jornada.find({
+            operario: operarioId,
+            fecha: {
+                $gte: startOfDay,
+                $lte: endOfDay
+            }
+        });
+
+        console.log(`✅ Jornadas encontradas para ${operario ? operario.name : 'ID ' + operarioId}: ${jornadas.length}`);
+
+        if (jornadas.length === 0) {
+            return res.status(404).json({ message: "No se encontraron jornadas para este operario en esta fecha." });
+        }
+        res.status(200).json(jornadas);
+    } catch (error) {
+        console.error("Error al buscar jornada por operario y fecha:", error);
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: "ID de operario o formato de fecha inválido." });
+        }
+        res.status(500).json({ message: "Error interno del servidor." });
+    }
+};
+
+
 // @desc    Actualizar una jornada (general, incluyendo horas de inicio/fin y registros)
 // @route   PUT /api/jornadas/:id
 // @access  Public (o según tu autenticación)
@@ -171,18 +214,10 @@ exports.actualizarJornada = async (req, res) => {
             return res.status(400).json({ error: 'ID de jornada inválido' });
         }
 
-        // Convertir registros a ObjectIds si vienen como objetos completos o si es necesario
-        // O simplemente pasar el array de IDs si ya está así.
-        // Si 'registros' contiene objetos completos de actividades, Mongoose puede intentar validarlos
-        // contra el esquema de Produccion si está en un array de subdocumentos, o solo guardar los IDs.
-        // Asumiendo que 'registros' aquí son IDs o que solo se actualizan horaInicio/horaFin.
-
         const jornada = await Jornada.findByIdAndUpdate(
             id,
-            { horaInicio, horaFin, registros }, // Cuidado aquí: si registros no son solo IDs, podría haber un problema.
-                                               // Si quieres actualizar solo horaInicio/horaFin, no pases 'registros'
-                                               // a menos que sean el array de IDs.
-            { new: true, runValidators: true } // runValidators: true para que Mongoose valide el update
+            { horaInicio, horaFin, registros },
+            { new: true, runValidators: true }
         );
 
         if (!jornada) {
@@ -211,8 +246,6 @@ exports.actualizarJornada = async (req, res) => {
 exports.eliminarJornada = async (req, res) => {
     try {
         const { id } = req.params;
-        // Opcional: Eliminar los registros de producción asociados antes de eliminar la jornada
-        // await Produccion.deleteMany({ jornada: id });
 
         const jornada = await Jornada.findByIdAndDelete(id);
         if (!jornada) {
@@ -230,7 +263,7 @@ exports.agregarActividadAJornada = async (req, res) => {
         const { jornadaId } = req.params;
         const {
             operario,
-            fecha, // Esta fecha es la de la jornada, no la de la actividad específica (que es la misma)
+            fecha, // Asegúrate de que esta 'fecha' es la fecha de la actividad, no la de la jornada
             oti,
             proceso,
             areaProduccion,
@@ -239,7 +272,7 @@ exports.agregarActividadAJornada = async (req, res) => {
             tipoTiempo,
             horaInicio,
             horaFin,
-            tiempo, // Este 'tiempo' ya viene del frontend como número de minutos
+            tiempo,
             observaciones
         } = req.body;
 
@@ -249,51 +282,53 @@ exports.agregarActividadAJornada = async (req, res) => {
         }
 
         // Buscar la jornada
-        const jornada = await Jornada.findById(jornadaId); // No necesitas poblar registros aquí si solo vas a agregar un nuevo _id
+        const jornada = await Jornada.findById(jornadaId);
         if (!jornada) {
             return res.status(404).json({ error: 'Jornada no encontrada' });
         }
 
+        // Normalizar la fecha de la actividad si es diferente a la de la jornada
+        const fechaActividadNormalizada = new Date(fecha);
+        fechaActividadNormalizada.setUTCHours(0, 0, 0, 0);
+
+
         // Validar los campos de la actividad
-        const camposRequeridos = { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin };
+        const camposRequeridos = { operario, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin };
         for (const [clave, valor] of Object.entries(camposRequeridos)) {
             if (!valor) return res.status(400).json({ error: `Falta el campo: ${clave}` });
-}
+        }
         if (proceso && !mongoose.Types.ObjectId.isValid(proceso)) return res.status(400).json({ error: 'Proceso ID is invalid' });
         if (areaProduccion && !mongoose.Types.ObjectId.isValid(areaProduccion)) return res.status(400).json({ error: 'Area ID is invalid' });
         if (maquina && !mongoose.Types.ObjectId.isValid(maquina)) return res.status(400).json({ error: 'Maquina ID is invalid' });
         if (insumos && !mongoose.Types.ObjectId.isValid(insumos)) return res.status(400).json({ error: 'Insumos ID is invalid' });
 
+
         // Crear un nuevo registro de producción (actividad individual)
         const nuevoRegistro = new Produccion({
             operario,
-            fecha: fechaActividadNormalizada,
+            fecha: fechaActividadNormalizada, // Usar la fecha de la actividad o la de la jornada si son iguales
             oti,
             proceso,
             areaProduccion,
             maquina,
             insumos,
             tipoTiempo,
-            horaInicio, // Asume que horaInicio/horaFin ya vienen como Date o string parseable a Date
+            horaInicio,
             horaFin,
-            tiempo: tiempo || 0, // Asegurarse de que 'tiempo' es un Number
+            tiempo: tiempo || 0,
             observaciones: observaciones || null,
-            jornada: jornadaId // Enlazar la actividad con la jornada
+            jornada: jornadaId
         });
-        await nuevoRegistro.save(); // Guarda la actividad en su propia colección
+        await nuevoRegistro.save();
 
         // Agregar el _id del nuevo registro a la jornada
         jornada.registros.push(nuevoRegistro._id);
-        await jornada.save(); // Guarda la jornada, lo que podría activar un 'pre-save' hook
+        await jornada.save();
 
-        // Recalcular las horas de inicio/fin y el totalTiempoActividades de la jornada
-        // Esto es crucial para mantener la jornada actualizada
-        await recalcularHorasJornada(jornadaId);
-        // Recalcular el tiempo total de actividades
-        await recalcularTiempoTotal(jornadaId);
+       
 
         res.status(200).json({ msg: 'Actividad agregada con éxito', jornada: await Jornada.findById(jornadaId).populate('registros') });
-              
+
     } catch (error) {
         console.error('Error al agregar actividad a la jornada:', error);
         if (error.name === 'ValidationError') {
@@ -326,10 +361,10 @@ exports.guardarJornadaCompleta = async (req, res) => {
             jornada = new Jornada({
                 operario,
                 fecha: fechaNormalizada,
-                horaInicio: horaInicio, // Asume que ya vienen como Date o string parseable
+                horaInicio: horaInicio,
                 horaFin: horaFin,
                 registros: [],
-                totalTiempoActividades: 0 // Se calculará después de agregar las actividades
+                totalTiempoActividades: 0
             });
         } else {
             // Actualizar horas de jornada existente si se proporcionan
@@ -345,17 +380,17 @@ exports.guardarJornadaCompleta = async (req, res) => {
                 if (!actividad.oti || !actividad.proceso || !actividad.areaProduccion || !actividad.maquina || !actividad.insumos || !actividad.tipoTiempo || !actividad.horaInicio || !actividad.horaFin) {
                     return res.status(400).json({ error: `Faltan campos requeridos para una actividad: ${JSON.stringify(actividad)}` });
                 }
-                 if (!mongoose.Types.ObjectId.isValid(actividad.oti)) return res.status(400).json({ error: 'ID de OTI inválido en actividad' });
-                 if (!mongoose.Types.ObjectId.isValid(actividad.proceso)) return res.status(400).json({ error: 'ID de Proceso inválido en actividad' });
-                 if (!mongoose.Types.ObjectId.isValid(actividad.areaProduccion)) return res.status(400).json({ error: 'ID de Área de Producción inválido en actividad' });
-                 if (!mongoose.Types.ObjectId.isValid(actividad.maquina)) return res.status(400).json({ error: 'ID de Máquina inválido en actividad' });
-                 if (!mongoose.Types.ObjectId.isValid(actividad.insumos)) return res.status(400).json({ error: 'ID de Insumo inválido en actividad' });
+                if (!mongoose.Types.ObjectId.isValid(actividad.oti)) return res.status(400).json({ error: 'ID de OTI inválido en actividad' });
+                if (!mongoose.Types.ObjectId.isValid(actividad.proceso)) return res.status(400).json({ error: 'ID de Proceso inválido en actividad' });
+                if (!mongoose.Types.ObjectId.isValid(actividad.areaProduccion)) return res.status(400).json({ error: 'ID de Área de Producción inválido en actividad' });
+                if (!mongoose.Types.ObjectId.isValid(actividad.maquina)) return res.status(400).json({ error: 'ID de Máquina inválido en actividad' });
+                if (!mongoose.Types.ObjectId.isValid(actividad.insumos)) return res.status(400).json({ error: 'ID de Insumo inválido en actividad' });
 
 
                 // Crear y guardar cada registro de producción
                 const nuevoRegistro = new Produccion({
-                    operario: jornada.operario, // Usar el operario de la jornada
-                    fecha: jornada.fecha,       // Usar la fecha de la jornada
+                    operario: jornada.operario,
+                    fecha: jornada.fecha, // La fecha de la actividad será la de la jornada
                     oti: actividad.oti,
                     proceso: actividad.proceso,
                     areaProduccion: actividad.areaProduccion,
@@ -364,7 +399,7 @@ exports.guardarJornadaCompleta = async (req, res) => {
                     tipoTiempo: actividad.tipoTiempo,
                     horaInicio: actividad.horaInicio,
                     horaFin: actividad.horaFin,
-                    tiempo: actividad.tiempo || 0, // Asegurarse de que 'tiempo' es un Number
+                    tiempo: actividad.tiempo || 0,
                     observaciones: actividad.observaciones || null,
                     jornada: jornada._id
                 });
@@ -373,14 +408,11 @@ exports.guardarJornadaCompleta = async (req, res) => {
             }
         }
 
-        // Añadir las IDs de los nuevos registros a la jornada (si no están ya ahí)
-        // Puedes querer evitar duplicados si la jornada ya tenía registros
+        // Añadir las IDs de los nuevos registros a la jornada
         jornada.registros = [...new Set([...jornada.registros.map(r => r.toString()), ...idsNuevosRegistros.map(id => id.toString())])];
-        // Convertir de vuelta a ObjectId para guardar
         jornada.registros = jornada.registros.map(id => new mongoose.Types.ObjectId(id));
 
-
-        await jornada.save(); // Guarda la jornada con los nuevos registros
+        await jornada.save();
 
         // Recalcular horas y tiempo total de la jornada después de agregar todas las actividades
         await recalcularHorasJornada(jornada._id);
@@ -401,7 +433,6 @@ exports.guardarJornadaCompleta = async (req, res) => {
     } catch (error) {
         console.error('Error al guardar la jornada completa:', error);
         if (error.name === 'ValidationError') {
-            // Manejar errores de validación de Mongoose
             const errors = {};
             for (let field in error.errors) {
                 errors[field] = error.errors[field].message;
@@ -412,51 +443,51 @@ exports.guardarJornadaCompleta = async (req, res) => {
     }
 };
 
+// ** ESTA ES LA FUNCIÓN QUE DEBE ESTAR EN EL BLOQUE PRINCIPAL exports **
+// @desc    Obtener jornadas por operario y fecha
+// @route   GET /api/jornadas/operario/:operarioId/fecha/:fecha
+// @access  Public (o según tu autenticación)
+exports.obtenerJornadasPorOperarioYFecha = async (req, res) => {
+    try {
+        const { operarioId, fecha } = req.params;
+        console.log(`🔎 Buscando jornadas para el operario con ID: ${operarioId} y fecha: ${fecha}`);
 
-// Función auxiliar para recalcular las horas de inicio, fin y el tiempo total de la jornada
-// Se llama después de agregar/actualizar actividades en una jornada
-async function recalcularHorasJornada(jornadaId) {
-    const jornada = await Jornada.findById(jornadaId).populate('registros'); // Poblar registros para acceder a los tiempos
-    if (!jornada) {
-        console.error(`Jornada no encontrada con ID: ${jornadaId} al recalcular horas.`);
-        return;
-    }
-
-    let minHoraInicio = null;
-    let maxHoraFin = null;
-    let totalTiempoAcumulado = 0; // Este es el campo 'totalTiempoActividades'
-
-    if (jornada.registros && jornada.registros.length > 0) {
-        const horasInicio = jornada.registros
-            .map(registro => registro.horaInicio ? new Date(registro.horaInicio).getTime() : null)
-            .filter(Boolean); // Filtrar valores nulos
-
-        const horasFin = jornada.registros
-            .map(registro => registro.horaFin ? new Date(registro.horaFin).getTime() : null)
-            .filter(Boolean); // Filtrar valores nulos
-
-        if (horasInicio.length > 0) {
-            minHoraInicio = new Date(Math.min(...horasInicio));
-        }
-        if (horasFin.length > 0) {
-            maxHoraFin = new Date(Math.max(...horasFin));
+        // Opcional: Verificar si el operario existe (solo para logs, no es estrictamente necesario para la query)
+        const operario = await Operario.findById(operarioId);
+        if (operario) {
+            console.log(`✅ Operario encontrado: ${operario.name}`);
+        } else {
+            console.log(`⚠️ Operario no encontrado con ID: ${operarioId}`);
         }
 
-        // Calcular el totalTiempoActividades sumando el 'tiempo' de cada registro
-        totalTiempoAcumulado = jornada.registros.reduce((sum, registro) => {
-            // Asegurarse de que registro.tiempo sea un número (en minutos)
-            return sum + (registro.tiempo || 0);
-        }, 0);
+        // Convertir la fecha a un objeto Date y buscar por operario y fecha exacta
+        const targetDate = new Date(fecha);
+        const startOfDay = new Date(targetDate);
+        startOfDay.setUTCHours(0, 0, 0, 0); // Inicio del día en UTC
+
+        const endOfDay = new Date(targetDate);
+        endOfDay.setUTCHours(23, 59, 59, 999); // Fin del día en UTC
+
+        const jornadas = await Jornada.find({
+            operario: operarioId,
+            fecha: {
+                $gte: startOfDay, // Mayor o igual que el inicio del día
+                $lte: endOfDay    // Menor o igual que el fin del día
+            }
+        });
+
+        console.log(`✅ Jornadas encontradas para ${operario ? operario.name : 'ID ' + operarioId}: ${jornadas.length}`);
+
+        if (jornadas.length === 0) {
+            return res.status(404).json({ message: "No se encontraron jornadas para este operario en esta fecha." });
+        }
+        res.status(200).json(jornadas); // Devolver array de jornadas
+    } catch (error) {
+        console.error("Error al buscar jornada por operario y fecha:", error);
+        // Manejo de CastError para ObjectId inválidos
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: "ID de operario o formato de fecha inválido." });
+        }
+        res.status(500).json({ message: "Error interno del servidor." });
     }
-
-    // Asignar los valores recalculados a la jornada
-    jornada.horaInicio = minHoraInicio;
-    jornada.horaFin = maxHoraFin;
-    jornada.totalTiempoActividades = totalTiempoAcumulado; // <-- ¡Aquí se asigna el número!
-
-    // Guardar los cambios en la base de datos
-    await jornada.save({ validateBeforeSave: false }); // validateBeforeSave: false para evitar re-validar campos
-                                                        // que no se están modificando explícitamente en este hook.
-                                                        // O elimínalo si quieres que Mongoose valide todo el doc.
-    console.log(`Horas y tiempo total de la jornada ${jornadaId} recalculadas: Inicio: ${jornada.horaInicio}, Fin: ${jornada.horaFin}, Total Actividades: ${jornada.totalTiempoActividades} minutos.`);
-}
+};
