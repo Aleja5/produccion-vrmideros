@@ -15,6 +15,7 @@ const obtenerUsuarios = async (req, res) => {
     try {
         const totalResults = await User.countDocuments(query);
         const usuarios = await User.find(query)
+            .sort({ nombre: 1 })
             .skip((page - 1) * limit)
             .limit(Number(limit));
 

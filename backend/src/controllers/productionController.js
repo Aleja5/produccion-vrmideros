@@ -53,7 +53,7 @@ exports.getAllProduccion = async (req, res) => {
             .limit(limit)
             .populate("oti", "numeroOti")
             .populate("operario", "name")
-            .populate("proceso", "nombre")
+            .populate("procesos", "nombre")
             .populate("areaProduccion", "nombre")
             .populate("maquina", "nombre")
             .populate("insumos", "nombre");
@@ -69,15 +69,39 @@ exports.getAllProduccion = async (req, res) => {
 // 📌 Registrar Producción
 exports.registrarProduccion = async (req, res) => {
     try {
-        const { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin, tiempo, observaciones } = req.body;
+        const { operario, fecha, oti, procesos, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin, tiempo, observaciones } = req.body;
 
         // Log de datos recibidos
         logger.info('Datos recibidos en registrarProduccion:', req.body);
 
-        // Validar campos requeridos
-        if (!operario || !fecha || !oti || !proceso || !areaProduccion || !maquina || !insumos || !tipoTiempo || !horaInicio || !horaFin || !tiempo) {
-            logger.warn('Faltan campos requeridos:', { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin, tiempo });
-            return res.status(400).json({ msg: 'Faltan campos requeridos' });
+        // Nueva validación más detallada
+        const validationErrors = [];
+        if (!operario) validationErrors.push('operario');
+        if (!fecha) validationErrors.push('fecha');
+        if (!oti) validationErrors.push('oti');
+        if (!procesos || !Array.isArray(procesos)) { // Asegura que procesos sea un array
+            validationErrors.push('procesos (debe ser un array)');
+        } else if (procesos.length === 0 && (tipoTiempo === "Operación" || tipoTiempo === "Preparación")) { // Ejemplo: requerir procesos si es operación/preparación
+            // Ajusta esta lógica si procesos puede estar vacío en ciertos casos o siempre debe tener al menos uno.
+            // Por ahora, solo validamos que sea un array. El modelo Produccion.js ya requiere que los elementos internos sean ObjectId.
+        }
+        if (!areaProduccion) validationErrors.push('areaProduccion');
+        if (!maquina) validationErrors.push('maquina');
+        if (!insumos || !Array.isArray(insumos)) { // Asegura que insumos sea un array
+            validationErrors.push('insumos (debe ser un array)');
+        }
+        // Similar a procesos, puedes añadir validación de insumos.length === 0 si es necesario.
+        if (!tipoTiempo) validationErrors.push('tipoTiempo');
+        if (!horaInicio) validationErrors.push('horaInicio');
+        if (!horaFin) validationErrors.push('horaFin');
+        if (typeof tiempo !== 'number') { // Permite que tiempo sea 0
+            validationErrors.push('tiempo (debe ser un número)');
+        }
+
+        if (validationErrors.length > 0) {
+            const message = `Faltan campos requeridos o tienen formato incorrecto: ${validationErrors.join(', ')}`;
+            logger.warn(message, { body: req.body, errors: validationErrors });
+            return res.status(400).json({ msg: message, fields: validationErrors });
         }
 
         // Buscar o crear la jornada correspondiente
@@ -100,7 +124,7 @@ exports.registrarProduccion = async (req, res) => {
             operario,
             fecha,
             oti: otiId,
-            proceso,
+            procesos,
             areaProduccion,
             maquina,
             insumos,
@@ -177,7 +201,7 @@ exports.listarProduccion = async (req, res) => {
         const producciones = await Produccion.find(query)
         .sort({ fecha: -1 })
         .populate({ path: 'oti', select: 'numeroOti' })
-        .populate({ path: 'proceso', select: 'nombre' })
+        .populate({ path: 'procesos', select: 'nombre' })
         .populate({ path: 'areaProduccion', select: 'nombre' })
         .populate({ path: 'maquina', select: 'nombre' })
         .populate({ path: 'operario', select: 'name' })
@@ -198,217 +222,77 @@ exports.listarProduccion = async (req, res) => {
 exports.actualizarProduccion = async (req, res) => {
     try {
         console.log("🛠 Datos recibidos en backend para actualización:", req.body);
-        const { _id, operario, oti, proceso, areaProduccion, maquina, insumos, fecha, tiempo, horaInicio, horaFin, tipoTiempo} = req.body;
+        const { _id, operario, oti, procesos, areaProduccion, maquina, insumos, fecha, tiempo, horaInicio, horaFin, tipoTiempo} = req.body;
 
-        // Validar que el ID de la producción esté presente
+        // Validaciones básicas
         if (!_id) {
-            return res.status(400).json({ msg: 'El ID de la producción es requerido' });
+            return res.status(400).json({ msg: "El ID del registro de producción es requerido." });
+        }
+        if (!mongoose.Types.ObjectId.isValid(_id)) {
+            return res.status(400).json({ msg: "El ID del registro de producción no es válido." });
         }
 
-        // Buscar la producción existente
-        const produccion = await Produccion.findById(_id);
-        if (!produccion) {
-            return res.status(404).json({ msg: "Producción no encontrada" });
+        // Verificar que todos los campos necesarios para la actualización están presentes
+        if (!operario || !oti || !procesos || !areaProduccion || !maquina || !insumos || !fecha || !tiempo || !horaInicio || !horaFin || !tipoTiempo) { 
+            console.log("Faltan campos requeridos para la actualización:", { operario, oti, procesos, areaProduccion, maquina, insumos, fecha, tiempo, horaInicio, horaFin, tipoTiempo }); 
+            return res.status(400).json({ msg: "Faltan campos requeridos para la actualización." });
         }
 
-        // Validar Operario
-        if (!operario || !mongoose.Types.ObjectId.isValid(operario)) {
-            return res.status(400).json({ msg: "Operario no válido" });
-        }
-        const operarioDB = await Operario.findById(operario);
-        if (!operarioDB) {
-            return res.status(404).json({ msg: "Operario no encontrado" });
-        }
+        // Convertir IDs de string a ObjectId donde sea necesario
+        const operarioId = new mongoose.Types.ObjectId(operario);
+        const areaProduccionId = new mongoose.Types.ObjectId(areaProduccion);
+        const maquinaId = new mongoose.Types.ObjectId(maquina);
+        const procesosIds = Array.isArray(procesos) ? procesos.map(pId => new mongoose.Types.ObjectId(pId)) : [new mongoose.Types.ObjectId(procesos)];
+        const insumosIds = Array.isArray(insumos) ? insumos.map(iId => new mongoose.Types.ObjectId(iId)) : [new mongoose.Types.ObjectId(insumos)];
 
-        // Validar y/o buscar OTI
-        let otiExistente = await Oti.findById(oti);
-        if (!otiExistente) {
-            console.warn(`⚠️ OTI con ID ${oti} no encontrada. Creando nueva OTI.`);
-            otiExistente = new Oti({ _id: oti, numeroOti: "Nueva OTI" });
-            await otiExistente.save();
+        // Verificar y/o crear OTI
+        const otiId = await verificarYCrearOti(oti);
+        if (!otiId) {
+            return res.status(400).json({ msg: "Error al verificar o crear la OTI." });
         }
 
-        // Validar Proceso
-        const procesoExistente = await Proceso.findById(proceso);
-        if (!procesoExistente) {
-            return res.status(404).json({ msg: "Proceso no encontrado" });
+        const produccionActualizada = await Produccion.findByIdAndUpdate(
+            _id,
+            {
+                operario: operarioId,
+                oti: otiId,
+                procesos: procesosIds, 
+                areaProduccion: areaProduccionId,
+                maquina: maquinaId,
+                insumos: insumosIds,
+                fecha,
+                tiempo,
+                horaInicio,
+                horaFin,
+                tipoTiempo,
+                // No actualizamos la jornada aquí directamente, se maneja por separado si es necesario
+            },
+            { new: true, runValidators: true }
+        )
+        .populate("oti", "numeroOti")
+        .populate("operario", "name")
+        .populate("procesos", "nombre") 
+        .populate("areaProduccion", "nombre")
+        .populate("maquina", "nombre")
+        .populate("insumos", "nombre");
+
+        if (!produccionActualizada) {
+            return res.status(404).json({ msg: "Registro de producción no encontrado." });
         }
 
-        // Validar Área de Producción
-        const areaExistente = await AreaProduccion.findById(areaProduccion);
-        if (!areaExistente) {
-            return res.status(404).json({ msg: "Área de producción no encontrada" });
-        }
+        // Recalcular tiempo total de la OTI si es necesario (opcional, dependiendo de la lógica de negocio)
+        // await recalcularTiempoTotal(otiId);
 
-        // Validar Máquina
-        const maquinaExistente = await Maquina.findById(maquina);
-        if (!maquinaExistente) {
-            return res.status(404).json({ msg: "Máquina no encontrada" });
-        }
-
-        // Validar Insumos
-        const insumosExistente = await Insumos.findById(insumos);
-        if (!insumosExistente) {
-            return res.status(404).json({ msg: "Insumo no encontrado" });
-        }
-
-        // Validar Fecha
-        const fechaValida = new Date(fecha);
-        if (isNaN(fechaValida.getTime())) {
-            return res.status(400).json({ msg: "Fecha inválida" });
-        }
-
-        // Ajustar la fecha para la zona horaria local
-        const fechaLocal = new Date(fecha);
-        fechaLocal.setMinutes(fechaLocal.getMinutes() + fechaLocal.getTimezoneOffset());
-        produccion.fecha = fechaLocal;
-
-        // Actualizar los datos de la producción
-        produccion.oti = otiExistente._id;
-        produccion.operario = operarioDB._id;
-        produccion.proceso = procesoExistente._id;
-        produccion.areaProduccion = areaExistente._id;
-        produccion.maquina = maquinaExistente._id;
-        produccion.insumos = insumosExistente._id;
-        produccion.tipoTiempo = tipoTiempo || produccion.tipoTiempo;
-
-        // Convert horaInicio (HH:mm string from req.body) to Date object
-        // 'horaInicio' here is the destructured variable from req.body
-        if (horaInicio !== undefined) { // Check if horaInicio was present in req.body
-            if (horaInicio === null) {
-                produccion.horaInicio = null; // Allow explicitly setting to null if schema permits
-            } else {
-                const isString = typeof horaInicio === 'string';
-                const isTimeFormat = isString ? /^\d{2}:\d{2}$/.test(horaInicio) : false;
-
-                if (isString && isTimeFormat) {
-                    const [hoursStr, minutesStr] = horaInicio.split(':');
-                    const hours = parseInt(hoursStr, 10);
-                    const minutes = parseInt(minutesStr, 10);
-
-                    if (produccion.fecha instanceof Date && !isNaN(produccion.fecha.getTime()) &&
-                        !isNaN(hours) && hours >= 0 && hours <= 23 &&
-                        !isNaN(minutes) && minutes >= 0 && minutes <= 59) {
-                        
-                        const newHoraInicio = new Date(produccion.fecha);
-                        newHoraInicio.setHours(hours, minutes, 0, 0);
-                        produccion.horaInicio = newHoraInicio;
-                    } else {
-                        console.warn(`Could not parse horaInicio "\\${horaInicio}" due to invalid time values or invalid base date (produccion.fecha: \\${produccion.fecha}).`);
-                        return res.status(400).json({ msg: `Formato de horaInicio \'\\${horaInicio}\' inválido o fecha base inválida.` });
-                    }
-                } else {
-                    console.warn(`horaInicio was provided but not in expected HH:mm format or null: \\${horaInicio}`);
-                    return res.status(400).json({ msg: `Formato de horaInicio \'\\${horaInicio}\' debe ser HH:mm o null.` });
-                }
-            }
-        } // If horaInicio was not in req.body (i.e., undefined), produccion.horaInicio (the existing value from DB) is preserved.
-
-        // Convert horaFin (HH:mm string from req.body) to Date object
-        // 'horaFin' here is the destructured variable from req.body
-        if (horaFin !== undefined) { // Check if horaFin was present in req.body
-            if (horaFin === null) {
-                produccion.horaFin = null; // Allow explicitly setting to null
-            } else {
-                const isString = typeof horaFin === 'string';
-                const isTimeFormat = isString ? /^\d{2}:\d{2}$/.test(horaFin) : false;
-
-                if (isString && isTimeFormat) {
-                    const [hoursStr, minutesStr] = horaFin.split(':');
-                    const hours = parseInt(hoursStr, 10);
-                    const minutes = parseInt(minutesStr, 10);
-
-                    if (produccion.fecha instanceof Date && !isNaN(produccion.fecha.getTime()) &&
-                        !isNaN(hours) && hours >= 0 && hours <= 23 &&
-                        !isNaN(minutes) && minutes >= 0 && minutes <= 59) {
-
-                        const newHoraFin = new Date(produccion.fecha);
-                        newHoraFin.setHours(hours, minutes, 0, 0);
-                        produccion.horaFin = newHoraFin;
-                    } else {
-                        console.warn(`Could not parse horaFin "\\${horaFin}" due to invalid time values or invalid base date (produccion.fecha: \\${produccion.fecha}).`);
-                        return res.status(400).json({ msg: `Formato de horaFin \'\\${horaFin}\' inválido o fecha base inválida.` });
-                    }
-                } else {
-                    console.warn(`horaFin was provided but not in expected HH:mm format or null: \\${horaFin}`);
-                    return res.status(400).json({ msg: `Formato de horaFin \'\\${horaFin}\' debe ser HH:mm o null.` });
-                }
-            }
-        } // If horaFin was not in req.body (i.e., undefined), produccion.horaFin (the existing value from DB) is preserved.
-        
-        produccion.tiempo = tiempo || produccion.tiempo;
-
-        // Validar Observaciones
-        produccion.observaciones = req.body.observaciones || produccion.observaciones;
-
-
-        //  COMPROBAR SI LA FECHA DE LA PRODUCCIÓN CAMBIÓ Y ACTUALIZAR LA JORNADA
-        const oldJornadaId = produccion.jornada;
-        const newFecha = produccion.fecha;
-        let jornadaCambiada = false;
-
-        if (oldJornadaId) {
-        const oldJornada = await Jornada.findById(oldJornadaId);
-
-        // Comparar solo la fecha (sin hora)
-        const fechaJornada = oldJornada?.fecha?.toISOString().split('T')[0];
-        const fechaProduccion = newFecha.toISOString().split('T')[0];
-
-        if (fechaJornada !== fechaProduccion) {
-            jornadaCambiada = true;
-
-            // 🗑 Quitar la actividad de la jornada anterior
-            if (oldJornada) {
-            oldJornada.registros.pull(produccion._id);
-            await oldJornada.save();
-
-            // Si la jornada queda vacía, puedes eliminarla
-            if (oldJornada.registros.length === 0) {
-                await Jornada.findByIdAndDelete(oldJornada._id);
-            }
-            }
-
-            // 🔍 Buscar o crear nueva jornada con la nueva fecha
-            let nuevaJornada = await Jornada.findOne({ operario: operarioDB._id, fecha: newFecha });
-
-            if (!nuevaJornada) {
-            nuevaJornada = new Jornada({
-                operario: operarioDB._id,
-                fecha: newFecha,
-                registros: [],
-            });
-            }
-
-            // Asegurar que la actividad esté incluida
-            if (!nuevaJornada.registros.includes(produccion._id)) {
-            nuevaJornada.registros.push(produccion._id);
-            }
-
-            await nuevaJornada.save();
-            produccion.jornada = nuevaJornada._id;
-        }
-        }
-        // Guardar cambios
-        const produccionActualizada = await produccion.save();
-        console.log("✅ Producción actualizada en BD:", produccionActualizada);
-
-        // Forzar el recálculo de la jornada asociada
-        const jornadaParaActualizar = await Jornada.findById(produccionActualizada.jornada);
-        if (jornadaParaActualizar) {
-            await jornadaParaActualizar.save(); // Esto disparará los hooks pre-save de Jornada
-            console.log("🔄 Jornada asociada actualizada para recálculos.");
-        } else {
-            console.warn(`⚠️ No se encontró la jornada con ID ${produccionActualizada.jornada} para forzar el recálculo.`);
-        }
-
-        res.status(200).json({
-            msg: "Producción actualizada exitosamente",
-            produccion: produccionActualizada
-        });
+        console.log("✅ Producción actualizada exitosamente:", produccionActualizada);
+        res.status(200).json({ msg: "Producción actualizada exitosamente", produccion: produccionActualizada });
 
     } catch (error) {
         console.error("❌ Error al actualizar producción:", error);
-        res.status(500).json({ msg: "Error al actualizar la producción", error: error.message });
+        // Considerar enviar un mensaje más específico basado en el tipo de error
+        if (error.name === 'CastError') {
+            return res.status(400).json({ msg: "Error de casteo: Verifique los IDs proporcionados.", error: error.message });
+        }
+        res.status(500).json({ msg: "Error interno del servidor al actualizar la producción.", error: error.message });
     }
 };
 
@@ -487,8 +371,14 @@ exports.buscarProduccion = async (req, res) => {
             };
         }
 
-        if (proceso && proceso.trim() !== '') {
-            query.proceso = proceso; // Espera el _id directamente
+        if (proceso && proceso.trim() !== '') { // Should be procesos
+            // If 'proceso' is an array of IDs
+            if (Array.isArray(proceso) && proceso.length > 0) {
+                query.procesos = { $in: proceso.map(p => new mongoose.Types.ObjectId(p)) };
+            } else if (mongoose.Types.ObjectId.isValid(proceso)) {
+                 // If 'proceso' is a single ID string 
+                query.procesos = new mongoose.Types.ObjectId(proceso);
+            }
         }
 
         if (areaProduccion && areaProduccion.trim() !== '') {
@@ -499,8 +389,14 @@ exports.buscarProduccion = async (req, res) => {
             query.maquina = maquina; // Espera el _id directamente
         }
 
-        if (insumos && insumos.trim() !== '') {
-            query.insumos = insumos; // Espera el _id directamente
+        if (insumos && insumos.trim() !== '') { // Should be insumos, and handle array
+            // If 'insumos' is an array of IDs
+            if (Array.isArray(insumos) && insumos.length > 0) {
+                query.insumos = { $in: insumos.map(i => new mongoose.Types.ObjectId(i)) };
+            } else if (mongoose.Types.ObjectId.isValid(insumos)){
+                // If 'insumos' is a single ID string
+                query.insumos = new mongoose.Types.ObjectId(insumos);
+            }
         }
 
         console.log("🔍 Query final construida para la búsqueda:", query);
@@ -513,7 +409,7 @@ exports.buscarProduccion = async (req, res) => {
             .limit(parseInt(limit))
             .populate('oti', 'numeroOti')
             .populate('operario', 'name')
-            .populate('proceso', 'nombre')
+            .populate('procesos', 'nombre') // Changed from proceso to procesos
             .populate('areaProduccion', 'nombre')
             .populate('maquina', 'nombre')
             .populate('insumos', 'nombre');
@@ -548,7 +444,7 @@ exports.buscarPorFechas = async (req, res) => {
         })
             .populate("oti", "numeroOti")
             .populate("operario", "name")
-            .populate("proceso", "nombre")
+            .populate("procesos", "nombre") // Changed from proceso to procesos
             .populate("areaProduccion", "nombre")
             .populate("maquina", "nombre")
             .populate("insumos", "nombre");

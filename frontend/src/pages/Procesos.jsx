@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import Navbar from '../components/Navbar';
 
-const ProcesoPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10 }) => {
+const ProcesoPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 8 }) => {
     const navigate = useNavigate();
     const [procesos, setProcesos] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
@@ -110,76 +110,86 @@ const ProcesoPage = ({ currentPage: propCurrentPage, totalResults: propTotalResu
         <div className="flex bg-gray-100 h-screen">
             <SidebarAdmin />
 
-            <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
-                <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Procesos</h1>
-                <div className="flex justify-between items-center mb-4">
-                <button onClick={handleCrear} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                >Crear Nuevo Proceso</button>
-                {modo === 'listar' && (
-                <div className="flex items-center">
-                    <label htmlFor="searchText" className="mr-2 text-gray-700">Buscar por Nombre:</label>
-                    <input
-                        type="text"
-                        id="searchText"
-                        value={searchText}
-                        onChange={handleSearchTextChange}
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                    />
-                    <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer ml-2" 
-                    onClick={() => navigate('/admin-dashboard')}>Atras</button>
-                </div>
-                )}
-            </div>
-
-            {loading ? (
-                <div className="flex justify-center items-center py-8 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"
-                ></div>
-            ) : (
-                <>
+            <div className="flex-1 flex flex-col overflow-y-auto">
+                <div className="p-4 sm:p-6 md:p-8"> 
+                    <div className="bg-white shadow-xl rounded-2xl p-6 md:p-8">
+                        <h1 className="text-3xl font-bold text-gray-800 mb-8">Gestión de Procesos</h1>
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                        <button
+                            onClick={handleCrear}
+                            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-lg shadow-md hover:shadow-lg transition duration-150 ease-in-out w-full md:w-auto order-first md:order-none flex items-center justify-center"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                            </svg>
+                            Crear Nuevo Proceso
+                        </button>
                     {modo === 'listar' && (
-                        <div className="overflow-x-auto">
-                            <ProcesosList procesos={filteredProcesos} onEditar={handleEditar} onEliminar={handleEliminar}/>
-                        </div>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                        <label htmlFor="searchText" className="sr-only">Buscar por Nombre:</label>
+                        <input
+                            type="text"
+                            id="searchText"
+                            value={searchText}
+                            onChange={handleSearchTextChange}
+                            placeholder="Buscar por Nombre..."
+                            className="appearance-none block w-full sm:w-auto flex-grow rounded-lg border border-gray-300 shadow-sm py-2.5 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />                    
+                    </div>
                     )}
+                </div>
 
-                    {filteredProcesos.length > 0 && modo === 'listar' && searchText && (
-                          <p className="mt-2 text-gray-600">{filteredProcesos.length} resultados encontrados para "{searchText}"</p>
-                      )}
+                    {loading ? (
+                        <div className="flex justify-center items-center py-12 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"
+                        ></div>
+                    ) : (
+                        <>
+                        {modo === 'listar' && (
+                            <div className="overflow-x-auto">
+                                <ProcesosList procesos={filteredProcesos} onEditar={handleEditar} onEliminar={handleEliminar}/>
+                            </div>
+                        )}
 
-                    {totalResults > 0 && modo === 'listar' && !searchText && (
-                        <div className="mt-4">
-                            <Pagination
-                                totalResults={totalResults}
-                                currentPage={currentPage}
-                                itemsPerPage={itemsPerPage}
-                                onPageChange={handlePageChange}
-                            />
-                        </div>
-                    )}
+                        {filteredProcesos.length > 0 && modo === 'listar' && searchText && (
+                            <p className="mt-2 text-gray-600">{filteredProcesos.length} resultados encontrados para "{searchText}"</p>
+                        )}
 
-                    {modo === 'crear' && (
-                        <div className="mt-6">
-                            <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Nuevo Proceso</h2>                    
-                            <ProcesoForm onGuardar={handleGuardar} onCancelar={handleCancelar}
-                            />
-                        </div>
-                    )}
+                        {totalResults > 0 && modo === 'listar' && !searchText && (
+                            <div className="mt-6">
+                                <Pagination
+                                    totalResults={totalResults}
+                                    currentPage={currentPage}
+                                    itemsPerPage={itemsPerPage}
+                                    onPageChange={handlePageChange}
+                                />
+                            </div>
+                        )}
+
+                        {modo === 'crear' && (
+                            <div className="mt-6">
+                                <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Nuevo Proceso</h2>                    
+                                <ProcesoForm onGuardar={handleGuardar} onCancelar={handleCancelar}
+                                />
+                            </div>
+                        )}
                         {modo === 'editar' && procesoAEditar && (
                             <div className="mt-6">
                                 <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar proceso</h2>
                                 <button
                                     onClick={() => setModo('listar')}
-                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-md transition cursor-pointer mb-4"
-                                >Atrás</button>
+                                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg shadow hover:shadow-md transition duration-150 ease-in-out"
+                                >Volver a la lista</button>
                                 <ProcesoForm procesoInicial={procesoAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar} />
                             </div>
                         )}
                     </>
                 )}
             </div>
-        </div>       
-        </>
-    );
+        </div>
+    </div>
+</div>       
+</>
+);
 };
 
 export default ProcesoPage;

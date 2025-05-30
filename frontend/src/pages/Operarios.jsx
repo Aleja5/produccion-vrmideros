@@ -3,12 +3,11 @@ import axios from 'axios';
 import OperarioList from '../components/OperarioList';
 import OperarioForm from '../components/OperarioForm';
 import Pagination from '../components/Pagination';
-import { useNavigate } from 'react-router-dom';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import Navbar from '../components/Navbar';
+import { PlusCircle } from 'lucide-react'; // Importar el icono
 
-const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10 }) => {
-    const navigate = useNavigate();
+const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 8 }) => {
     const [operarios, setOperarios] = useState([]);
     const [modo, setModo] = useState('listar');
     const [operarioAEditar, setOperarioAEditar] = useState(null);
@@ -109,75 +108,97 @@ const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRe
         <div className="flex bg-gray-100 h-screen">
             <SidebarAdmin />
 
-            <div className="container mx-auto p-6 bg-white shadow-md rounded-md">
-                <h1 className="text-2xl font-semibold mb-4 text-gray-800">Gestión de Operarios</h1>
-                <div className="flex justify-between items-center mb-4">
-                    <button onClick={handleCrear} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                    >Crear Nuevo Operario</button>
-                    {modo === 'listar' && (
-                    <div className="flex items-center">
-                        <label htmlFor="searchText" className="mr-2 text-gray-700">Buscar por Nombre:</label>
-                        <input
-                            type="text"
-                            id="searchText"
-                            value={searchText}
-                            onChange={handleSearchTextChange}
-                            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        />
-                        <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition cursor-pointer ml-2" 
-                        onClick={() => navigate('/admin-dashboard')}>Atras</button>
+            <div className="flex-1 flex flex-col overflow-y-auto">
+                <div className="p-4 sm:p-6 md:p-8">
+                    <div className="bg-white shadow-xl rounded-2xl p-6 md:p-8">
+                        <h1 className="text-3xl font-bold text-gray-800 mb-8">Gestión de Operarios</h1>
+                        
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                            <button
+                                onClick={handleCrear}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-lg shadow-md hover:shadow-lg transition duration-150 ease-in-out w-full md:w-auto order-first md:order-none flex items-center justify-center"
+                            >
+                                <PlusCircle size={20} className="mr-2" /> {/* Icono añadido */}
+                                Crear Nuevo Operario
+                            </button>
+
+                            {modo === 'listar' && (
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                                    <label htmlFor="searchText" className="sr-only"> 
+                                        Buscar por Nombre:
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="searchText"
+                                        value={searchText}
+                                        onChange={handleSearchTextChange}
+                                        placeholder="Buscar por Nombre..."
+                                        className="appearance-none block w-full sm:w-auto flex-grow rounded-lg border border-gray-300 shadow-sm py-2.5 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    />                                    
+                                </div>
+                            )}
+                        </div>
+
+                        {loading ? (
+                            <div className="flex justify-center items-center py-12">
+                                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"></div>
+                            </div>
+                        ) : (
+                            <>
+                                {modo === 'listar' && (
+                                    <div className="overflow-x-auto">
+                                        <OperarioList operarios={filteredOperarios} onEditar={handleEditar} onEliminar={handleEliminar} />
+                                    </div>
+                                )}
+
+                                {filteredOperarios.length > 0 && modo === 'listar' && searchText && (
+                                    <p className="mt-2 text-gray-600">
+                                        {filteredOperarios.length} resultados encontrados para "{searchText}"
+                                    </p>
+                                )}
+
+                                {totalResults > 0 && modo === 'listar' && !searchText && totalPages > 1 && (
+                                    <div className="mt-6">
+                                        <Pagination
+                                            totalResults={totalResults}
+                                            currentPage={currentPage}
+                                            totalPages={totalPages} // Asegúrate de que totalPages se pasa aquí
+                                            itemsPerPage={itemsPerPage}
+                                            onPageChange={handlePageChange}
+                                        />
+                                    </div>
+                                )}
+
+                                {(modo === 'crear' || (modo === 'editar' && operarioAEditar)) && (
+                                    <div className="mt-8 p-6 bg-gray-50 rounded-xl shadow-inner">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <h2 className="text-xl font-semibold text-gray-800">
+                                                {modo === 'crear' ? 'Crear Nuevo Operario' : 'Editar Operario'}
+                                            </h2>
+                                            {modo === 'editar' && (
+                                                <button
+                                                    onClick={() => setModo('listar')}
+                                                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg shadow hover:shadow-md transition duration-150 ease-in-out"
+                                                >
+                                                    Volver a la lista
+                                                </button>
+                                            )}
+                                        </div>
+                                        <OperarioForm 
+                                            operarioInicial={modo === 'editar' ? operarioAEditar : undefined} 
+                                            onGuardar={handleGuardar} 
+                                            onCancelar={handleCancelar} 
+                                        />
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </div>
-                    )}
                 </div>
-
-                {loading ? (
-                    <div className="flex justify-center items-center py-8 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"
-                    ></div>
-                ) : (
-                    <>
-                        {modo === 'listar' && (
-                            <div className="overflow-x-auto">
-                                <OperarioList operarios={filteredOperarios} onEditar={handleEditar} onEliminar={handleEliminar} />
-                            </div>
-                        )}
-
-                        {filteredOperarios.length > 0 && modo === 'listar' && searchText && (
-                            <p className="mt-2 text-gray-600">{filteredOperarios.length} resultados encontrados para "{searchText}"</p>
-                        )}
-
-                        {totalResults > 0 && modo === 'listar' && !searchText && (
-                            <div className="mt-4">
-                                <Pagination
-                                    totalResults={totalResults}
-                                    currentPage={currentPage}
-                                    onPageChange={handlePageChange}
-                                    itemsPerPage={itemsPerPage}
-                                />
-                            </div>
-                        )}
-
-                        {modo === 'crear' && (
-                          <div className="mt-6">
-                              <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Nuevo Operario</h2>
-                              <OperarioForm onGuardar={handleGuardar} onCancelar={handleCancelar} />
-                          </div>
-                        )}
-                        {modo === 'editar' && operarioAEditar && (
-                          <div className="mt-6">
-                              <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar Operario</h2>
-                              <button
-                                  onClick={() => setModo('listar')}
-                                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow-md transition cursor-pointer mb-4"
-                              >Atrás</button>
-                              <OperarioForm operarioInicial={operarioAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar} />
-                          </div>
-                        )}
-                        </>        
-                      )}
-                      </div>
-                  </div>
-          </>
-      );
+            </div>
+        </div>
+    </>
+  );
 }  
     
 export default OperariosPage;

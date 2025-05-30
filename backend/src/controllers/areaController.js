@@ -19,6 +19,7 @@ const obtenerAreas = async (req, res) => {
     try {
         const totalResults = await AreaProduccion.countDocuments(query);
         const areas = await AreaProduccion.find(query)
+            .sort({ nombre: 1 })
             .skip((page - 1) * limit)
             .limit(Number(limit));
 

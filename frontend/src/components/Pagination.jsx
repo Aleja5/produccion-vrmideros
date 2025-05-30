@@ -1,22 +1,15 @@
-// ✅ Pagination.jsx
 import React from 'react';
 
 const Pagination = ({ currentPage, totalResults, itemsPerPage, onPageChange }) => {
   const totalPages = Math.ceil(totalResults / itemsPerPage);
-
-  const pageNumbers = [];
-  for (let i = 1; i <= totalPages; i++) {
-    pageNumbers.push(i);
-  }
-  console.log('Pagination Component - totalResults:', totalResults, 'totalPages:', totalPages, 'currentPage:', currentPage);
-  console.log('🔍 Rendering Pagination - currentPage:', currentPage, 'totalPages:', totalPages, 'totalResults:', totalResults);
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 
   return (
-    <div className="flex justify-center mt-4">
+    <div className="flex justify-center mt-6">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="px-3 py-2 mr-2 rounded bg-gray-200 hover:bg-gray-300 disabled:text-gray-500"
+        className="px-4 py-2 mr-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
       >
         Anterior
       </button>
@@ -24,9 +17,11 @@ const Pagination = ({ currentPage, totalResults, itemsPerPage, onPageChange }) =
         <button
           key={number}
           onClick={() => onPageChange(number)}
-          className={`px-3 py-2 rounded ${
-            currentPage === number ? 'bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300'
-          } mr-1`}
+          className={`px-4 py-2 rounded-lg mr-1 transition-all ${
+            currentPage === number
+              ? 'bg-indigo-600 text-white font-semibold shadow'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+          }`}
         >
           {number}
         </button>
@@ -34,7 +29,7 @@ const Pagination = ({ currentPage, totalResults, itemsPerPage, onPageChange }) =
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages || totalPages === 0}
-        className="px-3 py-2 ml-2 rounded bg-gray-200 hover:bg-gray-300 disabled:text-gray-500"
+        className="px-4 py-2 ml-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
       >
         Siguiente
       </button>

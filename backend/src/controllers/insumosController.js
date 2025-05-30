@@ -19,6 +19,7 @@ const obtenerInsumos = async (req, res) => {
     try {
         const totalResults = await Insumos.countDocuments(query);
         const insumos = await Insumos.find(query)
+            .sort({ nombre: 1 }) 
             .skip((page - 1) * limit)
             .limit(Number(limit));
 

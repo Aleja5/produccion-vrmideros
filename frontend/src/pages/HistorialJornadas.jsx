@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react"; // Added useCallback
 import axiosInstance from "../utils/axiosInstance";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom"; // Import useLocation
 import { toast } from "react-toastify";
 import { Card, Button } from "../components/ui/index";
 import { Sidebar } from "../components/Sidebar";
@@ -18,6 +18,7 @@ const HistorialJornadas = () => {
   const [loading, setLoading] = useState(true);
   const [expandedJornada, setExpandedJornada] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation(); // Get location object
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduccion, setSelectedProduccion] = useState(null);
   const [fechaFiltro, setFechaFiltro] = useState('');
@@ -25,7 +26,7 @@ const HistorialJornadas = () => {
   const storedOperario = JSON.parse(localStorage.getItem('operario'));
   const operarioName = storedOperario?.name || 'Operario';
 
-  const fetchJornadas = async (filterDate = fechaFiltro) => { 
+  const fetchJornadas = useCallback(async (filterDate = fechaFiltro) => { 
     try {
       setLoading(true);
       const localStoredOperario = JSON.parse(localStorage.getItem("operario"));
@@ -53,12 +54,12 @@ const HistorialJornadas = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, fechaFiltro]); // Added fechaFiltro to dependencies
 
   useEffect(() => {
     fetchJornadas();
     
-  }, [navigate]); 
+  }, [fetchJornadas, location]); // Add location to the dependency array
 
   const handleFiltrarPorFecha = () => {
     fetchJornadas(fechaFiltro); // Pass the current fechaFiltro
@@ -213,12 +214,16 @@ const handleEliminarActividad = async (jornadaId, actividadId) => {
                             .sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio))
                             .map((actividad) => (
                               <tr key={actividad._id}>
-                                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{actividad.proceso?.nombre || "N/A"}</td>
+                                <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                                  {actividad.procesos?.map(p => p.nombre).join(', ') || "N/A"}
+                                </td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tiempo}</td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.oti?.numeroOti || "N/A"}</td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.areaProduccion?.nombre || "N/A"}</td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.maquina?.nombre || "N/A"}</td>
-                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.insumos?.nombre || "N/A"}</td>
+                                <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                  {actividad.insumos?.map(i => i.nombre).join(', ') || "N/A"}
+                                </td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tipoTiempo || "N/A"}</td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}</td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}</td>
