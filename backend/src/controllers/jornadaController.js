@@ -1,39 +1,12 @@
 // backend/controllers/jornadaController.js (o como lo tengas)
 
 const mongoose = require('mongoose');
-const Produccion = require('../models/Produccion'); // Asegúrate de que la ruta sea correcta
-const Jornada = require('../models/Jornada');     // Asegúrate de que la ruta sea correcta
-const Operario = require('../models/Operario');   // Asegúrate de que la ruta sea correcta
+const Produccion = require('../models/Produccion');
+const Jornada = require('../models/Jornada');
+const Operario = require('../models/Operario');
+const { recalcularTiempoTotal } = require('../utils/recalcularTiempo');
+const { recalcularHorasJornada } = require('../utils/recalcularHoras');
 
-// NOTA: La siguiente función 'crearNuevaJornada' con axiosInstance
-// parece ser de tu frontend, no del controlador de backend.
-// La mantengo aquí por referencia, pero los 'exports' son las funciones del backend.
-/*
-const crearNuevaJornada = async () => {
-    try {
-        const fechaHoy = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
-
-        const response = await axiosInstance.post('/jornadas/crear', {
-            operario: operarioId, // Debes tener operarioId definido en tu frontend
-            fecha: fechaHoy
-        });
-
-        toast.success('Jornada creada con éxito');
-        // setActualizar((prev) => !prev); // Para recargar jornadas, si es un hook de React
-    } catch (error) {
-        if (error.response && error.response.status === 400 && error.response.data.jornadaId) {
-            toast.info('Ya existe una jornada para hoy');
-        } else {
-            console.error(error);
-            toast.error('No se pudo crear la jornada');
-        }
-    }
-};
-*/
-
-// @desc    Crear una nueva jornada
-// @route   POST /api/jornadas/crear
-// @access  Public (o según tu autenticación)
 exports.crearJornada = async (req, res) => {
     try {
         const { operario, fecha } = req.body; // 'actividades' no se pasa al crear una jornada vacía
@@ -55,13 +28,11 @@ exports.crearJornada = async (req, res) => {
         }
 
         // Si no existe, crear una nueva jornada con 'registros' inicializado como array vacío
-        const nuevaJornada = new Jornada({
-            operario,
-            fecha: fechaNormalizada,
+        const nuevaJornada = new Jornada({ 
+            operario, 
+            fecha: new Date(fecha + 'T00:00:00.000Z'), 
             registros: [],
-            totalTiempoActividades: 0, // Inicializar en 0, se recalcula al agregar actividades
-            horaInicio: null, // Inicializar nulo
-            horaFin: null     // Inicializar nulo
+            totalTiempoActividades: { horas: 0, minutos: 0 }
         });
 
         await nuevaJornada.save();
@@ -79,20 +50,27 @@ exports.crearJornada = async (req, res) => {
 // @access  Public (o según tu autenticación)
 exports.obtenerJornadas = async (req, res) => {
     try {
-        const jornadas = await Jornada.find()
-            .populate('operario', 'name cedula') // Puedes poblar el operario si necesitas su nombre/cédula
-            .populate({
-                path: 'registros',
-                populate: [
-                    { path: 'oti', select: 'numeroOti' },
-                    { path: 'proceso', select: 'nombre' },
-                    { path: 'areaProduccion', select: 'nombre' },
-                    { path: 'maquina', select: 'nombre' },
-                    { path: 'insumos', select: 'nombre' }
-                ]
-            })
-            .sort({ fecha: -1 }); // Ordenar por fecha, las más recientes primero
-        res.status(200).json(jornadas);
+        const jornadas = await Jornada.find().
+        populate({
+            path: 'registros',
+            populate: [
+                { path: 'oti', select: 'numeroOti' },
+                { path: 'proceso', select: 'nombre' },
+                { path: 'areaProduccion', select: 'nombre' },
+                { path: 'maquina', select: 'nombre' },
+                { path: 'insumos', select: 'nombre' }
+            ],
+            
+        });
+        
+        const jornadasConTiempo = jornadas.map(jornada => {
+            return {
+                ...jornada.toObject(),
+                totalTiempoActividades: jornada.totalTiempoActividades || { horas: 0, minutos: 0 }
+            };
+        });
+
+        res.status(200).json(jornadasConTiempo);
     } catch (error) {
         console.error('Error fetching Jornadas:', error);
         res.status(500).json({ error: 'Error al obtener jornadas' });
@@ -111,16 +89,15 @@ exports.obtenerJornada = async (req, res) => {
             console.error(`ID de Jornada inválido: ${id}`);
             return res.status(400).json({ error: 'ID de jornada inválido' });
         }
-
-        // Buscar la Jornada y poblar sus referencias
-        const jornada = await Jornada.findById(id).populate('operario', 'name cedula').populate({
+        // Asegurarse de que todos los campos relacionados se populen correctamente
+        const jornada = await Jornada.findById(id).populate({
             path: 'registros',
             populate: [
-                { path: 'oti', select: 'numeroOti' },
-                { path: 'proceso', select: 'nombre' },
-                { path: 'areaProduccion', select: 'nombre' },
-                { path: 'maquina', select: 'nombre' },
-                { path: 'insumos', select: 'nombre' }
+                { path: 'oti', model: 'Oti', select: 'numeroOti' },
+                { path: 'proceso', model: 'Proceso', select: 'nombre' },
+                { path: 'areaProduccion', model: 'AreaProduccion', select: 'nombre' },
+                { path: 'maquina', model: 'Maquina', select: 'nombre' },
+                { path: 'insumos', model: 'Insumo', select: 'nombre' }
             ]
         });
 
@@ -129,24 +106,7 @@ exports.obtenerJornada = async (req, res) => {
             return res.status(404).json({ error: 'Jornada no encontrada' });
         }
 
-        // Recalcular las horas y el tiempo total de la jornada (siempre es buena práctica hacerlo al obtenerla)
-        await recalcularHorasJornada(id); // Esto actualizará el documento en la DB
-
-        // Volver a buscar la jornada después de la actualización de recalcularHorasJornada
-        // para obtener los datos más recientes, incluyendo los recalculados
-        const jornadaActualizada = await Jornada.findById(id).populate('operario', 'name cedula').populate({
-            path: 'registros',
-            populate: [
-                { path: 'oti', select: 'numeroOti' },
-                { path: 'proceso', select: 'nombre' },
-                { path: 'areaProduccion', select: 'nombre' },
-                { path: 'maquina', select: 'nombre' },
-                { path: 'insumos', select: 'nombre' }
-            ]
-        });
-
-        console.log(`Jornada obtenida exitosamente:`, jornadaActualizada);
-        res.status(200).json(jornadaActualizada);
+        res.status(200).json(jornada);
 
     } catch (error) {
         console.error(`Error al obtener la Jornada con ID ${req.params.id}:`, error);
@@ -166,22 +126,31 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
         // Verificar si el operario existe
         const operarioExiste = await Operario.findById(id);
         if (!operarioExiste) {
-            // logger.error(`❌ Operario con ID ${id} no encontrado`); // Asumiendo que 'logger' está definido
+            console.error(`❌ Operario con ID ${id} no encontrado`);
             return res.status(404).json({ msg: 'Operario no encontrado' });
         }
         console.log(`✅ Operario encontrado:`, operarioExiste.name);
 
-        // Buscar las jornadas del operario y popular los registros (actividades)
-        const jornadas = await Jornada.find({ operario: id }).populate('operario', 'name cedula').populate({
-            path: 'registros',
-            populate: [
-                { path: 'proceso', select: 'nombre' },
-                { path: 'oti', select: 'numeroOti' } // Asegúrate de que 'oti' esté poblado correctamente
-            ]
-        }).sort({ fecha: -1 }); // Ordenar por fecha descendente (la más reciente primero)
+        // Obtener las jornadas sin populate por ahora
+        const jornadas = await Jornada.find({ operario: id }).sort({ fecha: -1 });
 
-        console.log(`✅ Jornadas encontradas para el operario ${operarioExiste.name}: ${jornadas.length}`);
-        res.status(200).json(jornadas);
+        // Recalcular tiempo y hacer populate completo para cada jornada
+        const jornadasConTiempo = await Promise.all(jornadas.map(async (jornada) => {
+
+            return await Jornada.findById(jornada._id).populate({
+                path: 'registros',
+                populate: [
+                    { path: 'proceso', select: 'nombre' },
+                    { path: 'oti', select: 'numeroOti' },
+                    { path: 'areaProduccion', select: 'nombre' },
+                    { path: 'maquina', select: 'nombre' },
+                    { path: 'insumos', select: 'nombre' }
+                ]
+            });
+        }));
+
+        console.log(`✅ Jornadas encontradas para ${operarioExiste.name}: ${jornadas.length}`);
+        res.json(jornadasConTiempo);
 
     } catch (error) {
         console.error(`🚨 Error al obtener las jornadas del operario ${id}:`, error);
@@ -222,20 +191,10 @@ exports.actualizarJornada = async (req, res) => {
 
         // Recalcular las horas y el tiempo total de la jornada después de la actualización
         await recalcularHorasJornada(id);
+        // Recalcular el tiempo total de actividades
+        await recalcularTiempoTotal(id);
 
-        // Devolver la jornada actualizada con los registros poblados
-        const jornadaActualizada = await Jornada.findById(id).populate('operario', 'name cedula').populate({
-            path: 'registros',
-            populate: [
-                { path: 'oti', select: 'numeroOti' },
-                { path: 'proceso', select: 'nombre' },
-                { path: 'areaProduccion', select: 'nombre' },
-                { path: 'maquina', select: 'nombre' },
-                { path: 'insumos', select: 'nombre' }
-            ]
-        });
-
-        res.status(200).json(jornadaActualizada);
+        res.status(200).json(await Jornada.findById(id).populate('registros'));
 
     } catch (error) {
         console.error('Error al actualizar Jornada:', error);
@@ -266,9 +225,6 @@ exports.eliminarJornada = async (req, res) => {
     }
 };
 
-// @desc    Agregar una actividad a una jornada existente
-// @route   POST /api/jornadas/:jornadaId/actividades (RUTA QUE USAS PARA "GUARDAR ACTIVIDAD")
-// @access  Public (o según tu autenticación)
 exports.agregarActividadAJornada = async (req, res) => {
     try {
         const { jornadaId } = req.params;
@@ -298,22 +254,15 @@ exports.agregarActividadAJornada = async (req, res) => {
             return res.status(404).json({ error: 'Jornada no encontrada' });
         }
 
-        // Validar campos requeridos para la actividad
-        if (!operario || !fecha || !oti || !proceso || !areaProduccion || !maquina || !insumos || !tipoTiempo || !horaInicio || !horaFin) {
-            return res.status(400).json({ error: 'Faltan campos requeridos para la actividad' });
-        }
-
-        // Validar IDs de las referencias (si no son ObjectId válidos)
-        if (!mongoose.Types.ObjectId.isValid(operario)) return res.status(400).json({ error: 'ID de Operario inválido' });
-        if (!mongoose.Types.ObjectId.isValid(oti)) return res.status(400).json({ error: 'ID de OTI inválido' });
-        if (!mongoose.Types.ObjectId.isValid(proceso)) return res.status(400).json({ error: 'ID de Proceso inválido' });
-        if (!mongoose.Types.ObjectId.isValid(areaProduccion)) return res.status(400).json({ error: 'ID de Área de Producción inválido' });
-        if (!mongoose.Types.ObjectId.isValid(maquina)) return res.status(400).json({ error: 'ID de Máquina inválido' });
-        if (!mongoose.Types.ObjectId.isValid(insumos)) return res.status(400).json({ error: 'ID de Insumo inválido' });
-
-        // Normalizar la fecha de la actividad si es necesario (generalmente será la misma que la jornada)
-        const fechaActividadNormalizada = new Date(fecha);
-        fechaActividadNormalizada.setUTCHours(0, 0, 0, 0);
+        // Validar los campos de la actividad
+        const camposRequeridos = { operario, fecha, oti, proceso, areaProduccion, maquina, insumos, tipoTiempo, horaInicio, horaFin };
+        for (const [clave, valor] of Object.entries(camposRequeridos)) {
+            if (!valor) return res.status(400).json({ error: `Falta el campo: ${clave}` });
+}
+        if (proceso && !mongoose.Types.ObjectId.isValid(proceso)) return res.status(400).json({ error: 'Proceso ID is invalid' });
+        if (areaProduccion && !mongoose.Types.ObjectId.isValid(areaProduccion)) return res.status(400).json({ error: 'Area ID is invalid' });
+        if (maquina && !mongoose.Types.ObjectId.isValid(maquina)) return res.status(400).json({ error: 'Maquina ID is invalid' });
+        if (insumos && !mongoose.Types.ObjectId.isValid(insumos)) return res.status(400).json({ error: 'Insumos ID is invalid' });
 
         // Crear un nuevo registro de producción (actividad individual)
         const nuevoRegistro = new Produccion({
@@ -340,21 +289,11 @@ exports.agregarActividadAJornada = async (req, res) => {
         // Recalcular las horas de inicio/fin y el totalTiempoActividades de la jornada
         // Esto es crucial para mantener la jornada actualizada
         await recalcularHorasJornada(jornadaId);
+        // Recalcular el tiempo total de actividades
+        await recalcularTiempoTotal(jornadaId);
 
-        // Devolver la jornada actualizada con los registros poblados para el frontend
-        const jornadaFinal = await Jornada.findById(jornadaId).populate('operario', 'name cedula').populate({
-            path: 'registros',
-            populate: [
-                { path: 'oti', select: 'numeroOti' },
-                { path: 'proceso', select: 'nombre' },
-                { path: 'areaProduccion', select: 'nombre' },
-                { path: 'maquina', select: 'nombre' },
-                { path: 'insumos', select: 'nombre' }
-            ]
-        });
-
-        res.status(200).json({ msg: 'Actividad agregada con éxito', jornada: jornadaFinal });
-
+        res.status(200).json({ msg: 'Actividad agregada con éxito', jornada: await Jornada.findById(jornadaId).populate('registros') });
+              
     } catch (error) {
         console.error('Error al agregar actividad a la jornada:', error);
         if (error.name === 'ValidationError') {

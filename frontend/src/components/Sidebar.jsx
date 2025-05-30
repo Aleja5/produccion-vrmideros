@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Home, PlusCircle, ClipboardList, History, LogOut } from "lucide-react";
+import { Home, PlusCircle, ClipboardList, History, LogOut, ChevronLeft, ChevronRight} from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 
@@ -20,7 +20,6 @@ export const Sidebar = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
     navigate("/validate-cedula");
   };
 
@@ -47,7 +46,7 @@ export const Sidebar = () => {
           className="text-white focus:outline-none"
           aria-label="Toggle sidebar"
         >
-          {collapsed ? "▶" : "◀"}
+          {collapsed ? <ChevronRight /> : <ChevronLeft />}
         </button>
       </div>
 
@@ -74,7 +73,7 @@ export const Sidebar = () => {
         <button
           onClick={handleLogout}
           className="flex items-center gap-2 p-2 hover:bg-gray-700 rounded-md w-full"
-          aria-label="Cerrar sesión"
+          aria-label="Salir"
         >
           <LogOut className="text-white" size={20} />
           {!collapsed && <span>Salir</span>}
