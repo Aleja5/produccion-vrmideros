@@ -58,18 +58,20 @@ exports.obtenerJornadas = async (req, res) => {
             query = query.limit(parseInt(limit, 10));
         }
 
-        const jornadas = await query
-            .populate('operario', 'name') // Popular el campo operario de la jornada
-            .populate({
-                path: 'registros',
-                populate: [
-                    { path: 'operario', select: 'name' },
-                    { path: 'oti', select: 'numeroOti' },
-                    { path: 'proceso', select: 'nombre' },
-                    { path: 'areaProduccion', select: 'nombre' },
-                    { path: 'maquina', select: 'nombre' },
-                    { path: 'insumos', select: 'nombre' }
-                ],
+        // Popular el campo operario de la Jornada
+        query = query.populate('operario', 'name');
+
+        const jornadas = await query.
+        populate({
+            path: 'registros',
+            populate: [
+                { path: 'operario', select: 'name' },
+                { path: 'oti', select: 'numeroOti' },
+                { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Ensured model is specified for clarity
+                { path: 'areaProduccion', select: 'nombre' },
+                { path: 'maquina', select: 'nombre' },
+                { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model is specified for clarity
+            ],
             
         });
         
@@ -104,10 +106,10 @@ exports.obtenerJornada = async (req, res) => {
             path: 'registros',
             populate: [
                 { path: 'oti', model: 'Oti', select: 'numeroOti' },
-                { path: 'proceso', model: 'Proceso', select: 'nombre' },
+                { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Corrected path and ensured model
                 { path: 'areaProduccion', model: 'AreaProduccion', select: 'nombre' },
                 { path: 'maquina', model: 'Maquina', select: 'nombre' },
-                { path: 'insumos', model: 'Insumo', select: 'nombre' }
+                { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model
             ]
         });
 
@@ -159,11 +161,11 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
             .populate({
                 path: 'registros',
                 populate: [
-                    { path: 'proceso', select: 'nombre' },
+                    { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Corrected path and ensured model
                     { path: 'oti', select: 'numeroOti' },
                     { path: 'areaProduccion', select: 'nombre' },
                     { path: 'maquina', select: 'nombre' },
-                    { path: 'insumos', select: 'nombre' }
+                    { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model
                 ]
             });
 
@@ -288,7 +290,19 @@ exports.agregarActividadAJornada = async (req, res) => {
         // Recalcular el tiempo total de actividades
         await recalcularTiempoTotal(jornadaId);
 
-        res.status(200).json({ msg: 'Actividad agregada con éxito', jornada: await Jornada.findById(jornadaId).populate('registros') });
+        // Asegurar la correcta populación antes de enviar la respuesta
+        const jornadaActualizada = await Jornada.findById(jornadaId).populate({
+            path: 'registros',
+            populate: [
+                { path: 'procesos', model: 'Proceso', select: 'nombre' },
+                { path: 'oti', select: 'numeroOti' },
+                { path: 'areaProduccion', select: 'nombre' },
+                { path: 'maquina', select: 'nombre' },
+                { path: 'insumos', model: 'Insumo', select: 'nombre' }
+            ]
+        });
+
+        res.status(200).json({ msg: 'Actividad agregada con éxito', jornada: jornadaActualizada });
               
     } catch (error) {
         console.error('Error al agregar actividad a la jornada:', error);

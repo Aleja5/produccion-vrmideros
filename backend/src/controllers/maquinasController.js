@@ -19,6 +19,7 @@ const obtenerMaquinas = async (req, res) => {
     try {
         const totalResults = await Maquina.countDocuments(query);
         const maquinas = await Maquina.find(query)
+            .sort({ nombre: 1 })
             .skip((page - 1) * limit)
             .limit(Number(limit));
 

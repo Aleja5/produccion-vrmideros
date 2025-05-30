@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
-import FilterPanel from '../components/FilterPanel';
+import FilterPanel from '../components/filters/FilterPanel';
 import * as XLSX from 'xlsx';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import axiosInstance from '../utils/axiosInstance';
@@ -46,10 +46,15 @@ const AdminDashboard = () => {
         try {
             const filtrosAjustados = { ...filtrosRecibidos };
             if (filtrosRecibidos.fechaInicio) {
-                filtrosAjustados.fechaInicio = new Date(filtrosRecibidos.fechaInicio).toISOString();
+                const date = new Date(filtrosRecibidos.fechaInicio);
+                date.setDate(date.getDate() - 1);
+                filtrosAjustados.fechaInicio = date.toISOString();
             }
             if (filtrosRecibidos.fechaFin) {
-                filtrosAjustados.fechaFin = new Date(filtrosRecibidos.fechaFin).toISOString();
+                const date = new Date(filtrosRecibidos.fechaFin);
+              
+                date.setHours(23, 59, 59, 999); 
+                filtrosAjustados.fechaFin = date.toISOString();
             }
 
             const params = {
@@ -114,18 +119,26 @@ const AdminDashboard = () => {
 
   const exportarExcel = () => {
     const rows = resultados.map((r) => ({
-      OTI: r.oti?.numeroOti || '',
-      Operario: r.operario?.name || '',
+      
       Fecha: new Date(r.fecha).toLocaleDateString(),
-      Proceso: r.proceso?.nombre || '',
-      Maquina: r.maquina?.nombre || '',
       Area: r.areaProduccion?.nombre || '',
-      Insumos: r.insumos?.nombre || '',
-      Observaciones: r.observaciones || '',
+      OTI: r.oti?.numeroOti || '',
+      Proceso: r.procesos && r.procesos.length > 0 ? r.procesos.map(p => p.nombre).join(', ') : '',
+      Maquina: r.maquina?.nombre || '',
+      Insumos: r.insumos && r.insumos.length > 0 ? r.insumos.map(i => i.nombre).join(', ') : '',
+      Operario: r.operario?.name || '',
       'Tipo de Tiempo': r.tipoTiempo || '',
       'Hora Inicio': r.horaInicio ? new Date(r.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
       'Hora Fin': r.horaFin ? new Date(r.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
       Tiempo: r.tiempo,
+      Observaciones: r.observaciones || '',
+      
+      
+      
+      
+     
+      
+      
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -194,7 +207,11 @@ const AdminDashboard = () => {
                           <td className="p-1 whitespace-nowrap">{r.oti?.numeroOti}</td>
                           <td className="p-1 whitespace-nowrap">{r.operario?.name}</td>
                           <td className="p-1 whitespace-nowrap">{new Date(r.fecha).toISOString().split('T')[0]}</td>
-                          <td className="p-1 whitespace-nowrap">{r.proceso?.nombre}</td>
+                          <td className="p-1 whitespace-nowrap">
+                            {r.procesos && r.procesos.length > 0
+                              ? r.procesos.map(p => p.nombre).join(', ')
+                              : 'N/A'}
+                          </td>
                           <td className="p-1 whitespace-nowrap">{r.maquina?.nombre}</td>
                           <td className="p-1 whitespace-nowrap">{r.areaProduccion?.nombre}</td>
                           <td className="p-1 whitespace-nowrap">{r.tipoTiempo || 'N/A'}</td>

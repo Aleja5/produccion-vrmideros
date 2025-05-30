@@ -2,7 +2,7 @@ const Proceso = require('../models/Proceso');
 
 // Obtener todos los procesos
 const obtenerProcesos = async (req, res) => {
-    const { page = 1, limit = 10, nombre, search } = req.query;
+    const { page = 1, limit = 10, nombre, search, areaId } = req.query; // Added areaId
     const query = {};
 
     if (nombre && search) {
@@ -16,9 +16,15 @@ const obtenerProcesos = async (req, res) => {
         query.nombre = { $regex: search, $options: 'i' };
     }
 
+    if (areaId) { // Filter by areaId if provided
+        query.areaId = areaId;
+    }
+
     try {
         const totalResults = await Proceso.countDocuments(query);
         const procesos = await Proceso.find(query)
+            .populate('areaId') // Optionally populate area details
+            .sort({ nombre: 1 }) // Default sort by nombre ascending (A-Z)
             .skip((page - 1) * limit)
             .limit(Number(limit));
 
@@ -48,8 +54,12 @@ const obtenerProceso = async (req, res) => {
 
 // Crear un nuevo proceso
 const crearProceso = async (req, res) => {
-    const { nombre } = req.body;
-    const nuevoProceso = new Proceso({ nombre });
+    const { nombre, areaId } = req.body; // Added areaId
+    // Ensure areaId is provided if it's required by your logic/model (currently not strictly required in model)
+    if (!areaId) {
+        // return res.status(400).json({ message: 'El campo areaId es requerido.' }); // Uncomment if areaId becomes strictly required
+    }
+    const nuevoProceso = new Proceso({ nombre, areaId }); // Added areaId
     try {
         const procesoGuardado = await nuevoProceso.save();
         console.log('Proceso guardado:', procesoGuardado);

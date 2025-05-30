@@ -4,10 +4,10 @@ const produccionSchema = new mongoose.Schema({
     oti: { type: mongoose.Schema.Types.ObjectId, ref: 'Oti', required: true },
     operario: { type: mongoose.Schema.Types.ObjectId, ref: 'Operario', required: true },
     fecha: { type: Date, default: Date.now, required: true },
-    proceso: { type: mongoose.Schema.Types.ObjectId, ref: 'Proceso', required: true },
+    procesos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Proceso', required: true }],
     areaProduccion: { type: mongoose.Schema.Types.ObjectId, ref: 'AreaProduccion', required: true },
     maquina: { type: mongoose.Schema.Types.ObjectId, ref: 'Maquina', required: true },
-    insumos: { type: mongoose.Schema.Types.ObjectId, ref: 'Insumo', required: true },
+    insumos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Insumo', required: true }],
     jornada: {type:mongoose.Schema.Types.ObjectId, ref: 'JornadaProduccion', required: true},
 
     tipoTiempo: { type: String, enum: ['Preparación', 'Operación', 'Alimentacion'], required: true },
@@ -20,4 +20,3 @@ const produccionSchema = new mongoose.Schema({
 
 module.exports = mongoose.model('Produccion', produccionSchema,"registroProduccion");
 
- 
