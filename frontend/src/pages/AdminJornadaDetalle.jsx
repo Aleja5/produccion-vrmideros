@@ -52,10 +52,11 @@ const AdminJornadaDetalle = () => {
       <div className="flex bg-gray-100 min-h-screen">
         <SidebarAdmin />
         <div className="flex-1 p-6 overflow-y-auto">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-5xl mx-auto"> {/* Aumentado el max-w para la tabla */}
             <button onClick={() => navigate(-1)} className="mb-6 flex items-center text-indigo-600 hover:underline font-medium">
               <ChevronLeft className="w-5 h-5 mr-1" /> Volver
             </button>
+            {/* Detalles de la Jornada - Se mantiene el diseño actual */}
             <Card className="p-8 mb-8 shadow-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
               <div className="flex items-center mb-4">
                 <ClipboardList className="w-8 h-8 text-indigo-500 mr-3" />
@@ -88,74 +89,47 @@ const AdminJornadaDetalle = () => {
                 </div>
               </div>
             </Card>
-            <Card className="p-8 shadow-lg border border-gray-100 bg-white">
-              <h2 className="text-2xl font-bold mb-8 flex items-center text-[#2a2d34] tracking-tight border-b pb-2 border-blue-200">
-                <ClipboardList className="w-6 h-6 mr-2 text-blue-700" /> Actividades
-              </h2>
+            
+            {/* Actividades Registradas - Nuevo diseño de tabla */}
+            <Card className="shadow-lg border border-gray-200 bg-white rounded-lg">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-2xl font-bold flex items-center text-gray-700">
+                  <ClipboardList className="w-6 h-6 mr-2 text-blue-600" /> Actividades Registradas
+                </h2>
+              </div>
               {jornada.registros && jornada.registros.length > 0 ? (
-                <ul className="space-y-8">
-                  {jornada.registros.map((actividad, idx) => (
-                    <li key={actividad._id} className="rounded-2xl border border-blue-100 bg-gradient-to-br from-white to-blue-50 p-7 shadow-md hover:shadow-lg transition-all">
-                      {/* Título de la actividad: nombre del proceso */}
-                      <h3 className="text-2xl font-extrabold text-blue-900 mb-5 tracking-tight leading-tight">
-                        {actividad.proceso?.nombre || 'Sin proceso'}
-                      </h3>
-                      {/* Grupo 1: OTI y Área */}
-                      <div className="flex flex-col md:flex-row gap-4 mb-2 items-center">
-                        <div className="flex items-center bg-[#F3F4F6] rounded-lg px-4 py-2 min-w-[180px]">
-                          <ClipboardList className="w-5 h-5 text-[#4B5563] mr-2" />
-                          <span className="font-semibold text-[#4B5563]">OTI:</span>
-                          <span className="ml-1 text-[#4B5563]">{actividad.oti?.numeroOti || 'N/A'}</span>
-                        </div>
-                        <div className="flex items-center bg-[#DBEAFE] rounded-lg px-4 py-2 min-w-[180px]">
-                          <UserCircle className="w-5 h-5 text-[#2563EB] mr-2" />
-                          <span className="font-semibold text-[#2563EB]">Área:</span>
-                          <span className="ml-1 text-[#2563EB]">{actividad.areaProduccion?.nombre || 'N/A'}</span>
-                        </div>
-                      </div>
-                      {/* Grupo 2: Insumos y Máquina */}
-                      <div className="flex flex-col md:flex-row gap-4 mb-2 items-center">
-                        <div className="flex items-center bg-[#FFEDD5] rounded-lg px-4 py-2 min-w-[180px]">
-                          <ClipboardList className="w-5 h-5 text-[#EA580C] mr-2" />
-                          <span className="font-semibold text-[#EA580C]">Insumos:</span>
-                          <span className="ml-1 text-[#EA580C]">{actividad.insumos?.nombre || 'N/A'}</span>
-                        </div>
-                        <div className="flex items-center bg-[#DBEAFE] rounded-lg px-4 py-2 min-w-[180px]">
-                          <Clock className="w-5 h-5 text-[#1E3A8A] mr-2" />
-                          <span className="font-semibold text-[#1E3A8A]">Máquina:</span>
-                          <span className="ml-1 text-[#1E3A8A]">{actividad.maquina?.nombre || 'N/A'}</span>
-                        </div>
-                      </div>
-                      {/* Grupo 3: Horario y Tiempo */}
-                      <div className="flex flex-col md:flex-row gap-4 mb-2 items-center">
-                        <div className="flex items-center bg-[#FEF3C7] rounded-lg px-4 py-2 min-w-[180px]">
-                          <Clock className="w-5 h-5 text-[#FBBF24] mr-2" />
-                          <span className="font-semibold text-[#FBBF24]">Horario:</span>
-                          <span className="ml-1 text-[#FBBF24]">{actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'} - {actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
-                        </div>
-                        <div className="flex items-center bg-[#FECACA] rounded-lg px-4 py-2 min-w-[180px]">
-                          <Clock className="w-5 h-5 text-[#B91C1C] mr-2" />
-                          <span className="font-semibold text-[#B91C1C]">Tiempo:</span>
-                          <span className="ml-1 text-[#B91C1C]">{actividad.tiempo || 0} min</span>
-                        </div>
-                      </div>
-                      {/* Grupo 4: Tipo de tiempo */}
-                      <div className="flex flex-col md:flex-row gap-4 mb-2 items-center">
-                        <div className="flex items-center bg-gray-50 rounded-lg px-4 py-2 min-w-[180px]">
-                          <ClipboardList className="w-5 h-5 text-gray-500 mr-2" />
-                          <span className="font-semibold text-gray-900">Tipo:</span>
-                          <span className="ml-1 text-gray-800">{actividad.tipoTiempo || 'N/A'}</span>
-                        </div>
-                      </div>
-                      {/* Observaciones */}
-                      <div className="border-t border-blue-100 pt-3 mt-3 text-gray-700 text-base">
-                        <span className="font-semibold text-blue-700">Observaciones:</span> {actividad.observaciones || 'N/A'}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Proceso</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">OTI</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Área</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Máquina</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">H. Inicio</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">H. Fin</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {jornada.registros.map((actividad) => (
+                        <tr key={actividad._id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{actividad.proceso?.nombre || 'N/A'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.oti?.numeroOti || 'N/A'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.areaProduccion?.nombre || 'N/A'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.maquina?.nombre || 'N/A'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <p className="text-gray-500">No hay actividades registradas.</p>
+                <p className="text-gray-500 p-6">No hay actividades registradas.</p>
               )}
             </Card>
           </div>
