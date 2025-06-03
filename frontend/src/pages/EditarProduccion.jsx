@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Select from 'react-select';
 import { Card, Input, Button } from '../components/ui/index';
 import  axiosInstance  from '../utils/axiosInstance';
 import { toast } from 'react-toastify';
@@ -13,7 +14,8 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
   const [produccionLocal, setProduccionLocal] = useState(produccionProp);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null); 
-  const [procesos, setProcesos] = useState([]);
+  const [allProcesos, setAllProcesos] = useState([]); // Todos los procesos
+  const [filteredProcesos, setFilteredProcesos] = useState([]); // Procesos filtrados por área
   const [insumosColeccion, setInsumosColeccion] = useState([]);
   const [maquinas, setMaquinas] = useState([]);
   const [areasProduccion, setAreasProduccion] = useState([]);
@@ -108,10 +110,16 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
         ...produccionLocal,
         fecha: fechaFormateada,
         oti: { numeroOti: produccionLocal.oti?.numeroOti || "" },
-        proceso: produccionLocal.proceso?._id || "",
-        insumos: produccionLocal.insumos?._id || "",
-        maquina: produccionLocal.maquina?._id || "",
-        areaProduccion: produccionLocal.areaProduccion?._id || "",
+        procesos: Array.isArray(produccionLocal.procesos)
+          ? produccionLocal.procesos.map(p => p._id || p)
+          : (Array.isArray(produccionLocal.proceso)
+              ? produccionLocal.proceso.map(p => p._id || p)
+              : (produccionLocal.proceso?._id ? [produccionLocal.proceso._id] : produccionLocal.proceso ? [produccionLocal.proceso] : [])),
+        insumos: Array.isArray(produccionLocal.insumos)
+          ? produccionLocal.insumos.map(i => i._id || i)
+          : (produccionLocal.insumos?._id ? [produccionLocal.insumos._id] : produccionLocal.insumos ? [produccionLocal.insumos] : []),
+        maquina: produccionLocal.maquina?._id || produccionLocal.maquina || "",
+        areaProduccion: produccionLocal.areaProduccion?._id || produccionLocal.areaProduccion || "",
         observaciones: produccionLocal.observaciones || "",
         tipoTiempo: produccionLocal.tipoTiempo || "",
         horaInicio: formatTime(produccionLocal.horaInicio),
@@ -119,9 +127,8 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
         tiempo: produccionLocal.tiempo || 0
       });
     } else {
-      
       setRegistroEditado({
-        oti: { numeroOti: "" }, proceso: "", insumos: "", maquina: "", areaProduccion: "",
+        oti: { numeroOti: "" }, procesos: [], insumos: [], maquina: "", areaProduccion: "",
         fecha: "", tipoTiempo: "", horaInicio: "", horaFin: "", tiempo: 0, observaciones: ""
       });
     }
@@ -131,7 +138,7 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
     const cargarDatosColecciones = async () => {
       try {
         const procesosResponse = await axiosInstance.get('produccion/procesos');
-        setProcesos(procesosResponse.data);
+        setAllProcesos(procesosResponse.data);
 
         const insumosResponse = await axiosInstance.get('produccion/insumos');
         setInsumosColeccion(insumosResponse.data);
@@ -151,6 +158,27 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
     cargarDatosColecciones();
   }, []);
 
+  // Filtrar procesos por área seleccionada
+  useEffect(() => {
+    if (!registroEditado.areaProduccion) {
+      setFilteredProcesos([]);
+      return;
+    }
+    const filtrados = allProcesos.filter(p => {
+      if (!p.areaProduccion) return false;
+      if (typeof p.areaProduccion === 'object' && p.areaProduccion._id) {
+        return String(p.areaProduccion._id) === String(registroEditado.areaProduccion);
+      }
+      return String(p.areaProduccion) === String(registroEditado.areaProduccion);
+    });
+    setFilteredProcesos(filtrados);
+    // Si los procesos seleccionados ya no pertenecen al área, quitarlos
+    setRegistroEditado(prev => ({
+      ...prev,
+      procesos: prev.procesos ? prev.procesos.filter(pid => filtrados.some(p => String(p._id) === String(pid))) : []
+    }));
+  }, [registroEditado.areaProduccion, allProcesos]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setRegistroEditado(prev => ({
@@ -159,107 +187,136 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
     }));
   };
 
-  const handleChangeRelacion = (e) => {
-    const { name, value } = e.target;
-    setRegistroEditado(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+  // Handler para selects de react-select y nativos
+  const handleChangeRelacion = (selectedOptions, actionMeta) => {
+    if (actionMeta && actionMeta.name) {
+      const name = actionMeta.name;
+      if (name === 'procesos') {
+        setRegistroEditado(prev => ({
+          ...prev,
+          procesos: selectedOptions ? selectedOptions.map(opt => opt.value) : []
+        }));
+      } else if (name === 'insumos') {
+        setRegistroEditado(prev => ({
+          ...prev,
+          insumos: selectedOptions ? selectedOptions.map(opt => opt.value) : []
+        }));
+      }
+    } else if (selectedOptions && selectedOptions.target) {
+      // Evento de select nativo (maquina, tipoTiempo, areaProduccion)
+      const { name, value } = selectedOptions.target;
+      setRegistroEditado(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const guardarEdicion = async () => {
     try {
-        if (!registroEditado.fecha || !registroEditado.proceso || !registroEditado.insumos || !registroEditado.maquina || !registroEditado.areaProduccion || !registroEditado.tipoTiempo || !registroEditado.horaInicio || !registroEditado.horaFin) {
-            toast.error("⚠️ Por favor, completa todos los campos obligatorios antes de guardar.");
-            return;
-        }
+      if (
+        !registroEditado.fecha ||
+        !registroEditado.procesos ||
+        !Array.isArray(registroEditado.procesos) ||
+        registroEditado.procesos.length === 0 ||
+        !registroEditado.insumos ||
+        !registroEditado.maquina ||
+        !registroEditado.areaProduccion ||
+        !registroEditado.tipoTiempo ||
+        !registroEditado.horaInicio ||
+        !registroEditado.horaFin
+      ) {
+        toast.error("⚠️ Por favor, completa todos los campos obligatorios antes de guardar.");
+        return;
+      }
 
-        confirmAlert({
-            title: 'Confirmar Guardado',
-            message: '¿Estás seguro de que deseas guardar los cambios?',
-            buttons: [
-                {
-                    label: 'Sí',
-                    onClick: async () => {
-                        if (!registroEditado || Object.keys(registroEditado).length === 0) {
-                            toast.error("⚠️ No hay datos para guardar.");
-                            return;
-                        }
-                        
-                        const currentProduccionId = produccionLocal?._id || paramId;
-                        if (!currentProduccionId) {
-                            toast.error("⚠️ No se pudo determinar el ID de la producción a actualizar.");
-                            return;
-                        }
+      confirmAlert({
+        title: 'Confirmar Guardado',
+        message: '¿Estás seguro de que deseas guardar los cambios?',
+        buttons: [
+          {
+            label: 'Sí',
+            onClick: async () => {
+              if (!registroEditado || Object.keys(registroEditado).length === 0) {
+                toast.error("⚠️ No hay datos para guardar.");
+                return;
+              }
 
-                        const normalizarTexto = (texto) => (typeof texto === 'string' ? texto.trim().toLowerCase() : texto);
+              const currentProduccionId = produccionLocal?._id || paramId;
+              if (!currentProduccionId) {
+                toast.error("⚠️ No se pudo determinar el ID de la producción a actualizar.");
+                return;
+              }
 
-                        const otiId = await verificarYCrear(normalizarTexto(registroEditado.oti?.numeroOti || ''), "oti");
-                        const procesoId = registroEditado.proceso;
-                        const insumoId = registroEditado.insumos;
-                        const areaId = registroEditado.areaProduccion;
-                        const maquinaId = registroEditado.maquina;
+              const normalizarTexto = (texto) => (typeof texto === 'string' ? texto.trim().toLowerCase() : texto);
 
-                        if (!otiId || !procesoId || !areaId || !maquinaId || !insumoId) {
-                            toast.error("❌ No se pudieron verificar o crear todas las entidades requeridas.");
-                            return;
-                        }
+              const otiId = await verificarYCrear(normalizarTexto(registroEditado.oti?.numeroOti || ''), "oti");
+              const procesosIds = registroEditado.procesos;
+              const insumoId = registroEditado.insumos;
+              const areaId = registroEditado.areaProduccion;
+              const maquinaId = registroEditado.maquina;
 
-                        let tiempo = 0;
-                        if (registroEditado.horaInicio && registroEditado.horaFin) {
-                          const inicio = new Date(`1970-01-01T${registroEditado.horaInicio}:00`);
-                          const fin = new Date(`1970-01-01T${registroEditado.horaFin}:00`);
-                          if (fin > inicio) {
-                            tiempo = Math.floor((fin - inicio) / 60000);
-                          }
-                        }
+              if (!otiId || !procesosIds || procesosIds.length === 0 || !areaId || !maquinaId || !insumoId) {
+                toast.error("❌ No se pudieron verificar o crear todas las entidades requeridas.");
+                return;
+              }
 
-                        const datosActualizados = {
-                            _id: currentProduccionId,
-                            oti: otiId,
-                            operario: produccionLocal?.operario?._id || produccionLocal?.operario || registroEditado.operario,
-                            proceso: procesoId,
-                            insumos: insumoId,
-                            areaProduccion: areaId,
-                            maquina: maquinaId,
-                            fecha: registroEditado.fecha || null,
-                            tipoTiempo: registroEditado.tipoTiempo,
-                            horaInicio: registroEditado.horaInicio,
-                            horaFin: registroEditado.horaFin,
-                            tiempo,
-                            observaciones: registroEditado.observaciones
-                        };
-                        
-                        // --- BEGIN ADDED LOGS ---
-                        console.log("Frontend: currentProduccionId", currentProduccionId);
-                        console.log("Frontend: datosActualizados", datosActualizados);
-                        // --- END ADDED LOGS ---
-
-                        const response = await axiosInstance.put(`/produccion/actualizar/${currentProduccionId}`, datosActualizados);
-
-                        if (response.status >= 200 && response.status < 300) {
-                            toast.success("✅ Producción actualizada con éxito");
-                            if (onGuardar) onGuardar();
-                            if (onClose) onClose();
-                            if (!onGuardar && !onClose && paramId) navigate(-1); // Go back if in page mode and was loaded by paramId
-                        } else {
-                            throw new Error("⚠️ La respuesta del servidor no indica éxito.");
-                        }
-                    }
-                },
-                {
-                    label: 'Cancelar',
-                    onClick: () => {}
+              let tiempo = 0;
+              if (registroEditado.horaInicio && registroEditado.horaFin) {
+                const inicio = new Date(`1970-01-01T${registroEditado.horaInicio}:00`);
+                const fin = new Date(`1970-01-01T${registroEditado.horaFin}:00`);
+                if (fin > inicio) {
+                  tiempo = Math.floor((fin - inicio) / 60000);
                 }
-            ]
-        });
+              }
+
+              const datosActualizados = {
+                _id: currentProduccionId,
+                oti: otiId,
+                operario: produccionLocal?.operario?._id || produccionLocal?.operario || registroEditado.operario,
+                procesos: procesosIds,
+                insumos: insumoId,
+                areaProduccion: areaId,
+                maquina: maquinaId,
+                fecha: registroEditado.fecha || null,
+                tipoTiempo: registroEditado.tipoTiempo,
+                horaInicio: registroEditado.horaInicio,
+                horaFin: registroEditado.horaFin,
+                tiempo,
+                observaciones: registroEditado.observaciones
+              };
+
+              // --- BEGIN ADDED LOGS ---
+              console.log("Frontend: currentProduccionId", currentProduccionId);
+              console.log("Frontend: datosActualizados", datosActualizados);
+              // --- END ADDED LOGS ---
+
+              const response = await axiosInstance.put(`/produccion/actualizar/${currentProduccionId}`, datosActualizados);
+
+              if (response.status >= 200 && response.status < 300) {
+                toast.success("✅ Producción actualizada con éxito");
+                if (onGuardar) onGuardar();
+                if (onClose) onClose();
+                if (!onGuardar && !onClose && paramId) navigate(-1); // Go back if in page mode and was loaded by paramId
+              } else {
+                throw new Error("⚠️ La respuesta del servidor no indica éxito.");
+              }
+            }
+          },
+          {
+            label: 'Cancelar',
+            onClick: () => {}
+          }
+        ]
+      });
     } catch (error) {
-        console.error('❌ Error al editar la producción:', error);
-        if (error.response) {
-            toast.error(`Error: ${error.response.data.message || "No se pudo guardar la edición."}`);
-        } else {
-            toast.error(`⚠️ Error: ${error.message}`);
-        }
+      console.error('❌ Error al editar la producción:', error);
+      if (error.response) {
+        toast.error(`Error: ${error.response.data.message || "No se pudo guardar la edición."}`);
+      } else {
+        toast.error(`⚠️ Error: ${error.message}`);
+      }
     }
   };
 
@@ -339,34 +396,49 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
             className="focus:ring-2 focus:ring-blue-400"
           />
           <div className="space-y-2">
-            <label htmlFor="proceso" className="block text-sm font-semibold text-gray-700">Proceso</label>
-            <select
-              id="proceso"
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
-              value={registroEditado.proceso || ''}
-              onChange={handleChangeRelacion}
-              name="proceso"
-            >
-              <option value="">Seleccionar Proceso</option>
-              {procesos.map((proceso) => (
-                <option key={proceso._id} value={proceso._id}>{proceso.nombre}</option>
-              ))}
-            </select>
+            <label htmlFor="procesos" className="block text-sm font-semibold text-gray-700">Proceso(s)</label>
+            <Select
+              inputId="procesos"
+              isMulti
+              name="procesos"
+              options={filteredProcesos.map(p => ({ value: p._id, label: p.nombre }))}
+              value={registroEditado.procesos
+                ? registroEditado.procesos.map(pId => {
+                    const procesoInfo = filteredProcesos.find(ap => String(ap._id) === String(pId));
+                    return procesoInfo ? { value: procesoInfo._id, label: procesoInfo.nombre } : null;
+                  }).filter(p => p !== null)
+                : []}
+              onChange={(selectedOptions, actionMeta) => handleChangeRelacion(selectedOptions, { name: 'procesos', action: actionMeta.action })}
+              className="w-full basic-multi-select"
+              classNamePrefix="select"
+              placeholder="Seleccionar Proceso(s)"
+              isDisabled={!registroEditado.areaProduccion || (filteredProcesos && filteredProcesos.length === 0)}
+              styles={{ control: (base) => ({ ...base, borderColor: 'hsl(var(--input))', '&:hover': { borderColor: 'hsl(var(--input))' } }), placeholder: (base) => ({ ...base, color: 'hsl(var(--muted-foreground))' }) }}
+              required
+            />
           </div>
           <div className="space-y-2">
-            <label htmlFor="insumos" className="block text-sm font-semibold text-gray-700">Insumo</label>
-            <select
-              id="insumos"
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
-              value={registroEditado.insumos || ''}
-              onChange={handleChangeRelacion}
+            <label htmlFor="insumos" className="block text-sm font-semibold text-gray-700">Insumo(s)</label>
+            <Select
+              inputId="insumos"
+              isMulti
               name="insumos"
-            >
-              <option value="">Seleccionar Insumo</option>
-              {insumosColeccion.map((insumo) => (
-                <option key={insumo._id} value={insumo._id}>{insumo.nombre}</option>
-              ))}
-            </select>
+              options={insumosColeccion
+                .sort((a, b) => a.nombre.localeCompare(b.nombre))
+                .map(i => ({ value: i._id, label: i.nombre }))}
+              value={registroEditado.insumos
+                ? registroEditado.insumos.map(insumoId => {
+                    const insumoInfo = insumosColeccion.find(i => i._id === insumoId);
+                    return insumoInfo ? { value: insumoInfo._id, label: insumoInfo.nombre } : null;
+                  }).filter(i => i !== null)
+                : []}
+              onChange={(selectedOptions, actionMeta) => handleChangeRelacion(selectedOptions, { name: 'insumos', action: actionMeta.action })}
+              className="w-full basic-multi-select"
+              classNamePrefix="select"
+              placeholder="Seleccionar Insumo(s)"
+              styles={{ control: (base) => ({ ...base, borderColor: 'hsl(var(--input))', '&:hover': { borderColor: 'hsl(var(--input))' } }), placeholder: (base) => ({ ...base, color: 'hsl(var(--muted-foreground))' }) }}
+              required
+            />
           </div>
           <div className="space-y-2">
             <label htmlFor="maquina" className="block text-sm font-semibold text-gray-700">Máquina</label>

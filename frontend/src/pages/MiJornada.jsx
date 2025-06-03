@@ -149,12 +149,24 @@ const MiJornada = () => {
                       .sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio))
                       .map((actividad) => (
                         <tr key={actividad._id}>
-                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{actividad.procesos?.map(p => p.nombre).join(', ') || "N/A"}</td>
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                            {actividad.procesos && actividad.procesos.length > 0 ? (
+                              actividad.procesos.map(p => <div key={p._id || p.nombre}>{p.nombre}</div>)
+                            ) : (
+                              "N/A"
+                            )}
+                          </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tiempo}</td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.oti?.numeroOti || "N/A"}</td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.areaProduccion?.nombre || "N/A"}</td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.maquina?.nombre || "N/A"}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.insumos?.map(i => i.nombre).join(', ') || "N/A"}</td>
+                          <td className="px-3 py-4 text-sm text-gray-500">
+                            {actividad.insumos && actividad.insumos.length > 0 ? (
+                              actividad.insumos.map(i => <div key={i._id || i.nombre}>{i.nombre}</div>)
+                            ) : (
+                              "N/A"
+                            )}
+                          </td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tipoTiempo || "N/A"}</td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}</td>
                           <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}</td>

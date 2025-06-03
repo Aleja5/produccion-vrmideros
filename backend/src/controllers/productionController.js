@@ -231,11 +231,10 @@ exports.actualizarProduccion = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(_id)) {
             return res.status(400).json({ msg: "El ID del registro de producción no es válido." });
         }
-
-        // Verificar que todos los campos necesarios para la actualización están presentes
-        if (!operario || !oti || !procesos || !areaProduccion || !maquina || !insumos || !fecha || !tiempo || !horaInicio || !horaFin || !tipoTiempo) { 
-            console.log("Faltan campos requeridos para la actualización:", { operario, oti, procesos, areaProduccion, maquina, insumos, fecha, tiempo, horaInicio, horaFin, tipoTiempo }); 
-            return res.status(400).json({ msg: "Faltan campos requeridos para la actualización." });
+      
+        if (!operario || !areaProduccion || !maquina || !fecha || typeof tiempo !== 'number' || !horaInicio || !horaFin || !tipoTiempo || !procesos) { 
+            console.log("Faltan campos requeridos para la actualización o tienen formato incorrecto:", { operario, oti, procesos, areaProduccion, maquina, insumos, fecha, tiempo, horaInicio, horaFin, tipoTiempo }); 
+            return res.status(400).json({ msg: "Faltan campos requeridos para la actualización o tienen formato incorrecto." });
         }
 
         // Convertir IDs de string a ObjectId donde sea necesario

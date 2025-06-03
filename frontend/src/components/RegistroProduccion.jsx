@@ -124,12 +124,6 @@ export default function RegistroProduccion() {
             const areasRes = await fetch("http://localhost:5000/api/produccion/areas");
             if (areasRes.ok) setAreasProduccionData(await areasRes.json());
 
-            // const procesosRes = await fetch("http://localhost:5000/api/produccion/procesos"); // Removed initial fetch
-            // if (procesosRes.ok) {
-            //     const data = await procesosRes.json();
-            //     // console.log("Fetched procesosData:", data); 
-            //     setProcesosData(data);
-            // }
 
             const insumosRes = await fetch("http://localhost:5000/api/produccion/insumos");
             if (insumosRes.ok) setInsumosData(await insumosRes.json());

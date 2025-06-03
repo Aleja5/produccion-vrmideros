@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
 import Navbar from '../components/Navbar';
 import FilterPanel from '../components/filters/FilterPanel';
 import * as XLSX from 'xlsx';
@@ -17,6 +17,7 @@ const AdminDashboard = () => {
   const [totalResults, setTotalResults] = useState(0); // Para saber cuántos resultados totales hay
   const [error, setError] = useState(null);
   const [jornadas, setJornadas] = useState([]);
+  const [currentFilters, setCurrentFilters] = useState(null); // New state for active filters
 
   const calcularTotalHoras = (data) => {
     if (Array.isArray(data)) {
@@ -30,7 +31,8 @@ const AdminDashboard = () => {
     const handleBuscar = async (filtrosRecibidos) => {
         setLoading(true);
         setError(null);
-        setCurrentPage(1);
+        setCurrentPage(1); 
+        setCurrentFilters(filtrosRecibidos);
 
         try {
             const filtrosAjustados = { ...filtrosRecibidos };
@@ -47,7 +49,7 @@ const AdminDashboard = () => {
             }
 
             const params = {
-                page: 1,
+                page: 1, 
                 limit: itemsPerPage,
                 ...filtrosAjustados,
             };
@@ -57,7 +59,7 @@ const AdminDashboard = () => {
             if (response.data.resultados && Array.isArray(response.data.resultados)) {
                 let resultadosOrdenados = response.data.resultados;
 
-                // Ordenar por fecha si no hay filtros aplicados
+                // Ordenar por fecha si no hay filtros aplicados (o si es una búsqueda inicial sin filtros específicos)
                 if (!filtrosRecibidos || Object.keys(filtrosRecibidos).length === 0) {
                     resultadosOrdenados = resultadosOrdenados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
                 }
@@ -69,42 +71,74 @@ const AdminDashboard = () => {
                 setResultados([]);
                 setTotalHoras(0);
                 setTotalResults(0);
-                alert(response.data?.msg || 'Sin resultados');
+                toast.info(response.data?.msg || 'Sin resultados para los filtros aplicados.');
             }
         } catch (err) {
             console.error("❌ Error al buscar:", err);
             setError('Error al buscar los registros.');
             setResultados([]);
             setTotalHoras(0);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-  // 🔄 Cargar todas las producciones al iniciar
-  useEffect(() => {
-    const cargarProducciones = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          
-            const response = await axiosInstance.get(`/admin/admin-producciones?page=${currentPage}&limit=${itemsPerPage}`);
-            setResultados(response.data.resultados);
-            setTotalResults(response.data.totalResults);
-            calcularTotalHoras(response.data.resultados);
-        } catch (error) {
-            console.error("Error al cargar las producciones:", error);
-            setError("Error al cargar los registros.");
-            setResultados([]);
             setTotalResults(0);
-            setTotalHoras(0);
+            toast.error('Error al buscar los registros.');
         } finally {
             setLoading(false);
         }
     };
 
+  // 🔄 Cargar producciones (filtered or all)
+  const cargarProducciones = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let response;
+      if (currentFilters && Object.keys(currentFilters).length > 0) {
+        // Fetch filtered data
+        const filtrosAjustados = { ...currentFilters };
+        if (currentFilters.fechaInicio) {
+            const date = new Date(currentFilters.fechaInicio);
+            filtrosAjustados.fechaInicio = date.toISOString();
+        }
+        if (currentFilters.fechaFin) {
+            const date = new Date(currentFilters.fechaFin);
+            date.setHours(23, 59, 59, 999);
+            filtrosAjustados.fechaFin = date.toISOString();
+        }
+
+        const params = {
+          page: currentPage,
+          limit: itemsPerPage,
+          ...filtrosAjustados,
+        };
+        response = await axiosInstance.get('/produccion/buscar-produccion', { params });
+      } else {
+        // Fetch all data (paginated)
+        response = await axiosInstance.get(`/admin/admin-producciones?page=${currentPage}&limit=${itemsPerPage}`);
+      }
+
+      if (response.data.resultados && Array.isArray(response.data.resultados)) {
+        setResultados(response.data.resultados);
+        setTotalResults(response.data.totalResultados || response.data.totalResults || 0);
+        calcularTotalHoras(response.data.resultados);
+      } else {
+        setResultados([]);
+        setTotalResults(0);
+        setTotalHoras(0);
+      }
+    } catch (error) {
+      console.error("Error al cargar las producciones:", error);
+      setError("Error al cargar los registros.");
+      setResultados([]);
+      setTotalResults(0);
+      setTotalHoras(0);
+      toast.error("Error al cargar los registros.");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, itemsPerPage, currentFilters]); 
+
+  useEffect(() => {
     cargarProducciones();
-}, [currentPage, itemsPerPage]);
+  }, [cargarProducciones]);
 
   const exportarExcel = () => {
     const rows = resultados.map((r) => ({
@@ -122,12 +156,6 @@ const AdminDashboard = () => {
       Tiempo: r.tiempo,
       Observaciones: r.observaciones || '',
       
-      
-      
-      
-     
-      
-      
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -137,6 +165,7 @@ const AdminDashboard = () => {
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
+    // No direct fetch here, useEffect will handle it due to currentPage change
     console.log("Página cambiada a:", newPage);
   };
 
@@ -157,7 +186,7 @@ const AdminDashboard = () => {
     fetchJornadas();
   }, []);
 
-  console.log('🔄 AdminDashboard Render - loading:', loading, 'resultados:', resultados.length, 'totalResults:', totalResults);
+  console.log('🔄 AdminDashboard Render - loading:', loading, 'resultados:', resultados.length, 'totalResults:', totalResults, 'filters:', currentFilters);
   console.log('🔄 Renderizando AdminDashboard - totalResults:', totalResults, 'resultados:', resultados.length);
 
   return (
@@ -196,10 +225,12 @@ const AdminDashboard = () => {
                           <td className="p-1 whitespace-nowrap">{r.oti?.numeroOti}</td>
                           <td className="p-1 whitespace-nowrap">{r.operario?.name}</td>
                           <td className="p-1 whitespace-nowrap">{new Date(r.fecha).toISOString().split('T')[0]}</td>
-                          <td className="p-1 whitespace-nowrap">
-                            {r.procesos && r.procesos.length > 0
-                              ? r.procesos.map(p => p.nombre).join(', ')
-                              : 'N/A'}
+                          <td className="p-1">
+                            {r.procesos && r.procesos.length > 0 ? (
+                              r.procesos.map(p => <div key={p._id || p.nombre}>{p.nombre}</div>)
+                            ) : (
+                              'N/A'
+                            )}
                           </td>
                           <td className="p-1 whitespace-nowrap">{r.maquina?.nombre}</td>
                           <td className="p-1 whitespace-nowrap">{r.areaProduccion?.nombre}</td>
