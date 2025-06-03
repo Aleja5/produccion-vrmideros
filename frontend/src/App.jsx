@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-
+import EditarProduccion from './pages/EditarProduccion'; // Componente para editar producción
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword'; // Componente de recuperación
 import AdminDashboard from './pages/AdminDashboard';
@@ -8,7 +8,7 @@ import AdminHome from './pages/AdminHome';
 import ValidateCedula from './pages/ValidateCedula';
 import OperarioDashboard from './pages/OperarioDashboard';
 import RegistroProduccion from './components/RegistroProduccion';
-import EditarProduccion from './pages/EditarProduccion';
+
 import MiJornada from './pages/MiJornada';
 import HistorialJornadas from './pages/HistorialJornadas';
 import AdminJornadaDetalle from './pages/AdminJornadaDetalle'; // <--- Importar AdminJornadaDetalle
@@ -119,7 +119,7 @@ function App() {
         />
 
         <Route path="/mi-jornada" element={<MiJornada />} />
-        <Route path="/historial-jornadas" element={<HistorialJornadas />} />
+
       </Routes>
     </Router>
   );

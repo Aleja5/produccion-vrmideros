@@ -1,39 +1,40 @@
 const Jornada = require('../models/Jornada');
 
-// Recalcular la horaInicio y horaFin basados en los registros de producción
-const recalcularHorasJornada = async (jornadaId) => {
+async function recalcularHorasJornada(jornadaId) {
     try {
         const jornada = await Jornada.findById(jornadaId).populate('registros');
-        if (!jornada || !jornada.registros.length) {
-            // Si no hay registros, limpia las horas
-            await Jornada.findByIdAndUpdate(jornadaId, {
-                horaInicio: null,
-                horaFin: null
-            });
+        if (!jornada) {
+            console.error(`❌ Jornada no encontrada con ID: ${jornadaId}`);
             return;
         }
 
-        const horasInicio = jornada.registros.map(r => r.horaInicio).filter(Boolean);
-        const horasFin = jornada.registros.map(r => r.horaFin).filter(Boolean);
+        const horasInicio = [];
+        const horasFin = [];
+        let totalTiempoAcumulado = 0;
 
-        const nuevaHoraInicio = horasInicio.length > 0 ? new Date(Math.min(...horasInicio.map(h => new Date(h).getTime()))) : null;
-        const nuevaHoraFin = horasFin.length > 0 ? new Date(Math.max(...horasFin.map(h => new Date(h).getTime()))) : null;
-
-        const cambios =
-            (jornada.horaInicio?.getTime() || null) !== (nuevaHoraInicio?.getTime() || null) ||
-            (jornada.horaFin?.getTime() || null) !== (nuevaHoraFin?.getTime() || null);
-
-        if (cambios) {
-            await Jornada.findByIdAndUpdate(jornadaId, {
-                horaInicio: nuevaHoraInicio,
-                horaFin: nuevaHoraFin
+        if (jornada.registros?.length > 0) {
+            jornada.registros.forEach(registro => {
+                if (registro.horaInicio) horasInicio.push(new Date(registro.horaInicio).getTime());
+                if (registro.horaFin) horasFin.push(new Date(registro.horaFin).getTime());
+                totalTiempoAcumulado += Number(registro.tiempo) || 0;
             });
-            console.log(`⏱ Jornada ${jornadaId} actualizada con nuevas horas.`);
         }
 
-    } catch (error) {
-        console.error(`🚨 Error al recalcular horas de la jornada ${jornadaId}:`, error);
-    }
-};
+        jornada.horaInicio = horasInicio.length > 0 ? new Date(Math.min(...horasInicio)) : null;
+        jornada.horaFin = horasFin.length > 0 ? new Date(Math.max(...horasFin)) : null;
+        jornada.totalTiempoActividades = totalTiempoAcumulado;
 
-module.exports = recalcularHorasJornada;
+        await jornada.save({ validateBeforeSave: false });
+
+        console.log(`✅ Jornada ${jornadaId} actualizada:
+            Inicio: ${jornada.horaInicio?.toLocaleTimeString() || 'No definido'}
+            Fin: ${jornada.horaFin?.toLocaleTimeString() || 'No definido'}
+            Total: ${totalTiempoAcumulado} minutos`);
+
+    } catch (error) {
+        console.error(`❌ Error al recalcular horas de jornada ${jornadaId}:`, error);
+        throw error;
+    }
+}
+
+module.exports = { recalcularHorasJornada };

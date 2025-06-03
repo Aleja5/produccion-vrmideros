@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+// src/utils/helpers.js
+
+>>>>>>> a512c08b267dd224a9aea488aae309c4fa2cf37e
 /**
  * Formatea una cadena de fecha ISO a una hora local.
  * @param {string} isoDateString - La cadena de fecha ISO (ej. "2025-05-30T15:00:00.000Z").

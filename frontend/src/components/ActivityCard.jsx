@@ -1,3 +1,4 @@
+// src/components/ActivityCard.jsx
 import React, { useState, useEffect } from 'react';
 import { Hammer, Eye, Pencil } from 'lucide-react';
 import { Button } from './ui/index';
@@ -78,34 +79,6 @@ const ActivityCard = ({ actividad, onVerDetalle, onEditarActividad }) => {
     // Calcular inicioMs fuera del useEffect para que sea accesible en el JSX
     const inicioMs = actividad.horaInicio ? new Date(actividad.horaInicio).getTime() : 0;
 
-    // Helper para mostrar procesos correctamente
-    const renderProcesos = () => {
-        if (Array.isArray(actividad.procesos) && actividad.procesos.length > 0) {
-            // Si es array de objetos
-            if (typeof actividad.procesos[0] === 'object' && actividad.procesos[0] !== null) {
-                return actividad.procesos.map(p => p.nombre || p._id || p).join(', ');
-            }
-            // Si es array de strings
-            return actividad.procesos.join(', ');
-        }
-        if (actividad.proceso) {
-            if (typeof actividad.proceso === 'object' && actividad.proceso !== null) {
-                return actividad.proceso.nombre || actividad.proceso._id || 'N/A';
-            }
-            return actividad.proceso;
-        }
-        return 'N/A';
-    };
-
-    // Helper para mostrar OTI correctamente
-    const renderOti = () => {
-        if (!actividad.oti) return 'N/A';
-        if (typeof actividad.oti === 'object' && actividad.oti !== null) {
-            return actividad.oti.numeroOti || actividad.oti._id || 'N/A';
-        }
-        return actividad.oti;
-    };
-
     return (
         <motion.div
             key={actividad._id}
@@ -119,8 +92,8 @@ const ActivityCard = ({ actividad, onVerDetalle, onEditarActividad }) => {
             <div className="relative z-10 flex items-center gap-3 mb-3">
                 <Hammer className="w-6 h-6 text-blue-500" aria-label="Actividad" />
                 <div className="flex-1">
-                    <h4 className="font-medium text-gray-800 text-lg">{renderProcesos()}</h4>
-                    <p className="text-sm text-gray-500">OTI: {renderOti()}</p>
+                    <h4 className="font-medium text-gray-800 text-lg">{actividad.proceso?.nombre || 'N/A'}</h4>
+                    <p className="text-sm text-gray-500">OTI: {actividad.oti || 'N/A'}</p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStateColors(displayState)}`}>
                     {displayState}

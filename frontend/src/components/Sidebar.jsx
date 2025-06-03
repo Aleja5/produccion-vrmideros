@@ -20,6 +20,9 @@ export const Sidebar = () => {
   };
 
   const handleLogout = () => {
+    // Es buena práctica limpiar los datos de sesión al cerrar sesión
+    localStorage.clear();
+    sessionStorage.clear();
     navigate("/validate-cedula");
   };
 
@@ -32,15 +35,15 @@ export const Sidebar = () => {
 
   return (
     <motion.div
-      className={`h-full bg-gray-800 text-white shadow-md transition-all duration-300 ${
+      className={`h-screen bg-gray-800 text-white shadow-md transition-all duration-300 ${
         collapsed ? "w-16" : "w-64"
       } flex flex-col`}
       initial={{ width: collapsed ? 64 : 256 }}
       animate={{ width: collapsed ? 64 : 256 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Toggle Button */}
-      <div className="flex justify-end p-2">
+      {/* Toggle Button - Mantenerlo en la parte superior */}
+      <div className="flex justify-end p-2 mb-4">
         <button
           onClick={toggleSidebar}
           className="text-white focus:outline-none"
@@ -50,8 +53,9 @@ export const Sidebar = () => {
         </button>
       </div>
 
-      {/* Menu */}
-      <nav className="flex-1 px-2 py-4 space-y-2">
+      {/* Menu de navegación - Usará el espacio restante y permitirá scroll */}
+      {/* Añadido 'flex-grow' y 'min-h-0' para asegurar que el 'overflow-y-auto' funcione correctamente */}
+      <nav className="flex-grow min-h-0 px-2 py-4 space-y-2 overflow-y-auto custom-scrollbar">
         {menuItems.map(({ to, icon: Icon, label }) => (
           <Link
             key={to}
@@ -68,14 +72,15 @@ export const Sidebar = () => {
         ))}
       </nav>
 
-      {/* Logout */}
-      <div className="p-2 border-t border-gray-700">
+      {/* Logout - Se pegará al fondo con un margen y un estilo distintivo */}
+      {/* Añadido 'mt-auto' para empujarlo al final, y 'pb-4' para darle espacio desde abajo */}
+      <div className="mt-auto p-2 pb-4 border-t border-gray-700"> {/* Cambié p-2 por p-2 pb-4 */}
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 p-2 hover:bg-gray-700 rounded-md w-full"
+          className="flex items-center gap-2 p-2 hover:bg-gray-700 rounded-md w-full text-red-400 hover:text-red-300"
           aria-label="Salir"
         >
-          <LogOut className="text-white" size={20} />
+          <LogOut className="text-red-400" size={20} />
           {!collapsed && <span>Salir</span>}
         </button>
       </div>

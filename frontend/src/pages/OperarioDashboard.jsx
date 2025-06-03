@@ -1,3 +1,4 @@
+// src/pages/OperarioDashboard.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import axiosInstance from '../utils/axiosInstance';
 import { useNavigate } from 'react-router-dom';
@@ -15,7 +16,7 @@ import { motion } from 'framer-motion';
 
 // --- NUEVAS IMPORTACIONES ---
 import ActivityCard from '../components/ActivityCard';
-import { getFormattedLocalDateDisplay, getFechaISOForComparison } from '../utils/helpers'; 
+import { getFormattedLocalDateDisplay, getFechaISOForComparison } from '../utils/helpers'; // Importa de helpers
 
 // ---
 // Loading Skeleton Component

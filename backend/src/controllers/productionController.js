@@ -44,7 +44,6 @@ exports.getAllProduccion = async (req, res) => {
 
         const skip = (page - 1) * limit;
 
-
         const totalResults = await Produccion.countDocuments({});
 
         const registros = await Produccion.find()
@@ -57,7 +56,6 @@ exports.getAllProduccion = async (req, res) => {
             .populate("areaProduccion", "nombre")
             .populate("maquina", "nombre")
             .populate("insumos", "nombre");
-
 
         res.json({ totalResults, resultados: registros });
     } catch (error) {
@@ -177,7 +175,6 @@ exports.obtenerProducciones = async (req, res) => {
     }
 };
 
-// 📌 Listar Producción con detalles para operario
 exports.listarProduccion = async (req, res) => {
     try {
         const { operario, oti } = req.query;
@@ -218,7 +215,6 @@ exports.listarProduccion = async (req, res) => {
     }
 };
 
-// 📌 Actualizar Producción
 exports.actualizarProduccion = async (req, res) => {
     try {
         console.log("🛠 Datos recibidos en backend para actualización:", req.body);
@@ -351,11 +347,11 @@ exports.buscarProduccion = async (req, res) => {
         console.log("📥 Filtros recibidos en el backend:", req.query);
 
         if (oti && oti.trim() !== '') {
-            query.oti = oti; // Espera el _id directamente
+            query.oti = oti;
         }
 
         if (operario && operario.trim() !== '') {
-            query.operario = operario; // Espera el _id directamente
+            query.operario = operario;
         }
 
         if (fechaInicio && fechaFin) {
@@ -382,11 +378,11 @@ exports.buscarProduccion = async (req, res) => {
         }
 
         if (areaProduccion && areaProduccion.trim() !== '') {
-            query.areaProduccion = areaProduccion; // Espera el _id directamente
+            query.areaProduccion = areaProduccion;
         }
 
         if (maquina && maquina.trim() !== '') {
-            query.maquina = maquina; // Espera el _id directamente
+            query.maquina = maquina;
         }
 
         if (insumos && insumos.trim() !== '') { // Should be insumos, and handle array
@@ -449,11 +445,9 @@ exports.buscarPorFechas = async (req, res) => {
             .populate("maquina", "nombre")
             .populate("insumos", "nombre");
 
-
         res.status(200).json(producciones);
     } catch (error) {
         console.error("Error al buscar por fechas:", error);
         res.status(500).json({ msg: "Error al buscar registros" });
     }
 };
-
