@@ -6,6 +6,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { confirmAlert } from 'react-confirm-alert';
 import 'react-confirm-alert/src/react-confirm-alert.css';
+import { Sidebar } from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import { Button, Card } from '../components/ui/index';
 import EditarProduccion from './EditarProduccion';
@@ -400,7 +401,7 @@ const OperarioDashboard = () => {
                     )}
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 

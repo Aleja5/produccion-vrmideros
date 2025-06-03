@@ -50,6 +50,7 @@ const obtenerOperarios = async (req, res) => {
   try {
       const totalResults = await Operario.countDocuments(query);
       const operarios = await Operario.find(query)
+          .sort({ name: 1 })
           .skip((page - 1) * limit)
           .limit(Number(limit));
       console.log('Operarios encontrados:', operarios.length);

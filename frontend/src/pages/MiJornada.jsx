@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react"; // Added useCallback
 import axiosInstance from "../utils/axiosInstance";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom"; // Import useLocation
 import { toast } from "react-toastify";
 import { Button, Card } from "../components/ui";
 import { Sidebar } from "../components/Sidebar";
+import EditarProduccion from "./EditarProduccion"; 
+import { Pencil, Trash2 } from "lucide-react"; // Importing icons
 
 const ajustarFechaLocal = (fechaUTC) => {
   const fecha = new Date(fechaUTC);
@@ -13,74 +15,72 @@ const ajustarFechaLocal = (fechaUTC) => {
 const MiJornada = () => {
   const [jornadaActual, setJornadaActual] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedActividad, setSelectedActividad] = useState(null); 
   const navigate = useNavigate();
+  const location = useLocation(); // Get location object
   
   const storedOperario = JSON.parse(localStorage.getItem('operario'));
   const operarioName = storedOperario?.name || 'Operario';
 
-  useEffect(() => {
-    const fetchJornadas = async () => {
-      try {
-        setLoading(true);
-
-        
-        const storedOperario = JSON.parse(localStorage.getItem("operario"));
-        if (!storedOperario || !storedOperario._id) {
-          toast.error("No se encontró información del operario. Por favor, inicie sesión nuevamente.");
-          navigate("/validate-cedula");
-          return;
-        }
-
-        const operarioId = storedOperario._id;
-        const response = await axiosInstance.get(`/jornadas/operario/${operarioId}`);
-        const jornadas = response.data;
-
-        console.log("Jornadas fetched:", jornadas); // Debugging log
-
-        const jornadaActual = jornadas.find((jornada) => {
-          const fechaJornada = ajustarFechaLocal(jornada.fecha).toDateString();
-          const fechaHoy = ajustarFechaLocal(new Date()).toDateString();
-          console.log("Comparing:", { fechaJornada, fechaHoy }); 
-          return fechaJornada === fechaHoy;
-        });
-
-        console.log("Jornada actual identified:", jornadaActual); 
-
-        setJornadaActual(jornadaActual);
-      } catch (error) {
-        console.error("Error al obtener la jornada actual:", error);
-        toast.error("No se pudo cargar la jornada actual.");
-      } finally {
-        setLoading(false);
+  
+  const fetchJornadas = useCallback(async () => {
+    try {
+      setLoading(true);
+      const localStoredOperario = JSON.parse(localStorage.getItem("operario"));
+      if (!localStoredOperario || !localStoredOperario._id) {
+        toast.error("No se encontró información del operario. Por favor, inicie sesión nuevamente.");
+        navigate("/validate-cedula");
+        return;
       }
-    };
+      const operarioId = localStoredOperario._id;
+      const response = await axiosInstance.get(`/jornadas/operario/${operarioId}`);
+      const jornadas = response.data;
+      console.log("Todas las jornadas recibidas:", jornadas); 
+      const currentJornada = jornadas.find((jornada) => {
+        const fechaJornada = ajustarFechaLocal(jornada.fecha).toDateString();
+        const fechaHoy = ajustarFechaLocal(new Date()).toDateString();
+        return fechaJornada === fechaHoy;
+      });
+      console.log("Jornada actual encontrada:", currentJornada); 
+      setJornadaActual(currentJornada);
+    } catch (error) {
+      console.error("Error al obtener la jornada actual:", error);
+      toast.error("No se pudo cargar la jornada actual.");
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]); // useCallback dependencies remain the same
 
+  useEffect(() => {
     fetchJornadas();
-  }, [navigate]);
+  }, [fetchJornadas, location]); // Add location to the dependency array
 
 
-  const handleEditarActividad = (actividadId) => {
-    navigate(`/produccion/actualizar/${actividadId}`);
+  const handleEditarActividad = (actividad) => {
+    setSelectedActividad(actividad); 
+    setIsEditModalOpen(true);
   };
-
   const handleEliminarActividad = async (actividadId) => {
     try {
-      // 1. Eliminar la actividad
-      await axiosInstance.delete(`/produccion/eliminar/${actividadId}`);
-      toast.success("Actividad eliminada con éxito");
-
-      // 2. Volver a consultar la jornada actualizada desde el backend
-      const { data: jornadaActualizada } = await axiosInstance.get(`/jornadas/${jornadaActual._id}`);
-
-      // 3. Actualizar el estado del frontend con los datos frescos (incluye registros, horaInicio, horaFin, tiempo total, etc.)
-      setJornadaActual(jornadaActualizada);
+      console.log(`Intentando eliminar actividad con ID: ${actividadId}`);
       
+      // 1. Eliminar la actividad
+      const response = await axiosInstance.delete(`/produccion/eliminar/${actividadId}`);
+      console.log("Respuesta de eliminación:", response.data);
+      
+      toast.success("Actividad eliminada con éxito");
+      // No es necesario actualizar localmente los registros si vamos a re-fetchear toda la jornada
+      // setJornadaActual((prev) => ({
+      //   ...prev,
+      //   registros: prev.registros.filter((registro) => registro._id !== actividadId),
+      // }));
+      await fetchJornadas(); // Re-fetch jornada data to show updated totals and details
     } catch (error) {
       console.error("Error al eliminar la actividad:", error);
       toast.error("No se pudo eliminar la actividad.");
     }
   };
-
 
   return (
   <div className="flex bg-gray-100 h-screen">
@@ -106,14 +106,14 @@ const MiJornada = () => {
           <div className="flex justify-center items-center h-48">
             <p className="text-lg text-gray-600">Cargando información de la jornada...</p>
           </div>
-        ) : jornadaActual && jornadaActual.registros && jornadaActual.registros.length > 0 ? (
+        ) : jornadaActual ? (
           <>
             <Card className="mb-6 bg-white shadow-xl rounded-2xl border border-gray-100">
               <div className="p-6 space-y-4">
                 <h2 className="text-2xl font-semibold text-gray-800 border-b pb-2 border-gray-300">Detalles de la Jornada</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-gray-700">
                   <div><strong>Fecha:</strong> {ajustarFechaLocal(jornadaActual.fecha).toLocaleDateString()}</div>                  
-                  <div><strong>Tiempo Total:</strong> {jornadaActual.totalTiempoActividades.horas} horas {jornadaActual.totalTiempoActividades.minutos} minutos</div>
+                  <div><strong>Tiempo Total:</strong> {jornadaActual.totalTiempoActividades && typeof jornadaActual.totalTiempoActividades.horas === 'number' && typeof jornadaActual.totalTiempoActividades.minutos === 'number' ? `${jornadaActual.totalTiempoActividades.horas}h ${jornadaActual.totalTiempoActividades.minutos}m` : (jornadaActual.totalTiempoActividades || 'N/A')}</div>
                   <div><strong>Inicio de Jornada:</strong> {jornadaActual.horaInicio ? new Date(jornadaActual.horaInicio).toLocaleTimeString() : 'N/A'}</div>
                   <div><strong>Fin de Jornada:</strong> {jornadaActual.horaFin ? new Date(jornadaActual.horaFin).toLocaleTimeString() : 'N/A'}</div>
                 </div>
@@ -124,73 +124,71 @@ const MiJornada = () => {
               Actividades Registradas
             </h2>
 
-            {jornadaActual.registros
-            .sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio))
-            .map((actividad) => (
-              <Card
-                key={actividad._id}
-                className="mb-4 bg-white rounded-xl border hover:shadow-md transition-all"
-              >
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h4 className="text-lg font-semibold text-blue-700">
-                        {actividad.proceso?.nombre || "Proceso no especificado"}
-                      </h4>
-                      <p className="text-sm text-gray-500">
-                        Tiempo: <span className="text-green-600 font-semibold">{actividad.tiempo} min</span>
-                      </p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        onClick={() => handleEditarActividad(actividad._id)}
-                        className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 text-sm rounded-md"
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => handleEliminarActividad(actividad._id)}
-                        className="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-md transition duration-200"
-                      >
-                        Eliminar
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-gray-600">
-                    {actividad.oti?.numeroOti && (
-                      <p><span className="font-semibold">OTI:</span> {actividad.oti.numeroOti}</p>
-                    )}
-                    {actividad.areaProduccion?.nombre && (
-                      <p><span className="font-semibold">Área:</span> {actividad.areaProduccion.nombre}</p>
-                    )}
-                    {actividad.maquina?.nombre && (
-                      <p><span className="font-semibold">Máquina:</span> {actividad.maquina.nombre}</p>
-                    )}
-                    {actividad.insumos?.nombre && (
-                      <p><span className="font-semibold">Insumos:</span> {actividad.insumos.nombre}</p>
-                    )}
-                    {actividad.tipoTiempo && (
-                      <p><span className="font-semibold">Tiempo de:</span> {actividad.tipoTiempo}</p>
-                    )}
-                    {(actividad.horaInicio || actividad.horaFin) && (
-                      <p className="md:col-span-2 lg:col-span-1">
-                        <span className="font-semibold">Horario:</span>{" "}
-                        {actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'} -{" "}
-                        {actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
-                      </p>
-                    )}
-                  </div>
-
-                  {actividad.observaciones && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 text-sm text-gray-600">
-                      <span className="font-semibold">Observaciones:</span> {actividad.observaciones}
-                    </div>
-                  )}
-                </div>
-              </Card>
-            ))}
+            {jornadaActual.registros && jornadaActual.registros.length > 0 ? (
+              <div className="overflow-x-auto bg-white shadow-md rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-300">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Proceso</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tiempo (min)</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">OTI</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Área</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Máquina</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Insumos</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tipo Tiempo</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Inicio</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Fin</th>
+                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Observaciones</th>
+                      <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                        <span className="sr-only">Acciones</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {jornadaActual.registros
+                      .sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio))
+                      .map((actividad) => (
+                        <tr key={actividad._id}>
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{actividad.procesos?.map(p => p.nombre).join(', ') || "N/A"}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tiempo}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.oti?.numeroOti || "N/A"}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.areaProduccion?.nombre || "N/A"}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.maquina?.nombre || "N/A"}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.insumos?.map(i => i.nombre).join(', ') || "N/A"}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tipoTiempo || "N/A"}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}</td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}</td>
+                          <td className="px-3 py-4 text-sm text-gray-500 max-w-xs whitespace-normal break-words">{actividad.observaciones || "N/A"}</td>
+                          <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                            <button
+                              onClick={() => handleEditarActividad(actividad)}
+                              className="bg-green-200 text-green-700 font-semibold px-3 py-1.5 rounded-md shadow-md hover:bg-green-300 transition-all duration-300 cursor-pointer text-xs"
+                              title="Editar"
+                            >
+                              <Pencil size={14} className="inline mr-1" />
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (window.confirm("¿Estás seguro de que deseas eliminar esta actividad?")) {
+                                  handleEliminarActividad(actividad._id);
+                                }
+                              }}
+                              className="bg-red-200 text-red-700 font-semibold px-3 py-1.5 rounded-md shadow-md hover:bg-red-300 transition-all duration-300 cursor-pointer ml-2 text-xs"
+                              title="Eliminar"
+                            >
+                              <Trash2 size={14} className="inline mr-1" />
+                              Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-600">No hay actividades registradas.</p>
+            )}
           </>
         ) : (
           <Card className="flex flex-col items-center justify-center p-8 text-center bg-white shadow-md rounded-lg">
@@ -202,12 +200,30 @@ const MiJornada = () => {
               onClick={() => navigate("/registro-produccion")}
               className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-300"
             >
-              Comenzar Nueva Jornada
+              <span className="flex items-center space-x-2">
+                <span>Comenzar Nueva Jornada</span>
+              </span>
             </Button>
           </Card>
         )}
       </div>
     </div>
+    
+    {/* MODAL FOR EDITING PRODUCCION */}
+    {isEditModalOpen && selectedActividad && (
+      <EditarProduccion
+        produccion={selectedActividad}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedActividad(null);
+        }}
+        onGuardar={() => {
+          setIsEditModalOpen(false);
+          setSelectedActividad(null);
+          fetchJornadas(); // Re-fetch jornada data to show updated info
+        }}
+      />
+    )}
   </div>
 );
 

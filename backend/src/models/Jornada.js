@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-const JornadaSchema = new Schema({
+const jornadaSchema = new Schema({
     operario: {
         type: Schema.Types.ObjectId,
         ref: 'Operario',
@@ -29,7 +29,7 @@ const JornadaSchema = new Schema({
     ]
 }, { timestamps: true });
 
-JornadaSchema.pre('save', async function (next) {
+jornadaSchema.pre('save', async function (next) {
     try {
         if (this.registros && this.registros.length > 0) {
             const Produccion = mongoose.model('Produccion');
@@ -64,4 +64,5 @@ JornadaSchema.pre('save', async function (next) {
     }
 });
 
-module.exports = mongoose.model('Jornada', JornadaSchema);
+const Jornada = mongoose.model("Jornada", jornadaSchema);
+module.exports = Jornada;

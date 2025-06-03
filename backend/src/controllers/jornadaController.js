@@ -46,15 +46,33 @@ exports.crearJornada = async (req, res) => {
 // @access  Public (o según tu autenticación)
 exports.obtenerJornadas = async (req, res) => {
     try {
-        const jornadas = await Jornada.find().
+        const { limit, sort } = req.query;
+        let query = Jornada.find();
+
+        if (sort) {
+            const sortParams = {};
+            const parts = sort.split(':');
+            sortParams[parts[0]] = parts[1] === 'desc' ? -1 : 1;
+            query = query.sort(sortParams);
+        } else {
+            // Default sort if not provided
+            query = query.sort({ fecha: -1 });
+        }
+
+        if (limit) {
+            query = query.limit(parseInt(limit, 10));
+        }
+
+        const jornadas = await query.
         populate({
             path: 'registros',
             populate: [
+                { path: 'operario', select: 'name' },
                 { path: 'oti', select: 'numeroOti' },
-                { path: 'proceso', select: 'nombre' },
+                { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Ensured model is specified for clarity
                 { path: 'areaProduccion', select: 'nombre' },
                 { path: 'maquina', select: 'nombre' },
-                { path: 'insumos', select: 'nombre' }
+                { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model is specified for clarity
             ],
 
         });
@@ -90,10 +108,10 @@ exports.obtenerJornada = async (req, res) => {
             path: 'registros',
             populate: [
                 { path: 'oti', model: 'Oti', select: 'numeroOti' },
-                { path: 'proceso', model: 'Proceso', select: 'nombre' },
+                { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Corrected path and ensured model
                 { path: 'areaProduccion', model: 'AreaProduccion', select: 'nombre' },
                 { path: 'maquina', model: 'Maquina', select: 'nombre' },
-                { path: 'insumos', model: 'Insumo', select: 'nombre' }
+                { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model
             ]
         });
 
@@ -114,7 +132,8 @@ exports.obtenerJornada = async (req, res) => {
 // @route   GET /api/jornadas/operario/:id
 // @access  Public (o según tu autenticación)
 exports.obtenerJornadasPorOperario = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.params; // Operario ID
+    const { fecha } = req.query; // Optional date filter
 
     try {
         console.log(`🔎 Buscando jornadas para el operario con ID: ${id}`);
@@ -135,17 +154,21 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
             return await Jornada.findById(jornada._id).populate({
                 path: 'registros',
                 populate: [
-                    { path: 'proceso', select: 'nombre' },
+                    { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Corrected path and ensured model
                     { path: 'oti', select: 'numeroOti' },
                     { path: 'areaProduccion', select: 'nombre' },
                     { path: 'maquina', select: 'nombre' },
-                    { path: 'insumos', select: 'nombre' }
+                    { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model
                 ]
             });
-        }));
+
+        if (!jornadas) {
+            console.log(`ℹ️ No se encontraron jornadas para el operario ${id} con los filtros aplicados.`);
+            return res.json([]); // Devuelve un array vacío si no hay jornadas
+        }
 
         console.log(`✅ Jornadas encontradas para ${operarioExiste.name}: ${jornadas.length}`);
-        res.json(jornadasConTiempo);
+        res.json(jornadas);
 
     } catch (error) {
         console.error(`🚨 Error al obtener las jornadas del operario ${id}:`, error);
