@@ -113,7 +113,9 @@ const AdminJornadaDetalle = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {jornada.registros.map((actividad) => (
                         <tr key={actividad._id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{actividad.proceso?.nombre || 'N/A'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {actividad.procesos?.map(p => p.nombre).join(', ') || 'N/A'}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.oti?.numeroOti || 'N/A'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.areaProduccion?.nombre || 'N/A'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.maquina?.nombre || 'N/A'}</td>
