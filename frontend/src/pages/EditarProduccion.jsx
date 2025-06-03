@@ -437,16 +437,16 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
           <Input
             label="Tiempo (minutos)"
             type="number"
-            value={(() => {
-              if (registroEditado.horaInicio && registroEditado.horaFin) {
-                const inicio = new Date(`1970-01-01T${registroEditado.horaInicio}:00`);
-                const fin = new Date(`1970-01-01T${registroEditado.horaFin}:00`);
+            value={((inicioStr, finStr) => {
+              if (inicioStr && finStr) {
+                const inicio = new Date(`1970-01-01T${inicioStr}:00`);
+                const fin = new Date(`1970-01-01T${finStr}:00`);
                 if (fin > inicio) {
                   return Math.floor((fin - inicio) / 60000);
                 }
               }
               return 0;
-            })()}
+            })(registroEditado.horaInicio, registroEditado.horaFin)}
             readOnly
             disabled
             className="focus:ring-2 focus:ring-blue-400 bg-gray-100 cursor-not-allowed"

@@ -8,10 +8,10 @@ import { confirmAlert } from 'react-confirm-alert';
 import 'react-confirm-alert/src/react-confirm-alert.css';
 import { Sidebar } from '../components/Sidebar';
 import Navbar from '../components/Navbar';
-import { Button, Card } from '../components/ui/index';
+import { Button, Card, Input } from '../components/ui/index';
 import EditarProduccion from './EditarProduccion';
 import DetalleJornadaModal from '../components/DetalleJornadaModal';
-import { ClipboardList, Hammer, Eye, Pencil, UserCircle2} from 'lucide-react';
+import { ClipboardList, Hammer, Eye, Pencil, UserCircle2, CheckCircleIcon} from 'lucide-react';
 import { motion } from 'framer-motion';
 
 // --- NUEVAS IMPORTACIONES ---
@@ -66,7 +66,8 @@ const OperarioDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [actualizarKey, setActualizarKey] = useState(Date.now()); // Using timestamp for force updates
     const [jornadaDetalleId, setJornadaDetalleId] = useState(null);
-    const [actividadAEditar, setActividadAEditar] = useState(null);
+    const [filtro, setFiltro] = useState('');
+    const [actividadAEditar, setActividadAEditar] = useState(null); // Define this state as well
 
     const navigate = useNavigate();
 
@@ -166,6 +167,7 @@ const OperarioDashboard = () => {
         };
     }, [navigate]);
 
+    // --- Date and Filtering Logic (Corrected Placement) ---
 
     // Gets today's date in YYYY-MM-DD format for comparison.
     const hoyISO = (() => {
@@ -181,13 +183,19 @@ const OperarioDashboard = () => {
         jornada.registros && jornada.registros.length > 0
     );
 
-    // Find today's jornada
+    // Find today's jornada (ensure this is the ONLY declaration)
     const jornadaActual = jornadasFiltradas.find(jornada => {
         const fechaJornada = getFechaISOForComparison(jornada.fecha);
         return fechaJornada === hoyISO;
     });
 
-    // Calculate total time by summing activity times
+    // Define jornadasAnteriores by filtering out today's jornada and applying the filter state
+    const jornadasAnteriores = jornadasFiltradas.filter(jornada => {
+        const fechaJornada = getFechaISOForComparison(jornada.fecha);
+        return fechaJornada !== hoyISO && fechaJornada.includes(filtro);
+    });
+
+    // Calculate total time by summing activity times for 'Resumen del Día'
     const calcularTotalTiempo = (jornada) => {
         const totalMinutes = jornada.registros && Array.isArray(jornada.registros)
             ? jornada.registros.reduce((total, registro) => {
@@ -201,11 +209,33 @@ const OperarioDashboard = () => {
         return `${totalMinutes} min (${hours} horas ${minutes} min)`;
     };
 
+    // Calculate total time between jornada start and end times for 'Jornadas Anteriores Cards'
+    const calcularTiempoTotalJornada = (jornada) => {
+        if (!jornada.horaInicio || !jornada.horaFin) {
+            return 'N/A'; // Or handle as appropriate
+        }
+        const inicio = new Date(jornada.horaInicio);
+        const fin = new Date(jornada.horaFin);
+        const diffMs = fin - inicio; // Difference in milliseconds
+        const diffMinutes = Math.floor(diffMs / (1000 * 60)); // Difference in minutes
+
+        const hours = Math.floor(diffMinutes / 60);
+        const minutes = diffMinutes % 60;
+        return `${diffMinutes} min (${hours} horas ${minutes} min)`;
+    };
+
     // --- Event Handlers (optimized with useCallback) ---
 
     const handleRegistroProduccion = useCallback(() => {
-        navigate('/registro-produccion');
-    }, [navigate]);
+        // If there's an active jornada today, navigate to add activity to it.
+        // Otherwise, navigate to general registration to create a new jornada.
+        if (jornadaActual && jornadaActual._id) {
+            navigate(`/registro-produccion/${jornadaActual._id}`);
+        } else {
+            navigate('/registro-produccion');
+        }
+    }, [navigate, jornadaActual]);
+
 
     const handleVerDetalleJornada = useCallback((jornadaId) => {
         setJornadaDetalleId(jornadaId);
@@ -215,7 +245,102 @@ const OperarioDashboard = () => {
         setJornadaDetalleId(null);
     }, []);
 
-    const handleEditarActividad = useCallback((actividad) => {
+    // Removed iniciarEdicion and cerrarModalEditar as they seem to relate to 'editandoId' which is not declared.
+    // Use handleEditarActividad and setActividadAEditar for activity editing.
+    // const iniciarEdicion = (jornada) => {
+    //     debugLog("Iniciando edición para la jornada:", jornada._id);
+    //     setEditandoId(jornada._id);
+    // };
+
+    // const cerrarModalEditar = () => {
+    //     setEditandoId(null);
+    // };
+
+    const handleEliminarJornada = (id) => {
+        confirmAlert({
+            title: 'Confirmación de eliminación de jornada',
+            message: '¿Estás seguro de que deseas eliminar esta jornada y todas sus actividades asociadas? Esta acción no se puede deshacer.',
+            buttons: [
+                {
+                    label: 'Sí',
+                    onClick: async () => {
+                        try {
+                            await axiosInstance.delete(`/jornadas/${id}`);
+                            setActualizarKey(Date.now()); // Use setActualizarKey
+                            toast.success('Jornada eliminada con éxito');
+                        } catch (error) {
+                            console.error('Error al eliminar la jornada:', error);
+                            toast.error('No se pudo eliminar la jornada.');
+                        }
+                    }
+                },
+                {
+                    label: 'Cancelar',
+                    onClick: () => {
+                        toast.info('Eliminación cancelada');
+                    }
+                }
+            ]
+        });
+    };
+
+    const handleGuardarJornadaCompleta = async (jornadaId) => {
+        confirmAlert({
+            title: 'Confirmación',
+            message: '¿Está seguro de dar la jornada por completada?',
+            buttons: [
+                {
+                    label: 'Sí',
+                    onClick: async () => {
+                        try {
+                            await axiosInstance.put(`/jornadas/${jornadaId}`, { estado: "completa" });
+                            toast.success(`Jornada ${jornadaId} guardada como completa`);
+                            setActualizarKey(Date.now()); // Use setActualizarKey
+                        } catch (error) {
+                            console.error('Error al guardar la jornada como completa:', error);
+                            toast.error('No se pudo guardar la jornada como completa.');
+                        }
+                    }
+                },
+                {
+                    label: 'No',
+                    onClick: () => console.log('Acción cancelada')
+                }
+            ]
+        });
+    };
+
+    const handleEliminarJornadaActual = async (jornadaId) => {
+        confirmAlert({
+            title: '¿Estás seguro?',
+            message: '¿Quieres eliminar la jornada actual y todas sus actividades?',
+            buttons: [
+                {
+                    label: 'Sí',
+                    onClick: async () => {
+                        try {
+                            await axiosInstance.delete(`/jornadas/${jornadaId}`);
+                            toast.success('Jornada eliminada con éxito');
+                            setActualizarKey(Date.now()); // Use setActualizarKey
+                        } catch (error) {
+                            console.error('Error al eliminar la jornada:', error);
+                            toast.error('No se pudo eliminar la jornada.');
+                        }
+                    }
+                },
+                {
+                    label: 'Cancelar',
+                    onClick: () => {
+                        toast.info('Eliminación cancelada');
+                    }
+                }
+            ]
+        });
+    };
+
+    // Handlers para editar y eliminar actividad desde el modal de detalle
+
+    const handleEditarActividad =useCallback ((actividad) => {
         setActividadAEditar(actividad);
     }, []);
 
@@ -232,8 +357,8 @@ const OperarioDashboard = () => {
 
     const handleEliminarActividad = useCallback((actividad) => {
         confirmAlert({
-            title: '¿Eliminar actividad?',
-            message: '¿Estás seguro de eliminar esta actividad? Esta acción no se puede deshacer.',
+            title: 'Confirmación de eliminación de actividad',
+            message: '¿Estás seguro de que deseas eliminar esta actividad? Esta acción no se puede deshacer.',
             buttons: [
                 {
                     label: 'Sí',
@@ -257,7 +382,12 @@ const OperarioDashboard = () => {
                         }
                     }
                 },
-                { label: 'Cancelar', onClick: () => { } }
+                {
+                    label: 'Cancelar',
+                    onClick: () => {
+                        toast.info('Eliminación cancelada');
+                    }
+                }
             ]
         });
     }, [recargarJornadas]);
@@ -297,11 +427,11 @@ const OperarioDashboard = () => {
                             <ClipboardList className="w-7 h-7 text-blue-600" aria-label="Producción" />
                             Producción VR Mideros
                         </div>
-                      <div className="flex flex-col items-center space-y-1 bg-white px-4 py-2 rounded-lg shadow-sm">
-                        <UserCircle2 className="h-8 w-8 text-gray-500" />
-                        <span className="text-sm text-gray-500">Operario</span>
-                        <span className="font-semibold text-gray-700">{operarioName}</span>
-                    </div>
+                        <div className="flex flex-col items-center space-y-1 bg-white px-4 py-2 rounded-lg shadow-sm">
+                            <UserCircle2 className="h-8 w-8 text-gray-500" />
+                            <span className="text-sm text-gray-500">Operario</span>
+                            <span className="font-semibold text-gray-700">{operarioName}</span>
+                        </div>
                     </div>
 
                     {loading ? (
@@ -395,9 +525,166 @@ const OperarioDashboard = () => {
                         <EditarProduccion
                             actividad={actividadAEditar}
                             onClose={() => setActividadAEditar(null)}
-                            onUpdate={recargarJornadas}
+                            onGuardar={() => {
+                                setActividadAEditar(null);
+                                setActualizarKey(Date.now()); // Use setActualizarKey
+                            }}
                         />
                     )}
+
+                    {/* The duplicate section below was causing the error. I'm removing it.
+                        The content for jornadaActual has been moved above within the main content block.
+                        The button and filter input related to ALL jornadas (not just today) are kept below.
+                    */}
+
+                    <div className="container mx-auto px-4 py-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h1 className="text-2xl font-bold">Producción VR Mideros</h1>
+                            <h3 className="font-semibold">Bienvenido, {operarioName}</h3>
+                        </div>
+
+                        <div className="flex justify-between items-center mt-6">
+                            {/* Changed this button to use the new handleRegistroProduccion logic */}
+                            <Button className="bg-blue-200 blue font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500 transition-all duration-300 cursor-pointer" onClick={handleRegistroProduccion}>
+                                {jornadaActual ? 'Añadir actividad a jornada actual' : 'Registrar Nueva Producción'}
+                            </Button>
+                            <Button className="bg-red-200 text-gray-800 hover:bg-red-500 hover:text-red-100 px-6 py-3 rounded-xl shadow transition-all duration-300 cursor-pointer" variant="ghost" onClick={() => navigate('/validate-cedula')}>
+                                Salir
+                            </Button>
+                        </div>
+
+                        <div className="mt-6 mb-4 max-w-sm">
+                            <Input
+                                placeholder="Buscar por fecha (YYYY-MM-DD)"
+                                value={filtro}
+                                onChange={(e) => setFiltro(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Jornada Actual Card - Moved/Integrated into the main loading conditional block above */}
+                        {/* {jornadaActual && (
+                            <Card className="mb-6">
+                                <div className="p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center">
+                                            <svg className="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                            <span>{ajustarFechaLocal(jornadaActual.fecha).toLocaleDateString()}</span>
+                                        </div>
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            {jornadaActual.estado === 'completa' ? (
+                                                <>
+                                                    <CheckCircleIcon className="h-4 w-4 mr-1 text-green-500 inline" /> Registrado
+                                                </>
+                                            ) : (
+                                                'En progreso'
+                                            )}
+                                        </span>
+                                    </div>
+                                    <h2 className="text-xl font-semibold mb-2">Jornada Actual</h2>
+                                   <div className="mb-4 flex justify-between items-center">
+
+                                        <div className="flex items-center">
+                                            <svg className="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <span className="text-s">{jornadaActual.registros ? jornadaActual.registros.length : 0} actividades registradas</span>
+                                        </div>
+                                        {jornadaActual.registros && jornadaActual.registros.length > 0 && (
+                                            <span className="text-s">
+                                            Tiempo total: <span className="font-semibold">{calcularTotalTiempo(jornadaActual)} min</span>
+                                            </span>
+                                        )}
+                                        </div>
+
+                                        {jornadaActual.registros && jornadaActual.registros
+                                            .sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio)) // Orden por horaInicio ascendente
+                                            .map((actividad) => (
+                                            <div key={actividad._id} className="bg-gray-50 rounded-md p-3 mb-2 border border-gray-200">
+                                                <div className="flex justify-between items-center text-gray-700 text-sm">
+                                                <div className="flex flex-col">
+                                                    <h4 className="font-semibold text-gray-700">{actividad.proceso?.nombre}</h4>
+                                                    <p className="text-gray-600 text-sm">OTI: {actividad.oti?.numeroOti}</p>
+                                                </div>
+
+                                                <span className="text-gray-600 font-medium whitespace-nowrap">
+                                                    {actividad.horaInicio && !isNaN(new Date(actividad.horaInicio))
+                                                    ? new Date(actividad.horaInicio).toLocaleTimeString('en-GB', {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        })
+                                                    : 'Sin inicio'}{' '}
+                                                    -
+                                                    {actividad.horaFin && !isNaN(new Date(actividad.horaFin))
+                                                    ? new Date(actividad.horaFin).toLocaleTimeString('en-GB', {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        })
+                                                    : 'Sin fin'}
+                                                </span>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        <div className="mt-6 flex items-center space-x-4">
+                                            <Button onClick={handleRegistroProduccion}>Añadir actividad</Button>
+                                            <Button primary onClick={() => handleGuardarJornadaCompleta(jornadaActual._id)}>Guardar jornada completa</Button>
+                                            <Button variant="destructive" onClick={() => handleEliminarJornadaActual(jornadaActual._id)}>Eliminar jornada</Button>
+                                        </div>
+                                    </div>
+                                </Card>
+                        )} */}
+
+                        {/* Jornadas Anteriores Cards */}
+                        {jornadasAnteriores.length > 0 && (
+                            <h2 className="text-xl font-semibold mb-3">Jornadas Anteriores</h2>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {jornadasAnteriores.map((jornada) => (
+                                <Card key={jornada._id} className="relative group">
+                                {/* Contenido clickeable para ver el detalle */}
+                                <div className="p-4 cursor-pointer" onClick={() => handleVerDetalleJornada(jornada._id)}>
+                                    <h3 className="font-semibold mb-1">Fecha: {getFormattedLocalDateDisplay(jornada.fecha)}</h3>
+                                    <p className="text-gray-600 mb-1">Actividades: {jornada.registros ? jornada.registros.length : 0}</p>
+                                    {/* Ensure calcularTiempoTotalJornada is defined and correctly used */}
+                                    <p className="text-gray-600 mb-2">Tiempo Total Jornada: {calcularTiempoTotalJornada(jornada)}</p>
+                                </div>
+
+                                {/* Action Buttons for previous jornadas - hidden until hover */}
+                                <div className="absolute top-2 right-2 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleVerDetalleJornada(jornada._id)}
+                                        title="Ver Detalles"
+                                        className="p-1"
+                                    >
+                                        <Eye className="w-5 h-5 text-gray-600 hover:text-blue-500" />
+                                    </Button>
+                                    {jornada.estado !== 'completa' && (
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => handleGuardarJornadaCompleta(jornada._id)}
+                                            title="Marcar como Completa"
+                                            className="p-1"
+                                        >
+                                            <CheckCircleIcon className="w-5 h-5 text-gray-600 hover:text-green-500" />
+                                        </Button>
+                                    )}
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => handleEliminarJornada(jornada._id)}
+                                        title="Eliminar Jornada"
+                                        className="p-1"
+                                    >
+                                        <Hammer className="w-5 h-5 text-gray-600 hover:text-red-500" />
+                                    </Button>
+                                </div>
+                            </Card>
+                        ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </>
