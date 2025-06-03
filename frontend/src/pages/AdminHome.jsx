@@ -83,7 +83,7 @@ const TablaJornadasRecientes = ({ jornadas, loading, navigate }) => {
                 {jornada.operario?.name || 'Sin asignar'}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {new Date(jornada.fecha).toLocaleDateString()}
+                {ajustarFechaLocal(jornada.fecha).toLocaleDateString()}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {jornada.horaInicio ? new Date(jornada.horaInicio).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}
@@ -110,6 +110,11 @@ const TablaJornadasRecientes = ({ jornadas, loading, navigate }) => {
       </table>
     </div>
   );
+};
+
+const ajustarFechaLocal = (fechaUTC) => {
+  const fecha = new Date(fechaUTC);
+  return new Date(fecha.getTime() + fecha.getTimezoneOffset() * 60000);
 };
 
 const AdminHome = () => {
@@ -186,13 +191,6 @@ const AdminHome = () => {
                   icon={KpiIcons.Registros}
                   bgColor="bg-purple-50"
                   textColor="text-purple-600"
-                />
-                <ResumenKPI 
-                  title="OTIs en Curso" 
-                  value={loading ? "..." : kpis.otisActivas} 
-                  icon={KpiIcons.OTIs}
-                  bgColor="bg-orange-50"
-                  textColor="text-orange-600"
                 />
               </div>
             </section>

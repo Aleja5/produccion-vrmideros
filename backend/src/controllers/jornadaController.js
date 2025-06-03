@@ -58,6 +58,9 @@ exports.obtenerJornadas = async (req, res) => {
             query = query.limit(parseInt(limit, 10));
         }
 
+        // Popular el campo operario de la Jornada
+        query = query.populate('operario', 'name');
+
         const jornadas = await query.
         populate({
             path: 'registros',
@@ -97,7 +100,9 @@ exports.obtenerJornada = async (req, res) => {
             return res.status(400).json({ error: 'Jornada ID is invalid' });
         }
         // Asegurarse de que todos los campos relacionados se populen correctamente
-        const jornada = await Jornada.findById(id).populate({
+        const jornada = await Jornada.findById(id)
+            .populate('operario', 'name') // <--- Añadir esta línea para popular el operario
+            .populate({
             path: 'registros',
             populate: [
                 { path: 'oti', model: 'Oti', select: 'numeroOti' },
@@ -182,16 +187,22 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
 exports.actualizarJornada = async (req, res) => {
     try {
         const { id } = req.params;
-        const { horaInicio, horaFin, registros } = req.body;
+        const { horaInicio, horaFin, registros, estado } = req.body;
         
         // Validar ID de la jornada
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: 'Jornada ID is invalid' });
         }
         
+        const updateFields = { };
+        if (horaInicio !== undefined) updateFields.horaInicio = horaInicio;
+        if (horaFin !== undefined) updateFields.horaFin = horaFin;
+        if (registros !== undefined) updateFields.registros = registros;
+        if (estado !== undefined) updateFields.estado = estado;
+
         const jornada = await Jornada.findByIdAndUpdate(
             id,
-            { horaInicio, horaFin, registros },
+            updateFields,
             { new: true }
         );
         if (!jornada) {
