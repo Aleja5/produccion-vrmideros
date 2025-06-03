@@ -192,13 +192,6 @@ const AdminHome = () => {
                   bgColor="bg-purple-50"
                   textColor="text-purple-600"
                 />
-                <ResumenKPI 
-                  title="OTIs en Curso" 
-                  value={loading ? "..." : kpis.otisActivas} 
-                  icon={KpiIcons.OTIs}
-                  bgColor="bg-orange-50"
-                  textColor="text-orange-600"
-                />
               </div>
             </section>
 
