@@ -11,7 +11,6 @@ import Navbar from '../components/Navbar';
 import { Button, Card } from '../components/ui/index';
 import EditarProduccion from './EditarProduccion';
 import DetalleJornadaModal from '../components/DetalleJornadaModal';
-import { Sidebar } from '../components/Sidebar';
 import { ClipboardList, Hammer, Eye, Pencil, UserCircle2} from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -401,7 +400,7 @@ const OperarioDashboard = () => {
                     )}
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 

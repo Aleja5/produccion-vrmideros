@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-
+import EditarProduccion from './pages/EditarProduccion'; // Componente para editar producción
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword'; // Componente de recuperación
 import AdminDashboard from './pages/AdminDashboard';

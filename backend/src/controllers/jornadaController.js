@@ -149,33 +149,40 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
         // Obtener las jornadas sin populate por ahora
         const jornadas = await Jornada.find({ operario: id }).sort({ fecha: -1 });
 
-        // Recalcular tiempo y hacer populate completo para cada jornada
-        const jornadasConTiempo = await Promise.all(jornadas.map(async (jornada) => {
-            return await Jornada.findById(jornada._id).populate({
-                path: 'registros',
-                populate: [
-                    { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Corrected path and ensured model
-                    { path: 'oti', select: 'numeroOti' },
-                    { path: 'areaProduccion', select: 'nombre' },
-                    { path: 'maquina', select: 'nombre' },
-                    { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model
-                ]
-            });
-
-        if (!jornadas) {
+        // Si no hay jornadas, devolver un array vacío inmediatamente
+        if (!jornadas || jornadas.length === 0) { // Añadimos .length === 0 para claridad
             console.log(`ℹ️ No se encontraron jornadas para el operario ${id} con los filtros aplicados.`);
             return res.json([]); // Devuelve un array vacío si no hay jornadas
         }
 
-        console.log(`✅ Jornadas encontradas para ${operarioExiste.name}: ${jornadas.length}`);
-        res.json(jornadas);
+        // Recalcular tiempo y hacer populate completo para cada jornada
+        const jornadasConTiempo = await Promise.all(jornadas.map(async (jornada) => {
+            const populatedJornada = await Jornada.findById(jornada._id).populate({
+                path: 'registros',
+                populate: [
+                    { path: 'procesos', model: 'Proceso', select: 'nombre' },
+                    { path: 'oti', select: 'numeroOti' },
+                    { path: 'areaProduccion', select: 'nombre' },
+                    { path: 'maquina', select: 'nombre' },
+                    { path: 'insumos', model: 'Insumo', select: 'nombre' }
+                ]
+            });
+            return populatedJornada; // Asegúrate de retornar la jornada populada aquí
+        })); // <--- Cierre correcto del map y Promise.all
+
+
+        console.log(`✅ Jornadas encontradas para ${operarioExiste.name}: ${jornadasConTiempo.length}`); // Usar jornadasConTiempo
+        res.json(jornadasConTiempo); // Asegúrate de enviar jornadasConTiempo, no 'jornadas'
 
     } catch (error) {
         console.error(`🚨 Error al obtener las jornadas del operario ${id}:`, error);
         res.status(500).json({ msg: 'Error al obtener las jornadas' });
     }
 };
+        
+    
 
+       
 
 // @desc    Obtener jornadas por operario y fecha
 // @route   GET /api/jornadas/operario/:operarioId/fecha/:fecha
@@ -512,5 +519,6 @@ exports.obtenerJornadasPorOperarioYFecha = async (req, res) => {
             return res.status(400).json({ message: "ID de operario o formato de fecha inválido." });
         }
         res.status(500).json({ message: "Error interno del servidor." });
-    }
+    };
+    
 };

@@ -1,14 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom"; // Asegúrate de importar useParams
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Sidebar } from "../components/Sidebar";
-import { Input, Textarea, Button, Card } from "../components/ui/index"; 
-import React, { useState, useEffect, useCallback } from "react"; 
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import { useParams } from "react-router-dom";
-import Navbar from "./Navbar"; 
-import Select from 'react-select'; 
+import { Input, Textarea, Button, Card } from "../components/ui/index";
+import Navbar from "./Navbar";
+import Select from 'react-select';
 
 export default function RegistroProduccion() {
     const { jornadaId: urlJornadaId } = useParams(); // Renombrar para evitar conflicto con el estado local
@@ -25,22 +21,21 @@ export default function RegistroProduccion() {
     const [actividades, setActividades] = useState([
         {
             oti: "",
-            procesos: [], 
+            procesos: [],
             areaProduccion: "",
             maquina: "",
-            insumos: [], 
+            insumos: [],
             tipoTiempo: "",
             horaInicio: "",
             horaFin: "",
             tiempo: 0,
             observaciones: "",
-            availableProcesos: [] 
+            availableProcesos: []
         }
     ]);
     const [actividadesExistentes, setActividadesExistentes] = useState([]);
     const [maquinasData, setMaquinasData] = useState([]);
     const [areasProduccionData, setAreasProduccionData] = useState([]);
-    // const [procesosData, setProcesosData] = useState([]); // Removed
     const [insumosData, setInsumosData] = useState([]);
 
     const resetFormForNewJornada = () => {
@@ -69,14 +64,14 @@ export default function RegistroProduccion() {
         // The useEffect for fetchActividadesResumen will re-run due to jornadaData.fecha changing
         // and should show the summary for the new date, including the one just saved.
     };
-    
+
     const addActividad = () => {
         setActividades(prev => [...prev, {
             oti: "",
-            procesos: [], 
+            procesos: [],
             areaProduccion: "",
             maquina: "",
-            insumos: [], 
+            insumos: [],
             tipoTiempo: "",
             horaInicio: "",
             horaFin: "",
@@ -107,36 +102,29 @@ export default function RegistroProduccion() {
                 return;
             }
 
-        try {
-            const operarioData = JSON.parse(operario);
-            if (operarioData?.name) setNombreOperario(operarioData.name);
-            if (operarioData?._id || operarioData?.id) {
-            setJornadaData(prev => ({ ...prev, operario: operarioData._id || operarioData.id }));
+            try {
+                const operarioData = JSON.parse(operario);
+                if (operarioData?.name) setNombreOperario(operarioData.name);
+                if (operarioData?._id || operarioData?.id) {
+                    setJornadaData(prev => ({ ...prev, operario: operarioData._id || operarioData.id }));
+                }
+            } catch (error) {
+                console.error("Error al leer datos del operario:", error);
             }
-        } catch (error) {
-            console.error("Error al leer datos del operario:", error);
-        }
 
-        // Cargar datos de selectores
-        try {
-            const maquinasRes = await fetch("http://localhost:5000/api/produccion/maquinas");
-            if (maquinasRes.ok) setMaquinasData(await maquinasRes.json());
+            // Cargar datos de selectores
+            try {
+                const maquinasRes = await fetch("http://localhost:5000/api/produccion/maquinas");
+                if (maquinasRes.ok) setMaquinasData(await maquinasRes.json());
 
-            const areasRes = await fetch("http://localhost:5000/api/produccion/areas");
-            if (areasRes.ok) setAreasProduccionData(await areasRes.json());
+                const areasRes = await fetch("http://localhost:5000/api/produccion/areas");
+                if (areasRes.ok) setAreasProduccionData(await areasRes.json());
 
-            // const procesosRes = await fetch("http://localhost:5000/api/produccion/procesos"); // Removed initial fetch
-            // if (procesosRes.ok) {
-            //     const data = await procesosRes.json();
-            //     // console.log("Fetched procesosData:", data); 
-            //     setProcesosData(data);
-            // }
-
-            const insumosRes = await fetch("http://localhost:5000/api/produccion/insumos");
-            if (insumosRes.ok) setInsumosData(await insumosRes.json());
-        } catch (error) {
-            console.error("Error al cargar datos:", error);
-        }
+                const insumosRes = await fetch("http://localhost:5000/api/produccion/insumos");
+                if (insumosRes.ok) setInsumosData(await insumosRes.json());
+            } catch (error) {
+                console.error("Error al cargar datos:", error);
+            }
 
             // Lógica principal para obtener o crear la jornada
             if (urlJornadaId) {
@@ -146,7 +134,7 @@ export default function RegistroProduccion() {
                     if (res.ok) {
                         const jornada = await res.json();
                         setJornadaActualId(jornada._id); // Asegura que el estado local tenga el ID
-                        
+
                         // Normalizar actividades existentes
                         if (Array.isArray(jornada.registros)) {
                             const actividadesNorm = jornada.registros.map(act => ({
@@ -158,37 +146,61 @@ export default function RegistroProduccion() {
                                     ? new Date(act.horaFin).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
                                     : "",
                                 tiempo: act.tiempo || 0,
+                                // Asegúrate de que availableProcesos se cargue si el área está seleccionada
+                                availableProcesos: Array.isArray(act.procesosInfo) ? act.procesosInfo : [], // Suponiendo que el backend puede enviar info de procesos
                             }));
                             setActividadesExistentes(actividadesNorm);
+                            // Si estamos editando, las actividades iniciales del formulario deben ser las existentes
+                            setActividades(actividadesNorm.length > 0 ? actividadesNorm : [{
+                                oti: "",
+                                procesos: [],
+                                areaProduccion: "",
+                                maquina: "",
+                                insumos: [],
+                                tipoTiempo: "",
+                                horaInicio: "",
+                                horaFin: "",
+                                tiempo: 0,
+                                observaciones: "",
+                                availableProcesos: []
+                            }]);
+
+                            // Para cada actividad existente, cargar los procesos disponibles si el área está seleccionada
+                            actividadesNorm.forEach((act, index) => {
+                                if (act.areaProduccion) {
+                                    fetchProcesosForActivity(index, act.areaProduccion);
+                                }
+                            });
                         }
 
-                // Establecer fecha de la jornada
-                if (jornada.fecha) {
-                let fechaStr = jornada.fecha;
-                if (typeof fechaStr === "string" && fechaStr.length > 10) {
-                    fechaStr = fechaStr.substring(0, 10); // ISO -> YYYY-MM-DD
-                }
-                setJornadaData(prev => ({ ...prev, fecha: fechaStr }));
-                } else {
-                setJornadaData(prev => ({
-                    ...prev,
-                    fecha: new Date().toISOString().split("T")[0],
-                }));
+                        // Establecer fecha de la jornada
+                        if (jornada.fecha) {
+                            let fechaStr = jornada.fecha;
+                            if (typeof fechaStr === "string" && fechaStr.length > 10) {
+                                fechaStr = fechaStr.substring(0, 10); // ISO -> YYYY-MM-DD
+                            }
+                            setJornadaData(prev => ({ ...prev, fecha: fechaStr }));
+                        } else {
+                            setJornadaData(prev => ({
+                                ...prev,
+                                fecha: new Date().toISOString().split("T")[0],
+                            }));
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error al cargar actividades de la jornada:", error);
                 }
             }
-            } catch (error) {
-            console.error("Error al cargar actividades de la jornada:", error);
-            }
-        }
         };
 
         loadInitialData();
-        }, [navigate, jornadaId]);
+    }, [navigate, urlJornadaId]); // Corregido: usar urlJornadaId
 
     // useEffect para cargar actividades existentes al editar una jornada
     useEffect(() => {
         const fetchActividadesResumen = async () => {
-            if (jornadaData.fecha && jornadaData.operario && !jornadaId) {
+            // Solo cargar resumen si NO estamos editando una jornada específica y tenemos fecha y operario
+            if (jornadaData.fecha && jornadaData.operario && !urlJornadaId) { // Corregido: usar urlJornadaId
                 setLoadingResumen(true);
                 try {
                     const response = await fetch(`http://localhost:5000/api/jornadas/operario/${jornadaData.operario}?fecha=${jornadaData.fecha}`);
@@ -203,11 +215,18 @@ export default function RegistroProduccion() {
                         }
                     } else {
                         const jornadasDelDia = await response.json();
-                        console.log("Fetched jornadasDelDia:", jornadasDelDia); 
+                        console.log("Fetched jornadasDelDia:", jornadasDelDia);
                         if (jornadasDelDia && jornadasDelDia.length > 0) {
                             let todasLasActividadesDelDia = jornadasDelDia.reduce((acc, jornada) => {
-                                const actividadesDeJornada = jornada.registros || []; 
-                                return acc.concat(actividadesDeJornada.map(act => ({ ...act, fechaJornada: jornada.fecha })));
+                                const actividadesDeJornada = jornada.registros || [];
+                                return acc.concat(actividadesDeJornada.map(act => ({
+                                    ...act,
+                                    fechaJornada: jornada.fecha,
+                                    // Incluir el número de OTI si está disponible
+                                    otiNumero: act.oti?.numeroOti || "N/A",
+                                    // Asegurarse de que el proceso tenga nombre para mostrar
+                                    procesosNombres: Array.isArray(act.procesos) ? act.procesos.map(p => p.nombre).join(', ') : "N/A"
+                                })));
                             }, []);
 
                             // Sort activities by horaInicio
@@ -236,7 +255,7 @@ export default function RegistroProduccion() {
         };
 
         fetchActividadesResumen();
-    }, [jornadaData.fecha, jornadaData.operario, jornadaId]);
+    }, [jornadaData.fecha, jornadaData.operario, urlJornadaId]); // Corregido: usar urlJornadaId
 
     // useEffect para depurar actividadesResumen
     useEffect(() => {
@@ -251,12 +270,22 @@ export default function RegistroProduccion() {
         const horasFin = todas.map(a => a.horaFin).filter(Boolean);
         let primeraHora = "";
         let ultimaHora = "";
+
+        // Función para parsear y comparar horas en formato "HH:MM"
+        const parseTime = (timeStr) => {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes; // Convertir a minutos para fácil comparación
+        };
+
         if (horasInicio.length > 0) {
-            primeraHora = horasInicio.sort()[0];
+            // Ordenar horas de inicio y tomar la más temprana
+            primeraHora = horasInicio.sort((a, b) => parseTime(a) - parseTime(b))[0];
         }
         if (horasFin.length > 0) {
-            ultimaHora = horasFin.sort()[horasFin.length - 1];
+            // Ordenar horas de fin y tomar la más tardía
+            ultimaHora = horasFin.sort((a, b) => parseTime(a) - parseTime(b))[horasFin.length - 1];
         }
+
         setJornadaData(prev => ({
             ...prev,
             horaInicio: primeraHora,
@@ -270,17 +299,16 @@ export default function RegistroProduccion() {
         setJornadaData(prev => ({ ...prev, [name]: value }));
     };
 
-    const fetchProcesosForActivity = async (activityIndex, areaId) => {
+    const fetchProcesosForActivity = useCallback(async (activityIndex, areaId) => {
         if (!areaId) {
             setActividades(prev =>
                 prev.map((act, idx) =>
-                    idx === activityIndex ? { ...act, availableProcesos: [], procesos: [] } : act // Changed from proceso: ""
+                    idx === activityIndex ? { ...act, availableProcesos: [], procesos: [] } : act
                 )
             );
             return;
         }
         try {
-            // Corrected API endpoint
             const response = await fetch(`http://localhost:5000/api/procesos?areaId=${areaId}`);
             if (response.ok) {
                 const data = await response.json();
@@ -292,9 +320,6 @@ export default function RegistroProduccion() {
                 } else if (data && Array.isArray(data.procesos)) {
                     determinedProcesos = data.procesos;
                     console.log(`[Proceso Fetch Debug] Interpreted API data as an object with 'procesos' array. Count: ${determinedProcesos.length}`);
-                } else if (data && data.procesos && !Array.isArray(data.procesos)) {
-                    console.warn(`[Proceso Fetch Debug] API data has 'data.procesos' but it's NOT an array for areaId ${areaId}:`, data.procesos);
-                    determinedProcesos = [];
                 } else {
                     console.warn(`[Proceso Fetch Debug] API data for areaId ${areaId} does not match expected structures (direct array or object with 'procesos' array). Data:`, data);
                     determinedProcesos = [];
@@ -314,7 +339,7 @@ export default function RegistroProduccion() {
                 toast.error("Error al cargar procesos para el área seleccionada.");
                 setActividades(prev =>
                     prev.map((act, idx) =>
-                        idx === activityIndex ? { ...act, availableProcesos: [], procesos: [] } : act // Changed from proceso: ""
+                        idx === activityIndex ? { ...act, availableProcesos: [], procesos: [] } : act
                     )
                 );
             }
@@ -323,12 +348,11 @@ export default function RegistroProduccion() {
             toast.error("No se pudieron cargar los procesos (exception).");
             setActividades(prev =>
                 prev.map((act, idx) =>
-                    idx === activityIndex ? { ...act, availableProcesos: [], procesos: [] } : act // Changed from proceso: ""
+                    idx === activityIndex ? { ...act, availableProcesos: [], procesos: [] } : act
                 )
             );
         }
-    };
-
+    }, []); // Dependencias vacías para useCallback
 
     const handleActividadChange = (index, e_or_selectedOptions, actionMeta) => {
         let name, value;
@@ -341,20 +365,20 @@ export default function RegistroProduccion() {
             name = e_or_selectedOptions.target.name;
             value = e_or_selectedOptions.target.value;
         }
-        
+
         const nuevasActividades = actividades.map((act, idx) => {
             if (idx === index) {
                 let updatedAct = { ...act };
 
                 if (name === 'areaProduccion') {
                     updatedAct.areaProduccion = value;
-                    updatedAct.procesos = []; 
-                    updatedAct.availableProcesos = []; 
-                    fetchProcesosForActivity(index, value); 
-                } else if (name === 'procesos') { 
-                    updatedAct.procesos = value; 
-                } else if (name === 'insumos') { 
-                    updatedAct.insumos = value; 
+                    updatedAct.procesos = [];
+                    updatedAct.availableProcesos = [];
+                    fetchProcesosForActivity(index, value);
+                } else if (name === 'procesos') {
+                    updatedAct.procesos = value;
+                } else if (name === 'insumos') {
+                    updatedAct.insumos = value;
                 } else if (name === 'horaInicio' || name === 'horaFin') {
                     updatedAct[name] = value;
                     // Calcular tiempos de inicio y fin
@@ -369,7 +393,7 @@ export default function RegistroProduccion() {
                             updatedAct.tiempo = 0;
                         }
                     } else {
-                        updatedAct.tiempo = 0; 
+                        updatedAct.tiempo = 0;
                     }
                 } else {
                     updatedAct[name] = value;
@@ -380,7 +404,7 @@ export default function RegistroProduccion() {
         });
         setActividades(nuevasActividades);
     };
-    
+
     // Combinar fecha con hora para crear una fecha completa válida
     const combinarFechaYHora = (fecha, hora) => {
         console.log("Fecha recibida en combinarFechaYHora:", fecha);
@@ -394,7 +418,7 @@ export default function RegistroProduccion() {
         const date = new Date(Number(yyyy), Number(mmFecha) - 1, Number(dd), Number(hh), Number(mm), 0);
         console.log("Fecha combinada:", date);
 
-        return isNaN(date.getTime()) ? null : date;
+        return isNaN(date.getTime()) ? null : date.toISOString(); // Convertir a ISO string para enviar al backend
     };
 
     const handleSubmitJornada = async (e) => {
@@ -411,22 +435,36 @@ export default function RegistroProduccion() {
 
         const dataToSend = {
             ...jornadaData,
-            fecha: jornadaData.fecha,
+            fecha: jornadaData.fecha, // La fecha ya está en formato YYYY-MM-DD
             horaInicio: combinarFechaYHora(jornadaData.fecha, jornadaData.horaInicio),
             horaFin: combinarFechaYHora(jornadaData.fecha, jornadaData.horaFin),
-            actividades: actividades.map(actividad => ({
+            // Asegurarse de que oti y demás campos referenciados se envíen como string
+            registros: actividades.map(actividad => ({
                 ...actividad,
+                oti: actividad.oti, // Asumimos que oti es un string o ObjectId
+                areaProduccion: actividad.areaProduccion,
+                maquina: actividad.maquina,
+                procesos: actividad.procesos, // Array de IDs de procesos
+                insumos: actividad.insumos, // Array de IDs de insumos
                 tipoTiempo: actividad.tipoTiempo,
                 horaInicio: actividad.horaInicio && actividad.horaInicio !== "" ? combinarFechaYHora(jornadaData.fecha, actividad.horaInicio) : null,
                 horaFin: actividad.horaFin && actividad.horaFin !== "" ? combinarFechaYHora(jornadaData.fecha, actividad.horaFin) : null,
-                tiempo: actividad.tiempo || 0,}))
+                tiempo: actividad.tiempo || 0,
+                // No enviar availableProcesos al backend, es solo para el frontend
+                availableProcesos: undefined
+            }))
         };
 
         console.log("Payload enviado:", dataToSend); // DEBUG: Verificar que los campos de hora estén en el payload
 
         try {
-            const response = await fetch("http://localhost:5000/api/jornadas/completa", {
-                method: "POST",
+            const endpoint = urlJornadaId
+                ? `http://localhost:5000/api/jornadas/${urlJornadaId}`
+                : "http://localhost:5000/api/jornadas/completa";
+            const method = urlJornadaId ? "PUT" : "POST";
+
+            const response = await fetch(endpoint, {
+                method: method,
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(dataToSend)
             });
@@ -440,8 +478,12 @@ export default function RegistroProduccion() {
             }
 
             toast.success("Jornada guardada exitosamente");
-            resetFormForNewJornada(); // Call the reset function
-            // navigate("/operario-dashboard"); // Old navigation
+            if (!urlJornadaId) {
+                resetFormForNewJornada(); // Call the reset function only for new jornadas
+                navigate("/operario-dashboard"); // Navigate after successful creation
+            } else {
+                navigate("/mi-jornada"); // Navigate back to mi-jornada after edit
+            }
         } catch (error) {
             console.error("Error al enviar la jornada:", error);
             toast.error("Error al guardar la jornada");
@@ -451,13 +493,26 @@ export default function RegistroProduccion() {
     };
 
     const handleSubmitActividad = async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Prevent default form submission if this is a separate button
+
+        // Si solo hay una actividad y no estamos editando una jornada específica,
+        // este manejador podría usarse para guardar una actividad individual.
+        // Si hay múltiples actividades o estamos editando una jornada, el botón "Guardar Jornada Completa"
+        // debería usar handleSubmitJornada.
+        // Para simplificar, asumiremos que este manejador es para añadir una actividad a una jornada existente.
+
+        if (!JornadaActualId) {
+            toast.error("Primero debe crear o seleccionar una jornada para añadir actividades.");
+            return;
+        }
+
         setLoading(true);
 
-        const actividad = actividades[0]; 
+        const actividadIndex = 0; // Asumiendo que solo se guarda la primera actividad del array para este botón
+        const actividad = actividades[actividadIndex];
 
         // Enhanced validation to include areaProduccion and maquina
-        if (!actividad.oti || !actividad.areaProduccion || !actividad.maquina || !actividad.tipoTiempo || !actividad.horaInicio || !actividad.horaFin ) {
+        if (!actividad.oti || !actividad.areaProduccion || !actividad.maquina || !actividad.tipoTiempo || !actividad.horaInicio || !actividad.horaFin) {
             toast.error("Por favor complete todos los campos requeridos de la actividad (OTI, Área, Máquina, Tipo Tiempo, Horas).");
             setLoading(false);
             return;
@@ -485,11 +540,14 @@ export default function RegistroProduccion() {
 
         const actividadToSend = {
             ...actividad,
-            fecha: jornadaData.fecha, 
+            fecha: jornadaData.fecha,
             horaInicio,
             horaFin,
             tiempo: actividad.tiempo || 0,
             operario: jornadaData.operario,
+            jornadaId: JornadaActualId, // Asociar la actividad con la jornada actual
+            // No enviar availableProcesos al backend
+            availableProcesos: undefined
         };
         console.log("Datos a enviar (handleSubmitActividad):", actividadToSend);
 
@@ -508,7 +566,33 @@ export default function RegistroProduccion() {
             }
 
             toast.success("Actividad guardada exitosamente");
-            navigate("/mi-jornada");
+            // Limpiar la actividad actual para una nueva entrada si no estamos editando
+            setActividades(prev => prev.map((act, idx) => idx === actividadIndex ? {
+                oti: "",
+                procesos: [],
+                areaProduccion: "",
+                maquina: "",
+                insumos: [],
+                tipoTiempo: "",
+                horaInicio: "",
+                horaFin: "",
+                tiempo: 0,
+                observaciones: "",
+                availableProcesos: []
+            } : act));
+
+            // Si estamos en una jornada existente, recargar las actividades existentes
+            if (urlJornadaId) {
+                // Aquí necesitaríamos una forma de recargar solo las actividades de la jornada
+                // Simplificaremos recargando la página o la lógica de carga inicial.
+                // Para una UX más fluida, deberías actualizar el estado de actividadesExistentes
+                // con la nueva actividad guardada.
+                // Por ahora, una recarga simple o una navegación puede ser suficiente.
+                navigate(`/registro-produccion/${urlJornadaId}`); // Recarga la jornada para ver la nueva actividad
+            } else {
+                // Si no estamos editando, navegamos al dashboard del operario para ver el resumen
+                navigate("/operario-dashboard");
+            }
         } catch (error) {
             console.error("Error al enviar la actividad:", error);
             toast.error("Error al guardar la actividad");
@@ -520,9 +604,9 @@ export default function RegistroProduccion() {
     return (
         <div className="flex bg-gray-100 h-screen">
             <Sidebar />
-            <div className="flex flex-col flex-1"> 
-                <Navbar /> 
-                <div className="flex-1 overflow-auto"> 
+            <div className="flex flex-col flex-1">
+                <Navbar />
+                <div className="flex-1 overflow-auto">
                     <div className="container mx-auto px-4 py-10">
                         <div className="w-full max-w-6xl bg-white rounded-2xl shadow-lg p-8">
                             <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Registro de Producción</h1>
@@ -540,7 +624,8 @@ export default function RegistroProduccion() {
                                 </div>
 
                                 {/* Card para Resumen de Actividades del Día Seleccionado */}
-                                {!jornadaId && jornadaData.fecha && jornadaData.operario && (
+                                {/* Mostrar solo si NO estamos editando una jornada específica */}
+                                {!urlJornadaId && jornadaData.fecha && jornadaData.operario && (
                                     <Card className="mt-6 mb-4 p-6 bg-gray-50 rounded-lg shadow">
                                         <h2 className="text-xl font-semibold text-gray-700 mb-3">
                                             Resumen de Actividades para {new Date(jornadaData.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' })}
@@ -552,13 +637,13 @@ export default function RegistroProduccion() {
                                                 {actividadesResumen.map(act => (
                                                     <div key={act._id} className="p-3 bg-white rounded-md shadow-sm border border-gray-200">
                                                         <p className="font-medium text-blue-600">
-                                                            {(act.procesos && act.procesos.length > 0 ? act.procesos.map(p => p.nombre).join(', ') : "Proceso no especificado")}
+                                                            {act.procesosNombres} {/* Usar el nombre de procesos procesado */}
                                                         </p>
                                                         <div className="text-sm text-gray-600 grid grid-cols-2 gap-x-2">
-                                                            <span><strong>OTI:</strong> {act.oti?.numeroOti || "N/A"}</span>
+                                                            <span><strong>OTI:</strong> {act.otiNumero}</span> {/* Usar el número de OTI procesado */}
                                                             <span>
-                                                                <strong>Horario:</strong> 
-                                                                {act.horaInicio ? new Date(act.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} - 
+                                                                <strong>Horario:</strong>
+                                                                {act.horaInicio ? new Date(act.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"} -
                                                                 {act.horaFin ? new Date(act.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}
                                                             </span>
                                                         </div>
@@ -572,8 +657,34 @@ export default function RegistroProduccion() {
                                 )}
 
                                 <h2 className="text-lg font-semibold mt-4 mb-2 text-gray-800">
-                                    {jornadaId ? "Actividades de la Jornada (Editando)" : "Registrar Nuevas Actividades"}
+                                    {urlJornadaId ? "Actividades de la Jornada (Editando)" : "Registrar Nuevas Actividades"}
                                 </h2>
+
+                                {/* Mostrar actividades existentes si estamos editando */}
+                                {urlJornadaId && actividadesExistentes.length > 0 && (
+                                    <div className="mb-6">
+                                        <h3 className="text-xl font-semibold text-gray-700 mb-4 pb-2 border-b border-gray-300">Actividades Existentes</h3>
+                                        {actividadesExistentes.map((act, index) => (
+                                            <div key={act._id || `existing-${index}`} className="bg-blue-50 p-4 rounded-lg shadow-sm border border-blue-200 mb-3">
+                                                <p className="font-medium text-blue-800">Actividad Existente {index + 1}:</p>
+                                                <ul className="text-sm text-gray-700 list-disc list-inside">
+                                                    <li><strong>OTI:</strong> {act.oti}</li>
+                                                    <li><strong>Área:</strong> {areasProduccionData.find(area => area._id === act.areaProduccion)?.nombre || "N/A"}</li>
+                                                    <li><strong>Máquina:</strong> {maquinasData.find(maq => maq._id === act.maquina)?.nombre || "N/A"}</li>
+                                                    <li><strong>Procesos:</strong> {Array.isArray(act.procesos) ? act.procesos.map(pId => actividad.availableProcesos?.find(ap => ap._id === pId)?.nombre || pId).join(', ') : "N/A"}</li>
+                                                    <li><strong>Insumos:</strong> {Array.isArray(act.insumos) ? act.insumos.map(iId => insumosData.find(ins => ins._id === iId)?.nombre || iId).join(', ') : "N/A"}</li>
+                                                    <li><strong>Tipo de Tiempo:</strong> {act.tipoTiempo}</li>
+                                                    <li><strong>Horario:</strong> {act.horaInicio} - {act.horaFin}</li>
+                                                    <li><strong>Tiempo (min):</strong> {act.tiempo}</li>
+                                                    <li><strong>Observaciones:</strong> {act.observaciones || "Ninguna"}</li>
+                                                </ul>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+
+                                {/* Formulario para nuevas actividades */}
                                 {actividades.map((actividad, index) => (
                                     <div key={index} className="bg-white p-6 rounded-lg shadow-md border border-gray-200 mb-6">
                                         <h3 className="text-xl font-semibold text-gray-700 mb-4 pb-2 border-b border-gray-300">Actividad #{index + 1}</h3>
@@ -612,8 +723,11 @@ export default function RegistroProduccion() {
                                                     classNamePrefix="select"
                                                     placeholder="Seleccionar Proceso(s)"
                                                     isDisabled={!actividad.areaProduccion || (actividad.availableProcesos && actividad.availableProcesos.length === 0)}
-                                                    styles={{ control: (base) => ({ ...base, borderColor: 'hsl(var(--input))', '&:hover': { borderColor: 'hsl(var(--input))' } }), placeholder: (base) => ({ ...base, color: 'hsl(var(--muted-foreground))' }) }}
-                                                    required
+                                                    styles={{
+                                                        control: (base) => ({ ...base, borderColor: 'hsl(var(--input))', '&:hover': { borderColor: 'hsl(var(--input))' } }),
+                                                        placeholder: (base) => ({ ...base, color: 'hsl(var(--muted-foreground))' })
+                                                    }}
+                                                    required // Make required only if area is selected
                                                 />
                                             </div>
                                             <div>
@@ -627,102 +741,81 @@ export default function RegistroProduccion() {
                                             </div>
                                         </div>
 
-                                        {/* Row 3: Insumos (full width) */}
-                                        <div className="mb-4">
-                                            <label htmlFor={`insumos-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Insumo(s):</label>
-                                            <Select
-                                                inputId={`insumos-${index}`}
-                                                isMulti
-                                                name="insumos"
-                                                options={insumosData
-                                                    .sort((a, b) => a.nombre.localeCompare(b.nombre))
-                                                    .map(i => ({ value: i._id, label: i.nombre }))
-                                                }
-                                                value={actividad.insumos.map(insumoId => {
-                                                    const insumoInfo = insumosData.find(i => i._id === insumoId);
-                                                    return insumoInfo ? { value: insumoInfo._id, label: insumoInfo.nombre } : null;
-                                                }).filter(i => i !== null)}
-                                                onChange={(selectedOptions, actionMeta) => handleActividadChange(index, selectedOptions, { name: 'insumos' })}
-                                                className="w-full basic-multi-select"
-                                                classNamePrefix="select"
-                                                placeholder="Seleccionar Insumo(s)"
-                                                styles={{ control: (base) => ({ ...base, borderColor: 'hsl(var(--input))', '&:hover': { borderColor: 'hsl(var(--input))' } }), placeholder: (base) => ({ ...base, color: 'hsl(var(--muted-foreground))' }) }}
-                                            />
-                                        </div>
-
-                                        {/* Row 4: Tipo de Tiempo, Hora Inicio, Hora Fin, Tiempo (min) */}
-                                        <div className="grid md:grid-cols-4 gap-x-6 mb-4">
+                                        {/* Row 3: Insumos & Tipo de Tiempo */}
+                                        <div className="grid md:grid-cols-2 gap-x-6 mb-4">
+                                            <div>
+                                                <label htmlFor={`insumos-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Insumo(s):</label>
+                                                <Select
+                                                    inputId={`insumos-${index}`}
+                                                    isMulti
+                                                    name="insumos"
+                                                    options={insumosData.map(i => ({ value: i._id, label: i.nombre }))}
+                                                    value={actividad.insumos
+                                                        .map(iId => {
+                                                            const insumoInfo = insumosData.find(ins => ins._id === iId);
+                                                            return insumoInfo ? { value: insumoInfo._id, label: insumoInfo.nombre } : null;
+                                                        }).filter(i => i !== null)}
+                                                    onChange={(selectedOptions, actionMeta) => handleActividadChange(index, selectedOptions, actionMeta)}
+                                                    className="w-full basic-multi-select"
+                                                    classNamePrefix="select"
+                                                    placeholder="Seleccionar Insumo(s) (Opcional)"
+                                                    styles={{
+                                                        control: (base) => ({ ...base, borderColor: 'hsl(var(--input))', '&:hover': { borderColor: 'hsl(var(--input))' } }),
+                                                        placeholder: (base) => ({ ...base, color: 'hsl(var(--muted-foreground))' })
+                                                    }}
+                                                />
+                                            </div>
                                             <div>
                                                 <label htmlFor={`tipoTiempo-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Tipo de Tiempo:</label>
                                                 <Input as="select" id={`tipoTiempo-${index}`} name="tipoTiempo" value={actividad.tipoTiempo} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
                                                     <option value="">Seleccionar Tipo</option>
-                                                    <option value="Preparación">Preparación</option>
-                                                    <option value="Operación">Operación</option>
-                                                    <option value="Alimentacion">Alimentación</option>
+                                                    <option value="Productivo">Productivo</option>
+                                                    <option value="Improductivo">Improductivo</option>
+                                                    <option value="Inactivo">Inactivo</option>
                                                 </Input>
                                             </div>
+                                        </div>
+
+                                        {/* Row 4: Horas & Tiempo Calculado */}
+                                        <div className="grid md:grid-cols-3 gap-x-6 mb-4">
                                             <div>
-                                                <label htmlFor={`horaInicioActividad-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Hora Inicio:</label>
-                                                <input type="time" id={`horaInicioActividad-${index}`} name="horaInicio" value={actividad.horaInicio || ''} onChange={(e) => handleActividadChange(index, e)} required className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                                                <label htmlFor={`horaInicio-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Hora Inicio:</label>
+                                                <Input id={`horaInicio-${index}`} type="time" name="horaInicio" value={actividad.horaInicio} onChange={(e) => handleActividadChange(index, e)} required className="w-full" />
                                             </div>
                                             <div>
-                                                <label htmlFor={`horaFinActividad-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Hora Fin:</label>
-                                                <input type="time" id={`horaFinActividad-${index}`} name="horaFin" value={actividad.horaFin || ''} onChange={(e) => handleActividadChange(index, e)} required className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+                                                <label htmlFor={`horaFin-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Hora Fin:</label>
+                                                <Input id={`horaFin-${index}`} type="time" name="horaFin" value={actividad.horaFin} onChange={(e) => handleActividadChange(index, e)} required className="w-full" />
                                             </div>
                                             <div>
-                                                <label htmlFor={`tiempo-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Tiempo (min):</label>
-                                                <Input
-                                                    id={`tiempo-${index}`}
-                                                    type="number"
-                                                    name="tiempo"
-                                                    value={(() => {
-                                                        const inicio = actividad.horaInicio;
-                                                        const fin = actividad.horaFin;
-                                                        if (inicio && fin) {
-                                                            const inicioDate = new Date(`1970-01-01T${inicio}:00`);
-                                                            const finDate = new Date(`1970-01-01T${fin}:00`);
-                                                            if (finDate > inicioDate) {
-                                                                return Math.floor((finDate - inicioDate) / 60000);
-                                                            }
-                                                        }
-                                                        return 0;
-                                                    })()}
-                                                    readOnly
-                                                    disabled
-                                                    className="w-full bg-gray-100 cursor-not-allowed"
-                                                />
+                                                <label htmlFor={`tiempo-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Tiempo (minutos):</label>
+                                                <Input id={`tiempo-${index}`} type="number" name="tiempo" value={actividad.tiempo} disabled className="w-full" />
                                             </div>
                                         </div>
 
-                                        {/* Row 5: Observaciones (full width) */}
+                                        {/* Row 5: Observaciones */}
                                         <div className="mb-4">
                                             <label htmlFor={`observaciones-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Observaciones:</label>
-                                            <Textarea id={`observaciones-${index}`} name="observaciones" value={actividad.observaciones} onChange={(e) => handleActividadChange(index, e)} placeholder="Añadir observaciones sobre la actividad" className="w-full" />
+                                            <Textarea id={`observaciones-${index}`} name="observaciones" value={actividad.observaciones} onChange={(e) => handleActividadChange(index, e)} placeholder="Notas adicionales sobre la actividad" className="w-full" rows="3" />
                                         </div>
 
-                                        {/* Row 6: Eliminar Actividad button */}
+                                        {/* Botón para eliminar actividad si hay más de una */}
                                         {actividades.length > 1 && (
                                             <div className="flex justify-end mt-4">
-                                                <Button type="button" variant="destructive" onClick={() => removeActividad(index)} className="px-4 py-2">
-                                                    Eliminar Actividad #{index + 1}
+                                                <Button type="button" onClick={() => removeActividad(index)} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md">
+                                                    Eliminar Actividad
                                                 </Button>
                                             </div>
                                         )}
                                     </div>
                                 ))}
 
-                                <div className="flex flex-col sm:flex-row justify-between items-center mt-6 pt-6 border-t gap-4">
-                                    <Button type="button" onClick={addActividad} variant="outline" className="w-full sm:w-auto">
-                                        Agregar Nueva Actividad
+                                <div className="flex justify-between items-center mt-6">
+                                    <Button type="button" onClick={addActividad} className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md">
+                                        Agregar Otra Actividad
                                     </Button>
-                                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                                        <Button type="button" onClick={handleSubmitActividad} className="w-full sm:w-auto">
-                                            Guardar Actividad Individual
-                                        </Button>
-                                        <Button type="submit" className="w-full sm:w-auto"> {/* Este botón gatilla handleSubmitJornada */}
-                                            Guardar Jornada Completa
-                                        </Button>
-                                    </div>
+                                    <Button type="submit" disabled={loading} className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-md text-lg">
+                                        {loading ? "Guardando..." : (urlJornadaId ? "Actualizar Jornada" : "Guardar Jornada Completa")}
+                                    </Button>
                                 </div>
                             </form>
                         </div>
