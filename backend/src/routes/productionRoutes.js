@@ -6,6 +6,7 @@ const AreaProduccion = require('../models/AreaProduccion'); // Asegúrate de que
 const Proceso = require('../models/Proceso'); // Asegúrate de que Proceso esté importado
 const Insumo = require('../models/Insumos'); // Asegúrate de que Insumos esté importado
 const Operario = require('../models/Operario'); // Asegúrate de que Operario esté importado
+const productionController = require('../controllers/productionController'); // Importar el controlador de producción
 
 
 // Rutas para obtener listas
@@ -48,6 +49,10 @@ router.get('/insumos', async (req, res) => {
         res.status(500).json({ message: "Error interno del servidor al obtener insumos." });
     }
 });
+
+// NUEVA RUTA para registrar una producción (actividad individual)
+// Esto conectará la llamada frontend a /api/produccion/registrar con el controlador existente
+router.post('/registrar', productionController.registrarProduccion);
 
 // Ruta para obtener jornada por operario y fecha
 router.get('/operario/:operarioId/fecha/:fecha', async (req, res) => {
@@ -155,7 +160,7 @@ router.put('/completa/:id', async (req, res) => {
     }
 });
 
-// ESTA ES LA RUTA QUE ESTABA MAL ANIDADA Y AHORA ESTÁ EN EL NIVEL CORRECTO
+
 router.post('/:jornadaId/actividades', async (req, res) => {
     try {
         const { jornadaId } = req.params;

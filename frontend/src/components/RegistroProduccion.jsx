@@ -6,7 +6,22 @@ import { Input, Textarea, Button, Card } from "../components/ui/index";
 import Navbar from "./Navbar";
 import Select from 'react-select';
 
-export default function RegistroProduccion() {
+const parseLocalDate = (dateString) => {
+  if (!dateString || typeof dateString !== 'string') return null;
+  const datePart = dateString.split('T')[0];
+  const parts = datePart.split('-');
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10); // month is 1-12 from input
+    const day = parseInt(parts[2], 10);
+    if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+      return new Date(year, month - 1, day); // month is 0-indexed for Date constructor
+    }
+  }
+  return null; // Return null if parsing fails
+};
+
+export default function  RegistroProduccion() {
     const { jornadaId: urlJornadaId } = useParams(); // Renombrar para evitar conflicto con el estado local
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
@@ -198,44 +213,55 @@ export default function RegistroProduccion() {
     // useEffect para cargar actividades existentes al editar una jornada
     useEffect(() => {
         const fetchActividadesResumen = async () => {
-            // Solo cargar resumen si NO estamos editando una jornada específica y tenemos fecha y operario
-            if (jornadaData.fecha && jornadaData.operario && !urlJornadaId) { // Corregido: usar urlJornadaId
+            if (jornadaData.fecha && jornadaData.operario && !urlJornadaId) {
                 setLoadingResumen(true);
                 try {
                     const response = await fetch(`http://localhost:5000/api/jornadas/operario/${jornadaData.operario}?fecha=${jornadaData.fecha}`);
                     if (!response.ok) {
                         if (response.status === 404) {
-                            // console.warn("Resumen: Jornadas no encontradas para el operario/fecha."); // Optional log
                             setActividadesResumen([]);
                         } else {
-                            // console.error(`Resumen: Error ${response.status} al cargar jornadas.`); // Optional log
                             toast.error("Error al cargar resumen de actividades.");
                             setActividadesResumen([]);
                         }
                     } else {
-                        const jornadasDelDia = await response.json();
-                        console.log("Fetched jornadasDelDia:", jornadasDelDia);
-                        if (jornadasDelDia && jornadasDelDia.length > 0) {
-                            let todasLasActividadesDelDia = jornadasDelDia.reduce((acc, jornada) => {
-                                const actividadesDeJornada = jornada.registros || [];
-                                return acc.concat(actividadesDeJornada.map(act => ({
-                                    ...act,
-                                    fechaJornada: jornada.fecha,
-                                    // Incluir el número de OTI si está disponible
-                                    otiNumero: act.oti?.numeroOti || "N/A",
-                                    // Asegurarse de que el proceso tenga nombre para mostrar
-                                    procesosNombres: Array.isArray(act.procesos) ? act.procesos.map(p => p.nombre).join(', ') : "N/A"
-                                })));
-                            }, []);
+                        const jornadasDelDiaFetched = await response.json();
+                        console.log("Fetched jornadasDelDia from API:", jornadasDelDiaFetched);
 
-                            // Sort activities by horaInicio
+                        if (jornadasDelDiaFetched && jornadasDelDiaFetched.length > 0) {
+                            const selectedDateStr = jornadaData.fecha; // This is YYYY-MM-DD
+
+                            let todasLasActividadesDelDia = jornadasDelDiaFetched
+                                .filter(jornada => {
+                                    if (!jornada.fecha) return false; // Guard clause for missing date
+                                    const backendJornadaDateStr = jornada.fecha.split('T')[0]; // Extract YYYY-MM-DD
+                                    return backendJornadaDateStr === selectedDateStr;
+                                })
+                                .reduce((acc, jornada) => {
+                                    const actividadesDeJornada = jornada.registros || [];
+                                    return acc.concat(actividadesDeJornada.map(act => ({
+                                        ...act,
+                                        fechaJornada: jornada.fecha,
+                                        otiNumero: act.oti?.numeroOti || "N/A",
+                                        procesosNombres: Array.isArray(act.procesos) ? act.procesos.map(p => p.nombre).join(', ') : "N/A"
+                                    })));
+                                }, []);
+
                             todasLasActividadesDelDia.sort((a, b) => {
-                                const dateA = new Date(a.horaInicio);
-                                const dateB = new Date(b.horaInicio);
-                                return dateA - dateB;
+                                const dateA = a.horaInicio ? new Date(a.horaInicio) : null;
+                                const dateB = b.horaInicio ? new Date(b.horaInicio) : null;
+                                
+                                if (!dateA && !dateB) return 0;
+                                if (!dateA) return 1; // Treat null/invalid dates as later
+                                if (!dateB) return -1;
+                                if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
+                                if (isNaN(dateA.getTime())) return 1;
+                                if (isNaN(dateB.getTime())) return -1;
+                                
+                                return dateA.getTime() - dateB.getTime();
                             });
 
-                            console.log("Processed and sorted todasLasActividadesDelDia:", todasLasActividadesDelDia);
+                            console.log("Filtered and sorted todasLasActividadesDelDia for selected date:", todasLasActividadesDelDia);
                             setActividadesResumen(todasLasActividadesDelDia);
                         } else {
                             setActividadesResumen([]);
@@ -253,7 +279,7 @@ export default function RegistroProduccion() {
         };
 
         fetchActividadesResumen();
-    }, [jornadaData.fecha, jornadaData.operario, urlJornadaId]); // Corregido: usar urlJornadaId
+    }, [jornadaData.fecha, jornadaData.operario, urlJornadaId]);
 
     // useEffect para depurar actividadesResumen
     useEffect(() => {
@@ -482,28 +508,15 @@ export default function RegistroProduccion() {
     };
 
     const handleSubmitActividad = async (e) => {
-        e.preventDefault(); // Prevent default form submission if this is a separate button
-
-        // Si solo hay una actividad y no estamos editando una jornada específica,
-        // este manejador podría usarse para guardar una actividad individual.
-        // Si hay múltiples actividades o estamos editando una jornada, el botón "Guardar Jornada Completa"
-        // debería usar handleSubmitJornada.
-        // Para simplificar, asumiremos que este manejador es para añadir una actividad a una jornada existente.
-
-        if (!JornadaActualId) {
-            toast.error("Primero debe crear o seleccionar una jornada para añadir actividades.");
-            return;
-        }
-
+        e.preventDefault(); 
         setLoading(true);
 
-        const actividadIndex = 0; // Asumiendo que solo se guarda la primera actividad del array para este botón
-        const actividad = actividades[actividadIndex];
+        const actividad = actividades[0]
 
-        // Enhanced validation to include areaProduccion and maquina
-        if (!actividad.oti || !actividad.areaProduccion || !actividad.maquina || !actividad.tipoTiempo || !actividad.horaInicio || !actividad.horaFin) {
+        if (!actividad.oti || !actividad.areaProduccion || !actividad.maquina || !actividad.tipoTiempo || !actividad.horaInicio || !actividad.horaFin ) {
             toast.error("Por favor complete todos los campos requeridos de la actividad (OTI, Área, Máquina, Tipo Tiempo, Horas).");
             setLoading(false);
+
             return;
         }
         // Ensure procesos and insumos are arrays, even if empty
@@ -534,9 +547,6 @@ export default function RegistroProduccion() {
             horaFin,
             tiempo: actividad.tiempo || 0,
             operario: jornadaData.operario,
-            jornadaId: JornadaActualId, // Asociar la actividad con la jornada actual
-            // No enviar availableProcesos al backend
-            availableProcesos: undefined
         };
 
 
@@ -555,33 +565,7 @@ export default function RegistroProduccion() {
             }
 
             toast.success("Actividad guardada exitosamente");
-            // Limpiar la actividad actual para una nueva entrada si no estamos editando
-            setActividades(prev => prev.map((act, idx) => idx === actividadIndex ? {
-                oti: "",
-                procesos: [],
-                areaProduccion: "",
-                maquina: "",
-                insumos: [],
-                tipoTiempo: "",
-                horaInicio: "",
-                horaFin: "",
-                tiempo: 0,
-                observaciones: "",
-                availableProcesos: []
-            } : act));
-
-            // Si estamos en una jornada existente, recargar las actividades existentes
-            if (urlJornadaId) {
-                // Aquí necesitaríamos una forma de recargar solo las actividades de la jornada
-                // Simplificaremos recargando la página o la lógica de carga inicial.
-                // Para una UX más fluida, deberías actualizar el estado de actividadesExistentes
-                // con la nueva actividad guardada.
-                // Por ahora, una recarga simple o una navegación puede ser suficiente.
-                navigate(`/registro-produccion/${urlJornadaId}`); // Recarga la jornada para ver la nueva actividad
-            } else {
-                // Si no estamos editando, navegamos al dashboard del operario para ver el resumen
-                navigate("/operario-dashboard");
-            }
+            navigate("/mi-jornada");
         } catch (error) {
             toast.error("No se pudo guardar la actividad. Intenta de nuevo más tarde.");
         } finally {
@@ -616,7 +600,7 @@ export default function RegistroProduccion() {
                                 {!urlJornadaId && jornadaData.fecha && jornadaData.operario && (
                                     <Card className="mt-6 mb-4 p-6 bg-gray-50 rounded-lg shadow">
                                         <h2 className="text-xl font-semibold text-gray-700 mb-3">
-                                            Resumen de Actividades para {new Date(jornadaData.fecha).toLocaleDateString('es-ES', { timeZone: 'UTC' })}
+                                            Resumen de Actividades para {parseLocalDate(jornadaData.fecha)?.toLocaleDateString('es-ES')}
                                         </h2>
                                         {loadingResumen ? (
                                             <p className="text-gray-600">Cargando resumen...</p>
@@ -757,9 +741,9 @@ export default function RegistroProduccion() {
                                                 <label htmlFor={`tipoTiempo-${index}`} className="block text-sm font-medium text-gray-700 mb-1">Tipo de Tiempo:</label>
                                                 <Input as="select" id={`tipoTiempo-${index}`} name="tipoTiempo" value={actividad.tipoTiempo} onChange={(e) => handleActividadChange(index, e)} required className="w-full">
                                                     <option value="">Seleccionar Tipo</option>
-                                                    <option value="Productivo">Productivo</option>
-                                                    <option value="Improductivo">Improductivo</option>
-                                                    <option value="Inactivo">Inactivo</option>
+                                                    <option value="Operación">Operación</option>
+                                                    <option value="Preparación">Preparación</option>
+                                                    <option value="Alimentación">Alimentación</option>
                                                 </Input>
                                             </div>
                                         </div>
@@ -805,7 +789,8 @@ export default function RegistroProduccion() {
                                         </Button>
                                         
                                     </div>
-                                <div className="flex justify-between items-center mt-6">
+
+                                
                                     <Button type="button" onClick={addActividad} className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md">
                                         Agregar Otra Actividad
                                     </Button>
