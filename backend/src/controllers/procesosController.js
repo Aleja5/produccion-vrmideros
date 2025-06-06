@@ -2,7 +2,7 @@ const Proceso = require('../models/Proceso');
 
 // Obtener todos los procesos
 const obtenerProcesos = async (req, res) => {
-    const { page = 1, limit = 10, nombre, search, areaId } = req.query; // Added areaId
+    const { page = 1, limit = 100, nombre, search, areaId } = req.query; // Added areaId
     const query = {};
 
     if (nombre && search) {

@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword'; // Componente de recuperación
 import AdminDashboard from './pages/AdminDashboard';
 import AdminHome from './pages/AdminHome';
+import ConsultaJornadas from './pages/ConsultaJornadas';
 import ValidateCedula from './pages/ValidateCedula';
 import OperarioDashboard from './pages/OperarioDashboard';
 import RegistroProduccion from './components/RegistroProduccion';
@@ -46,6 +47,16 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Ruta protegida: Admin/Jornadas */}
+        <Route
+          path="/admin/jornadas"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ConsultaJornadas />
             </ProtectedRoute>
           }
         />                

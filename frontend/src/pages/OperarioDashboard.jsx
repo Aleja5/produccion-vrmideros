@@ -44,8 +44,7 @@ const OperarioDashboard = () => {
         setJornadas([...data]);
         setError(null);
     } catch (error) {
-        console.error('Error al obtener las jornadas:', error);
-        setError('No se pudieron cargar las jornadas.');
+        setError('No se pudieron cargar las jornadas. Intenta de nuevo más tarde.');
         setJornadas([]);
     } finally {
         setLoading(false);
@@ -147,8 +146,7 @@ const OperarioDashboard = () => {
                             setActualizar((prev) => !prev);
                             toast.success("Jornada eliminada con éxito");
                         } catch (error) {
-                            console.error('Error al eliminar la jornada:', error);
-                            toast.error('No se pudo eliminar la jornada.');
+                            toast.error('No se pudo eliminar la jornada. Intenta de nuevo más tarde.');
                         }
                     }
                 },
@@ -170,8 +168,7 @@ const OperarioDashboard = () => {
             toast.success(`Jornada ${jornadaId} guardada como completa`);
             setActualizar((prev) => !prev);
         } catch (error) {
-            console.error('Error al guardar la jornada como completa:', error);
-            toast.error('No se pudo guardar la jornada como completa.');
+            toast.error('No se pudo guardar la jornada como completa. Intenta de nuevo más tarde.');
         }
     };
 
@@ -181,8 +178,7 @@ const OperarioDashboard = () => {
             toast.success('Jornada eliminada con éxito');
             setActualizar((prev) => !prev);
         } catch (error) {
-            console.error('Error al eliminar la jornada:', error);
-            toast.error('No se pudo eliminar la jornada.');
+            toast.error('No se pudo eliminar la jornada. Intenta de nuevo más tarde.');
         }
     };
 

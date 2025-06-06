@@ -15,12 +15,56 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null); 
   const [allProcesos, setAllProcesos] = useState([]); // Todos los procesos
-  const [filteredProcesos, setFilteredProcesos] = useState([]); // Procesos filtrados por área
+  // Procesos filtrados por área (legacy, para compatibilidad con el select actual)
+  const [filteredProcesos, setFilteredProcesos] = useState([]);
+  // Procesos válidos para el área seleccionada (fetch dinámico, igual que en RegistroProduccion)
+  const [availableProcesos, setAvailableProcesos] = useState([]);
   const [insumosColeccion, setInsumosColeccion] = useState([]);
   const [maquinas, setMaquinas] = useState([]);
   const [areasProduccion, setAreasProduccion] = useState([]);
 
   const navigate = useNavigate();
+
+  // Helper function to format time values
+  const formatTime = (timeValue) => {
+    if (!timeValue) return "";
+    // Check if it's a Date object or an ISO string with 'T'
+    if (timeValue instanceof Date || (typeof timeValue === 'string' && timeValue.includes('T'))) {
+      try {
+        // Format to HH:MM using toLocaleTimeString
+        return new Date(timeValue).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false });
+      } catch (e) {
+        console.error("Error formatting date:", e);
+        return ""; // Return empty if formatting fails
+      }
+    } else if (typeof timeValue === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(timeValue)) {
+      // If it's already a string like "HH:MM" or "HH:MM:SS", return the HH:MM part
+      return timeValue.slice(0, 5);
+    }
+    // Fallback for unparseable or unexpected formats
+    return "";
+  };
+
+  // Normaliza el campo OTI para que siempre sea { numeroOti: string }
+  function normalizeOti(oti) {
+    if (!oti) return { numeroOti: "" };
+    if (typeof oti === "object") {
+      if (oti.numeroOti) {
+        return { numeroOti: String(oti.numeroOti) }; // Ensure numeroOti is a string
+      }
+      // Si es un objeto pero no tiene numeroOti (e.g., it's just an _id), return empty numeroOti
+      return { numeroOti: "" };
+    }
+    if (typeof oti === "string") {
+      // If it looks like an ObjectId, treat it as if it has no displayable numeroOti
+      if (/^[a-f\d]{24}$/i.test(oti)) {
+        return { numeroOti: "" };
+      }
+      return { numeroOti: oti }; // It's a string, hopefully the numeroOti itself
+    }
+    return { numeroOti: "" }; // Default fallback
+  }
+
 
   useEffect(() => {
     let timeoutId;
@@ -62,7 +106,6 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
           if (typeof fetchedData === 'object' && fetchedData !== null && !Array.isArray(fetchedData)) {
             setProduccionLocal(fetchedData);
           } else {
-            console.error("Unexpected data format from API:", response.data);
             setError('Formato de datos inesperado del servidor.');
             setProduccionLocal(null);
           }
@@ -71,8 +114,7 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
           setError('No se encontró el registro de producción.');
         }
       } catch (err) {
-        console.error("Error fetching production data:", err);
-        setError(err.response?.data?.msg || err.message || 'Error al cargar los datos de producción.');
+        setError('No se pudo cargar los datos de producción. Intenta de nuevo más tarde.');
         setProduccionLocal(null);
       } finally {
         setIsLoading(false);
@@ -95,44 +137,87 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
   useEffect(() => {
     if (produccionLocal) {
       const fechaFormateada = produccionLocal.fecha ? new Date(produccionLocal.fecha).toISOString().split('T')[0] : "";
-      const formatTime = (timeValue) => {
-        if (!timeValue) return "";
-        if (timeValue instanceof Date || (typeof timeValue === 'string' && timeValue.includes('T'))) {
-          try {
-            return new Date(timeValue).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false });
-          } catch (e) { return ""; }
-        } else if (typeof timeValue === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(timeValue)) {
-          return timeValue.slice(0,5);
+      // formatTime is now defined at component scope
+      // normalizeOti is now defined at component scope
+
+      // --- NUEVO: Esperar a que allProcesos esté cargado antes de setear procesos ---
+      // Si no hay procesos cargados aún, esperar y reintentar
+      if (!allProcesos || allProcesos.length === 0) {
+        // Esperar a que se cargue allProcesos antes de setRegistroEditado
+        return;
+      }
+
+      // Normalizar procesos: obtener siempre array de IDs (string)
+      let procesosIds = [];
+      if (Array.isArray(produccionLocal.procesos)) {
+        procesosIds = produccionLocal.procesos.map(p => (typeof p === 'object' && p !== null ? p._id : p)).filter(Boolean);
+      } else if (Array.isArray(produccionLocal.proceso)) {
+        procesosIds = produccionLocal.proceso.map(p => (typeof p === 'object' && p !== null ? p._id : p)).filter(Boolean);
+      } else if (produccionLocal.procesos?._id) {
+        procesosIds = [produccionLocal.procesos._id];
+      } else if (produccionLocal.proceso?._id) {
+        procesosIds = [produccionLocal.proceso._id];
+      } else if (produccionLocal.procesos) {
+        procesosIds = [produccionLocal.procesos];
+      } else if (produccionLocal.proceso) {
+        procesosIds = [produccionLocal.proceso];
+      }
+
+      // Validar que los procesos existan en allProcesos (por si hay datos antiguos)
+      procesosIds = procesosIds.filter(pid => allProcesos.some(p => String(p._id) === String(pid)));
+
+      // Normalizar insumos: obtener siempre array de IDs (string)
+      let insumosIds = [];
+      if (Array.isArray(produccionLocal.insumos)) {
+        insumosIds = produccionLocal.insumos.map(i => (typeof i === 'object' && i !== null ? i._id : i)).filter(Boolean);
+      } else if (produccionLocal.insumos?._id) {
+        insumosIds = [produccionLocal.insumos._id];
+      } else if (produccionLocal.insumos) {
+        insumosIds = [produccionLocal.insumos];
+      }
+
+      // Normalizar área de producción: siempre string (ID)
+      let areaProduccionId = "";
+      if (produccionLocal.areaProduccion) {
+        if (typeof produccionLocal.areaProduccion === 'object' && produccionLocal.areaProduccion._id) {
+          areaProduccionId = String(produccionLocal.areaProduccion._id);
+        } else {
+          areaProduccionId = String(produccionLocal.areaProduccion);
         }
-        return "";
-      };
+      }
+
+      // Debug temporal para ver los datos
+      console.log('allProcesos:', allProcesos);
+      console.log('procesosIds:', procesosIds);
+      console.log('areaProduccionId:', areaProduccionId);
+
       setRegistroEditado({
-        ...produccionLocal,
+        ...produccionLocal, // Spread first to get all existing fields
         fecha: fechaFormateada,
-        oti: { numeroOti: produccionLocal.oti?.numeroOti || "" },
-        procesos: Array.isArray(produccionLocal.procesos)
-          ? produccionLocal.procesos.map(p => p._id || p)
-          : (Array.isArray(produccionLocal.proceso)
-              ? produccionLocal.proceso.map(p => p._id || p)
-              : (produccionLocal.proceso?._id ? [produccionLocal.proceso._id] : produccionLocal.proceso ? [produccionLocal.proceso] : [])),
-        insumos: Array.isArray(produccionLocal.insumos)
-          ? produccionLocal.insumos.map(i => i._id || i)
-          : (produccionLocal.insumos?._id ? [produccionLocal.insumos._id] : produccionLocal.insumos ? [produccionLocal.insumos] : []),
+        oti: normalizeOti(produccionLocal.oti), // Use component-scoped normalizeOti
+        procesos: procesosIds,
+        insumos: insumosIds,
         maquina: produccionLocal.maquina?._id || produccionLocal.maquina || "",
-        areaProduccion: produccionLocal.areaProduccion?._id || produccionLocal.areaProduccion || "",
+        areaProduccion: areaProduccionId,
         observaciones: produccionLocal.observaciones || "",
         tipoTiempo: produccionLocal.tipoTiempo || "",
-        horaInicio: formatTime(produccionLocal.horaInicio),
-        horaFin: formatTime(produccionLocal.horaFin),
+        horaInicio: formatTime(produccionLocal.horaInicio), // Use component-scoped formatTime
+        horaFin: formatTime(produccionLocal.horaFin),       // Use component-scoped formatTime
         tiempo: produccionLocal.tiempo || 0
+        // Ensure operario is handled if it's part of produccionLocal and needs to be in registroEditado
+        // operario: produccionLocal.operario?._id || produccionLocal.operario || "", // Example if needed
       });
+
+  // REMOVE REDUNDANT normalizeOti definition from here if it existed
+  // REMOVE REDUNDANT formatTime definition from here
+
     } else {
       setRegistroEditado({
         oti: { numeroOti: "" }, procesos: [], insumos: [], maquina: "", areaProduccion: "",
         fecha: "", tipoTiempo: "", horaInicio: "", horaFin: "", tiempo: 0, observaciones: ""
       });
     }
-  }, [produccionLocal]);
+  }, [produccionLocal, allProcesos]);
 
   useEffect(() => {
     const cargarDatosColecciones = async () => {
@@ -150,34 +235,56 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
         setAreasProduccion(areasResponse.data);
 
       } catch (error) {
-        console.error("Error al cargar los datos de las colecciones:", error);
-        toast.error("Error al cargar los datos para la edición.");
+        toast.error("No se pudieron cargar los datos para la edición. Intenta de nuevo más tarde.");
       }
     };
 
     cargarDatosColecciones();
   }, []);
 
-  // Filtrar procesos por área seleccionada
+  // Filtrado dinámico de procesos por área (fetch igual que en RegistroProduccion)
   useEffect(() => {
-    if (!registroEditado.areaProduccion) {
-      setFilteredProcesos([]);
-      return;
-    }
-    const filtrados = allProcesos.filter(p => {
-      if (!p.areaProduccion) return false;
-      if (typeof p.areaProduccion === 'object' && p.areaProduccion._id) {
-        return String(p.areaProduccion._id) === String(registroEditado.areaProduccion);
+    const fetchProcesosForArea = async (areaId) => {
+      if (!areaId) {
+        setAvailableProcesos([]);
+        setFilteredProcesos([]);
+        setRegistroEditado(prev => ({ ...prev, procesos: [] }));
+        return;
       }
-      return String(p.areaProduccion) === String(registroEditado.areaProduccion);
-    });
-    setFilteredProcesos(filtrados);
-    // Si los procesos seleccionados ya no pertenecen al área, quitarlos
-    setRegistroEditado(prev => ({
-      ...prev,
-      procesos: prev.procesos ? prev.procesos.filter(pid => filtrados.some(p => String(p._id) === String(pid))) : []
-    }));
-  }, [registroEditado.areaProduccion, allProcesos]);
+      try {
+        const response = await fetch(`http://localhost:5000/api/procesos?areaId=${areaId}`);
+        if (response.ok) {
+          const data = await response.json();
+          let determinedProcesos = [];
+          if (Array.isArray(data)) {
+            determinedProcesos = data;
+          } else if (data && Array.isArray(data.procesos)) {
+            determinedProcesos = data.procesos;
+          } else if (data && data.procesos && !Array.isArray(data.procesos)) {
+            determinedProcesos = [];
+          } else {
+            determinedProcesos = [];
+          }
+          setAvailableProcesos(determinedProcesos);
+          setFilteredProcesos(determinedProcesos); // Para compatibilidad con el select actual
+          // Limpiar procesos no válidos
+          setRegistroEditado(prev => {
+            const nuevosProcesos = (prev.procesos || []).filter(pid => determinedProcesos.some(p => String(p._id) === String(pid)));
+            return { ...prev, procesos: nuevosProcesos };
+          });
+        } else {
+          setAvailableProcesos([]);
+          setFilteredProcesos([]);
+          setRegistroEditado(prev => ({ ...prev, procesos: [] }));
+        }
+      } catch (error) {
+        setAvailableProcesos([]);
+        setFilteredProcesos([]);
+        setRegistroEditado(prev => ({ ...prev, procesos: [] }));
+      }
+    };
+    fetchProcesosForArea(registroEditado.areaProduccion);
+  }, [registroEditado.areaProduccion]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -206,10 +313,19 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
     } else if (selectedOptions && selectedOptions.target) {
       // Evento de select nativo (maquina, tipoTiempo, areaProduccion)
       const { name, value } = selectedOptions.target;
-      setRegistroEditado(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      if (name === 'areaProduccion') {
+        // Al cambiar el área, limpiar procesos y fetch dinámico (el useEffect se encarga del fetch)
+        setRegistroEditado(prev => ({
+          ...prev,
+          [name]: value,
+          procesos: []
+        }));
+      } else {
+        setRegistroEditado(prev => ({
+          ...prev,
+          [name]: value
+        }));
+      }
     }
   };
 
@@ -251,21 +367,34 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
 
               const normalizarTexto = (texto) => (typeof texto === 'string' ? texto.trim().toLowerCase() : texto);
 
-              const otiId = await verificarYCrear(normalizarTexto(registroEditado.oti?.numeroOti || ''), "oti");
-              const procesosIds = registroEditado.procesos;
-              const insumoId = registroEditado.insumos;
+              // --- OTI PATCH: Mantener el número OTI en el estado tras guardar ---
+              const numeroOtiOriginalFormulario = registroEditado.oti?.numeroOti || "";
+              const otiId = await verificarYCrear(normalizarTexto(numeroOtiOriginalFormulario), "oti");
+              // Asegurar que procesos e insumos sean siempre arrays de strings
+              const procesosIds = Array.isArray(registroEditado.procesos)
+                ? registroEditado.procesos.filter(Boolean).map(String)
+                : registroEditado.procesos ? [String(registroEditado.procesos)] : [];
+              const insumosIds = Array.isArray(registroEditado.insumos)
+                ? registroEditado.insumos.filter(Boolean).map(String)
+                : registroEditado.insumos ? [String(registroEditado.insumos)] : [];
               const areaId = registroEditado.areaProduccion;
               const maquinaId = registroEditado.maquina;
 
-              if (!otiId || !procesosIds || procesosIds.length === 0 || !areaId || !maquinaId || !insumoId) {
+              if (!otiId || !procesosIds || procesosIds.length === 0 || !areaId || !maquinaId || !insumosIds || insumosIds.length === 0) {
                 toast.error("❌ No se pudieron verificar o crear todas las entidades requeridas.");
                 return;
               }
 
               let tiempo = 0;
-              if (registroEditado.horaInicio && registroEditado.horaFin) {
-                const inicio = new Date(`1970-01-01T${registroEditado.horaInicio}:00`);
-                const fin = new Date(`1970-01-01T${registroEditado.horaFin}:00`);
+              let horaInicioISO = null;
+              let horaFinISO = null;
+              if (registroEditado.horaInicio && registroEditado.horaFin && registroEditado.fecha) {
+                // Combinar fecha y hora para formato ISO
+                const [year, month, day] = registroEditado.fecha.split('-');
+                horaInicioISO = new Date(Number(year), Number(month) - 1, Number(day), ...registroEditado.horaInicio.split(':')).toISOString();
+                horaFinISO = new Date(Number(year), Number(month) - 1, Number(day), ...registroEditado.horaFin.split(':')).toISOString();
+                const inicio = new Date(horaInicioISO);
+                const fin = new Date(horaFinISO);
                 if (fin > inicio) {
                   tiempo = Math.floor((fin - inicio) / 60000);
                 }
@@ -276,13 +405,13 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
                 oti: otiId,
                 operario: produccionLocal?.operario?._id || produccionLocal?.operario || registroEditado.operario,
                 procesos: procesosIds,
-                insumos: insumoId,
+                insumos: insumosIds,
                 areaProduccion: areaId,
                 maquina: maquinaId,
                 fecha: registroEditado.fecha || null,
                 tipoTiempo: registroEditado.tipoTiempo,
-                horaInicio: registroEditado.horaInicio,
-                horaFin: registroEditado.horaFin,
+                horaInicio: horaInicioISO,
+                horaFin: horaFinISO,
                 tiempo,
                 observaciones: registroEditado.observaciones
               };
@@ -296,11 +425,55 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
 
               if (response.status >= 200 && response.status < 300) {
                 toast.success("✅ Producción actualizada con éxito");
-                if (onGuardar) onGuardar();
-                if (onClose) onClose();
-                if (!onGuardar && !onClose && paramId) navigate(-1); // Go back if in page mode and was loaded by paramId
+
+                if (response.data && response.data.produccion) {
+                  const produccionActualizadaBackend = response.data.produccion;
+
+                  // Preparar datos para setProduccionLocal, preservando el OTI number string
+                  const nuevaProduccionLocal = {
+                    ...produccionActualizadaBackend,
+                    oti: { numeroOti: numeroOtiOriginalFormulario }, // Use the string OTI number from form
+                    // Backend might return ISO strings for dates/times, keep them as is for produccionLocal
+                    // or re-normalize if needed. For display, formatTime will be used by setRegistroEditado.
+                  };
+                  setProduccionLocal(nuevaProduccionLocal);
+
+                  // También actualizar el formulario de edición para reflejar los datos guardados
+                  // y mantener la consistencia, especialmente el OTI.
+                  setRegistroEditado({
+                    ...nuevaProduccionLocal, // Start with the updated local data (which includes correct OTI string)
+                    // Ensure all fields for the form are correctly set and formatted for display
+                    fecha: nuevaProduccionLocal.fecha ? new Date(nuevaProduccionLocal.fecha).toISOString().split('T')[0] : "",
+                    // oti is already correct from nuevaProduccionLocal
+                    procesos: (nuevaProduccionLocal.procesos || []).map(p => (typeof p === 'object' && p !== null ? p._id : p)).filter(Boolean),
+                    insumos: (nuevaProduccionLocal.insumos || []).map(i => (typeof i === 'object' && i !== null ? i._id : i)).filter(Boolean),
+                    maquina: nuevaProduccionLocal.maquina?._id || nuevaProduccionLocal.maquina || "",
+                    areaProduccion: nuevaProduccionLocal.areaProduccion?._id || nuevaProduccionLocal.areaProduccion || "",
+                    horaInicio: formatTime(nuevaProduccionLocal.horaInicio), // Format for display
+                    horaFin: formatTime(nuevaProduccionLocal.horaFin),       // Format for display
+                    // operario: nuevaProduccionLocal.operario?._id || nuevaProduccionLocal.operario, // if needed
+                  });
+
+                  if (onGuardar) onGuardar(nuevaProduccionLocal); // Pass the updated data with correct OTI structure
+                  if (onClose) onClose();
+                  if (!onGuardar && !onClose && paramId) {
+                    // If it's a page and not a modal, potentially navigate or refresh
+                    // navigate(`/ruta-detalle/\${currentProduccionId}`); // Example
+                  }
+                } else {
+                  // Handle case where response.data.produccion is not available but status was success
+                  toast.warn("Producción actualizada, pero no se recibieron datos detallados del servidor. Refrescando con OTI local.");
+                  // Attempt to keep the form OTI consistent
+                  setRegistroEditado(prev => ({ ...prev, oti: { numeroOti: numeroOtiOriginalFormulario } }));
+                  if (onClose) onClose();
+                }
+
               } else {
-                throw new Error("⚠️ La respuesta del servidor no indica éxito.");
+                // Handle non-2xx responses that don't throw an error by default with axios
+                const errorMsg = response.data?.message || response.statusText || "Error desconocido del servidor";
+                toast.error(`❌ Error al actualizar: ${errorMsg}`);
+                // Optionally, revert OTI or keep form as is for user to retry
+                setRegistroEditado(prev => ({ ...prev, oti: { numeroOti: numeroOtiOriginalFormulario } }));
               }
             }
           },
@@ -311,12 +484,10 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
         ]
       });
     } catch (error) {
-      console.error('❌ Error al editar la producción:', error);
-      if (error.response) {
-        toast.error(`Error: ${error.response.data.message || "No se pudo guardar la edición."}`);
-      } else {
-        toast.error(`⚠️ Error: ${error.message}`);
-      }
+      console.error("Error en guardarEdicion:", error.response?.data || error.message || error);
+      toast.error(`❌ No se pudo guardar la edición: ${error.response?.data?.message || error.message || 'Intenta de nuevo más tarde.'}`);
+      // Ensure OTI in form remains what the user typed, in case of error
+      setRegistroEditado(prev => ({ ...prev, oti: { numeroOti: prev.oti?.numeroOti || '' } }));
     }
   };
 
@@ -401,10 +572,10 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
               inputId="procesos"
               isMulti
               name="procesos"
-              options={filteredProcesos.map(p => ({ value: p._id, label: p.nombre }))}
+              options={availableProcesos.map(p => ({ value: p._id, label: p.nombre }))}
               value={registroEditado.procesos
                 ? registroEditado.procesos.map(pId => {
-                    const procesoInfo = filteredProcesos.find(ap => String(ap._id) === String(pId));
+                    const procesoInfo = availableProcesos.find(ap => String(ap._id) === String(pId));
                     return procesoInfo ? { value: procesoInfo._id, label: procesoInfo.nombre } : null;
                   }).filter(p => p !== null)
                 : []}
@@ -412,7 +583,7 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
               className="w-full basic-multi-select"
               classNamePrefix="select"
               placeholder="Seleccionar Proceso(s)"
-              isDisabled={!registroEditado.areaProduccion || (filteredProcesos && filteredProcesos.length === 0)}
+              isDisabled={!registroEditado.areaProduccion || (availableProcesos && availableProcesos.length === 0)}
               styles={{ control: (base) => ({ ...base, borderColor: 'hsl(var(--input))', '&:hover': { borderColor: 'hsl(var(--input))' } }), placeholder: (base) => ({ ...base, color: 'hsl(var(--muted-foreground))' }) }}
               required
             />

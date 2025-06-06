@@ -20,11 +20,6 @@ const logger = winston.createLogger({
 });
 
 const Oti = require('../models/Oti');
-const Proceso = require('../models/Proceso');
-const AreaProduccion = require('../models/AreaProduccion');
-const Maquina = require('../models/Maquina');
-const Operario = require("../models/Operario")
-const Insumos = require('../models/Insumos');
 
 const logFilePath = path.join(__dirname, '..', '..', 'logs', 'produccion.log');
 
@@ -51,7 +46,7 @@ exports.getAllProduccion = async (req, res) => {
             .sort({ fecha: -1 })
             .skip(skip)
             .limit(limit)
-            .populate("oti", "numeroOti")
+            .populate("oti", "_id numeroOti")
             .populate("operario", "name")
             .populate("procesos", "nombre")
             .populate("areaProduccion", "nombre")
@@ -164,7 +159,13 @@ exports.obtenerProducciones = async (req, res) => {
             return res.status(400).json({ msg: "El ID del operario no es válido" });
         }
 
-        const producciones = await Produccion.find({ operario: operario }).populate('operario', 'name');
+        const producciones = await Produccion.find({ operario: operario })
+            .populate('operario', 'name')
+            .populate('oti', '_id numeroOti')
+            .populate('procesos', 'nombre')
+            .populate('areaProduccion', 'nombre')
+            .populate('maquina', 'nombre')
+            .populate('insumos', 'nombre');
 
         if (!producciones.length) {
             return res.status(404).json({ msg: "No se encontraron producciones para este operario" });
@@ -172,7 +173,8 @@ exports.obtenerProducciones = async (req, res) => {
 
         return res.status(200).json(producciones);
     } catch (error) {
-        console.error("Error al obtener las producciones:", error);
+        // Log error in a consistent way
+        logger.error("Error al obtener las producciones:", error);
         res.status(500).json({ msg: "Error interno del servidor" });
     }
 };
@@ -181,8 +183,6 @@ exports.obtenerProducciones = async (req, res) => {
 exports.listarProduccion = async (req, res) => {
     try {
         const { operario, oti } = req.query;
-        console.log("🟢 ID del operario recibido en el backend:", operario);
-        
         if (!mongoose.Types.ObjectId.isValid(operario)) {
             return res.status(400).json({ error: "ID de operario no válido" });
         }
@@ -200,29 +200,24 @@ exports.listarProduccion = async (req, res) => {
 
         const producciones = await Produccion.find(query)
         .sort({ fecha: -1 })
-        .populate({ path: 'oti', select: 'numeroOti' })
+        .populate({ path: 'oti', select: '_id numeroOti' })
         .populate({ path: 'procesos', select: 'nombre' })
         .populate({ path: 'areaProduccion', select: 'nombre' })
         .populate({ path: 'maquina', select: 'nombre' })
         .populate({ path: 'operario', select: 'name' })
         .populate({ path: 'insumos', select: 'nombre' });
 
-        console.log("📊 Producciones enviadas al frontend:", JSON.stringify(producciones, null, 2));
-
         res.status(200).json(producciones);
-        console.log("📌 Buscando producciones para operario:", operario);
-
     } catch (error) {
-        console.error('Error al listar producciones:', error);
-        res.status(500).json({ msg: 'Error al listar las producciones', error: error.message });
+        logger.error('Error al listar producciones:', error);
+        res.status(500).json({ msg: 'Error al listar las producciones' });
     }
 };
 
 // 📌 Actualizar Producción
 exports.actualizarProduccion = async (req, res) => {
     try {
-        console.log("🛠 Datos recibidos en backend para actualización:", req.body);
-        const { _id, operario, oti, procesos, areaProduccion, maquina, insumos, fecha, tiempo, horaInicio, horaFin, tipoTiempo} = req.body;
+        const { _id, operario, oti, procesos, areaProduccion, maquina, insumos, fecha, tiempo, horaInicio, horaFin, tipoTiempo, observaciones } = req.body;
 
         // Validaciones básicas
         if (!_id) {
@@ -233,7 +228,6 @@ exports.actualizarProduccion = async (req, res) => {
         }
       
         if (!operario || !areaProduccion || !maquina || !fecha || typeof tiempo !== 'number' || !horaInicio || !horaFin || !tipoTiempo || !procesos) { 
-            console.log("Faltan campos requeridos para la actualización o tienen formato incorrecto:", { operario, oti, procesos, areaProduccion, maquina, insumos, fecha, tiempo, horaInicio, horaFin, tipoTiempo }); 
             return res.status(400).json({ msg: "Faltan campos requeridos para la actualización o tienen formato incorrecto." });
         }
 
@@ -264,11 +258,12 @@ exports.actualizarProduccion = async (req, res) => {
                 horaInicio,
                 horaFin,
                 tipoTiempo,
+                observaciones: observaciones || null
                 // No actualizamos la jornada aquí directamente, se maneja por separado si es necesario
             },
             { new: true, runValidators: true }
         )
-        .populate("oti", "numeroOti")
+        .populate("oti", "_id numeroOti")
         .populate("operario", "name")
         .populate("procesos", "nombre") 
         .populate("areaProduccion", "nombre")
@@ -279,19 +274,14 @@ exports.actualizarProduccion = async (req, res) => {
             return res.status(404).json({ msg: "Registro de producción no encontrado." });
         }
 
-        // Recalcular tiempo total de la OTI si es necesario (opcional, dependiendo de la lógica de negocio)
-        // await recalcularTiempoTotal(otiId);
-
-        console.log("✅ Producción actualizada exitosamente:", produccionActualizada);
         res.status(200).json({ msg: "Producción actualizada exitosamente", produccion: produccionActualizada });
 
     } catch (error) {
-        console.error("❌ Error al actualizar producción:", error);
-        // Considerar enviar un mensaje más específico basado en el tipo de error
+        logger.error("Error al actualizar producción:", error);
         if (error.name === 'CastError') {
-            return res.status(400).json({ msg: "Error de casteo: Verifique los IDs proporcionados.", error: error.message });
+            return res.status(400).json({ msg: "Error de casteo: Verifique los IDs proporcionados." });
         }
-        res.status(500).json({ msg: "Error interno del servidor al actualizar la producción.", error: error.message });
+        res.status(500).json({ msg: "Error interno del servidor al actualizar la producción." });
     }
 };
 
@@ -347,8 +337,6 @@ exports.buscarProduccion = async (req, res) => {
         const query = {};
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        console.log("📥 Filtros recibidos en el backend:", req.query);
-
         if (oti && oti.trim() !== '') {
             query.oti = oti; // Espera el _id directamente
         }
@@ -398,15 +386,12 @@ exports.buscarProduccion = async (req, res) => {
             }
         }
 
-        console.log("🔍 Query final construida para la búsqueda:", query);
-
         const totalResultados = await Produccion.countDocuments(query);
-        console.log("📊 Total de resultados encontrados:", totalResultados);
 
         const producciones = await Produccion.find(query)
             .skip(skip)
             .limit(parseInt(limit))
-            .populate('oti', 'numeroOti')
+            .populate('oti', '_id numeroOti')
             .populate('operario', 'name')
             .populate('procesos', 'nombre') // Changed from proceso to procesos
             .populate('areaProduccion', 'nombre')
@@ -415,8 +400,8 @@ exports.buscarProduccion = async (req, res) => {
 
         res.status(200).json({ totalResultados, resultados: producciones });
     } catch (error) {
-        console.error('❌ Error al buscar producciones:', error);
-        res.status(500).json({ msg: 'Error interno del servidor', error: error.message });
+        logger.error('Error al buscar producciones:', error);
+        res.status(500).json({ msg: 'Error interno del servidor' });
     }
 };
 
@@ -441,17 +426,16 @@ exports.buscarPorFechas = async (req, res) => {
                 $lte: fin,
             },
         })
-            .populate("oti", "numeroOti")
+            .populate("oti", "_id numeroOti")
             .populate("operario", "name")
             .populate("procesos", "nombre") // Changed from proceso to procesos
             .populate("areaProduccion", "nombre")
             .populate("maquina", "nombre")
             .populate("insumos", "nombre");
 
-
         res.status(200).json(producciones);
     } catch (error) {
-        console.error("Error al buscar por fechas:", error);
+        logger.error("Error al buscar por fechas:", error);
         res.status(500).json({ msg: "Error al buscar registros" });
     }
 };

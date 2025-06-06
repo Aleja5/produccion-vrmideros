@@ -39,7 +39,6 @@ export default function RegistroProduccion() {
     const [actividadesExistentes, setActividadesExistentes] = useState([]);
     const [maquinasData, setMaquinasData] = useState([]);
     const [areasProduccionData, setAreasProduccionData] = useState([]);
-    // const [procesosData, setProcesosData] = useState([]); // Removed
     const [insumosData, setInsumosData] = useState([]);
 
     const resetFormForNewJornada = () => {
@@ -64,9 +63,7 @@ export default function RegistroProduccion() {
                 availableProcesos: []
             }
         ]);
-        setActividadesExistentes([]); // Clear any activities that might have been loaded if editing
-        // The useEffect for fetchActividadesResumen will re-run due to jornadaData.fecha changing
-        // and should show the summary for the new date, including the one just saved.
+        setActividadesExistentes([]); 
     };
     
     const addActividad = () => {
@@ -110,25 +107,27 @@ export default function RegistroProduccion() {
             const operarioData = JSON.parse(operario);
             if (operarioData?.name) setNombreOperario(operarioData.name);
             if (operarioData?._id || operarioData?.id) {
-            setJornadaData(prev => ({ ...prev, operario: operarioData._id || operarioData.id }));
+                setJornadaData(prev => ({ ...prev, operario: operarioData._id || operarioData.id }));
             }
         } catch (error) {
-            console.error("Error al leer datos del operario:", error);
+            toast.error("No se pudo leer la información del operario. Por favor, vuelve a validar tu cédula.");
         }
 
         // Cargar datos de selectores
         try {
             const maquinasRes = await fetch("http://localhost:5000/api/produccion/maquinas");
             if (maquinasRes.ok) setMaquinasData(await maquinasRes.json());
+            else toast.error("No se pudieron cargar las máquinas. Intenta de nuevo más tarde.");
 
             const areasRes = await fetch("http://localhost:5000/api/produccion/areas");
             if (areasRes.ok) setAreasProduccionData(await areasRes.json());
-
+            else toast.error("No se pudieron cargar las áreas de producción. Intenta de nuevo más tarde.");
 
             const insumosRes = await fetch("http://localhost:5000/api/produccion/insumos");
             if (insumosRes.ok) setInsumosData(await insumosRes.json());
+            else toast.error("No se pudieron cargar los insumos. Intenta de nuevo más tarde.");
         } catch (error) {
-            console.error("Error al cargar datos:", error);
+            toast.error("No se pudieron cargar los datos de los selectores. Intenta de nuevo más tarde.");
         }
 
         // Cargar jornada si hay jornadaId
@@ -177,7 +176,7 @@ export default function RegistroProduccion() {
                 }
             }
             } catch (error) {
-            console.error("Error al cargar actividades de la jornada:", error);
+            toast.error("No se pudieron cargar las actividades de la jornada. Intenta de nuevo más tarde.");
             }
         }
         };
@@ -224,7 +223,6 @@ export default function RegistroProduccion() {
                         }
                     }
                 } catch (error) {
-                    console.error("Error fetching activities summary:", error);
                     toast.error("No se pudo cargar el resumen de actividades.");
                     setActividadesResumen([]);
                 } finally {
@@ -284,33 +282,27 @@ export default function RegistroProduccion() {
             const response = await fetch(`http://localhost:5000/api/procesos?areaId=${areaId}`);
             if (response.ok) {
                 const data = await response.json();
-                console.log(`[Proceso Fetch Debug] API response for areaId ${areaId} (Activity ${activityIndex}):`, JSON.stringify(data, null, 2));
 
                 let determinedProcesos = [];
                 if (Array.isArray(data)) {
                     determinedProcesos = data;
                 } else if (data && Array.isArray(data.procesos)) {
                     determinedProcesos = data.procesos;
-                    console.log(`[Proceso Fetch Debug] Interpreted API data as an object with 'procesos' array. Count: ${determinedProcesos.length}`);
                 } else if (data && data.procesos && !Array.isArray(data.procesos)) {
-                    console.warn(`[Proceso Fetch Debug] API data has 'data.procesos' but it's NOT an array for areaId ${areaId}:`, data.procesos);
                     determinedProcesos = [];
                 } else {
-                    console.warn(`[Proceso Fetch Debug] API data for areaId ${areaId} does not match expected structures (direct array or object with 'procesos' array). Data:`, data);
                     determinedProcesos = [];
                 }
 
                 setActividades(prev =>
                     prev.map((act, idx) => {
                         if (idx === activityIndex) {
-                            console.log(`[Proceso Fetch Debug] Updating activity ${idx} with ${determinedProcesos.length} availableProcesos for areaId ${areaId}.`);
                             return { ...act, availableProcesos: determinedProcesos, procesos: [] }; // Reset procesos
                         }
                         return act;
                     })
                 );
             } else {
-                console.error(`[Proceso Fetch Debug] Error fetching procesos for area ${areaId}. Status: ${response.status}`);
                 toast.error("Error al cargar procesos para el área seleccionada.");
                 setActividades(prev =>
                     prev.map((act, idx) =>
@@ -319,11 +311,10 @@ export default function RegistroProduccion() {
                 );
             }
         } catch (error) {
-            console.error("[Proceso Fetch Debug] Exception fetching procesos for activity:", error);
-            toast.error("No se pudieron cargar los procesos (exception).");
+            toast.error("No se pudieron cargar los procesos. Intenta de nuevo más tarde.");
             setActividades(prev =>
                 prev.map((act, idx) =>
-                    idx === activityIndex ? { ...act, availableProcesos: [], procesos: [] } : act // Changed from proceso: ""
+                    idx === activityIndex ? { ...act, availableProcesos: [], procesos: [] } : act
                 )
             );
         }
@@ -333,7 +324,6 @@ export default function RegistroProduccion() {
     const handleActividadChange = (index, e_or_selectedOptions, actionMeta) => {
         let name, value;
 
-        // Check if the event is from react-select or a standard input
         if (actionMeta && actionMeta.name) { // Event from react-select
             name = actionMeta.name;
             value = e_or_selectedOptions ? e_or_selectedOptions.map(option => option.value) : [];
@@ -405,7 +395,7 @@ export default function RegistroProduccion() {
             return;
         }
 
-        console.log("Actividades al enviar jornada:", actividades); // DEBUG: Verificar campos de hora
+
 
         setLoading(true);
 
@@ -421,8 +411,6 @@ export default function RegistroProduccion() {
                 horaFin: actividad.horaFin && actividad.horaFin !== "" ? combinarFechaYHora(jornadaData.fecha, actividad.horaFin) : null,
                 tiempo: actividad.tiempo || 0,}))
         };
-
-        console.log("Payload enviado:", dataToSend); // DEBUG: Verificar que los campos de hora estén en el payload
 
         try {
             const response = await fetch("http://localhost:5000/api/jornadas/completa", {
@@ -443,8 +431,7 @@ export default function RegistroProduccion() {
             resetFormForNewJornada(); // Call the reset function
             // navigate("/operario-dashboard"); // Old navigation
         } catch (error) {
-            console.error("Error al enviar la jornada:", error);
-            toast.error("Error al guardar la jornada");
+            toast.error("No se pudo guardar la jornada. Intenta de nuevo más tarde.");
         } finally {
             setLoading(false);
         }
@@ -491,7 +478,7 @@ export default function RegistroProduccion() {
             tiempo: actividad.tiempo || 0,
             operario: jornadaData.operario,
         };
-        console.log("Datos a enviar (handleSubmitActividad):", actividadToSend);
+
 
         try {
             const response = await fetch("http://localhost:5000/api/produccion/registrar", {
@@ -510,8 +497,7 @@ export default function RegistroProduccion() {
             toast.success("Actividad guardada exitosamente");
             navigate("/mi-jornada");
         } catch (error) {
-            console.error("Error al enviar la actividad:", error);
-            toast.error("Error al guardar la actividad");
+            toast.error("No se pudo guardar la actividad. Intenta de nuevo más tarde.");
         } finally {
             setLoading(false);
         }
@@ -712,16 +698,12 @@ export default function RegistroProduccion() {
                                 ))}
 
                                 <div className="flex flex-col sm:flex-row justify-between items-center mt-6 pt-6 border-t gap-4">
-                                    <Button type="button" onClick={addActividad} variant="outline" className="w-full sm:w-auto">
-                                        Agregar Nueva Actividad
-                                    </Button>
+                                    
                                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                                         <Button type="button" onClick={handleSubmitActividad} className="w-full sm:w-auto">
                                             Guardar Actividad Individual
                                         </Button>
-                                        <Button type="submit" className="w-full sm:w-auto"> {/* Este botón gatilla handleSubmitJornada */}
-                                            Guardar Jornada Completa
-                                        </Button>
+                                        
                                     </div>
                                 </div>
                             </form>

@@ -58,19 +58,19 @@ exports.obtenerJornadas = async (req, res) => {
             query = query.limit(parseInt(limit, 10));
         }
 
-        const jornadas = await query.
-        populate({
-            path: 'registros',
-            populate: [
-                { path: 'operario', select: 'name' },
-                { path: 'oti', select: 'numeroOti' },
-                { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Ensured model is specified for clarity
-                { path: 'areaProduccion', select: 'nombre' },
-                { path: 'maquina', select: 'nombre' },
-                { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model is specified for clarity
-            ],
-            
-        });
+        const jornadas = await query
+            .populate('operario', 'name')
+            .populate({
+                path: 'registros',
+                populate: [
+                    { path: 'operario', select: 'name' },
+                    { path: 'oti', select: '_id numeroOti' },
+                    { path: 'procesos', model: 'Proceso', select: 'nombre' },
+                    { path: 'areaProduccion', select: 'nombre' },
+                    { path: 'maquina', select: 'nombre' },
+                    { path: 'insumos', model: 'Insumo', select: 'nombre' }
+                ],
+            });
         
         const jornadasConTiempo = jornadas.map(jornada => {
             return {
@@ -100,11 +100,11 @@ exports.obtenerJornada = async (req, res) => {
         const jornada = await Jornada.findById(id).populate({
             path: 'registros',
             populate: [
-                { path: 'oti', model: 'Oti', select: 'numeroOti' },
-                { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Corrected path and ensured model
+                { path: 'oti', model: 'Oti', select: '_id numeroOti' },
+                { path: 'procesos', model: 'Proceso', select: 'nombre' }, 
                 { path: 'areaProduccion', model: 'AreaProduccion', select: 'nombre' },
                 { path: 'maquina', model: 'Maquina', select: 'nombre' },
-                { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model
+                { path: 'insumos', model: 'Insumo', select: 'nombre' }
             ]
         });
 
@@ -156,11 +156,11 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
             .populate({
                 path: 'registros',
                 populate: [
-                    { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Corrected path and ensured model
-                    { path: 'oti', select: 'numeroOti' },
+                    { path: 'procesos', model: 'Proceso', select: 'nombre' },
+                    { path: 'oti', select: '_id numeroOti' },
                     { path: 'areaProduccion', select: 'nombre' },
                     { path: 'maquina', select: 'nombre' },
-                    { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model
+                    { path: 'insumos', model: 'Insumo', select: 'nombre' }
                 ]
             });
 
@@ -284,7 +284,7 @@ exports.agregarActividadAJornada = async (req, res) => {
             path: 'registros',
             populate: [
                 { path: 'procesos', model: 'Proceso', select: 'nombre' },
-                { path: 'oti', select: 'numeroOti' },
+                { path: 'oti', select: '_id numeroOti' },
                 { path: 'areaProduccion', select: 'nombre' },
                 { path: 'maquina', select: 'nombre' },
                 { path: 'insumos', model: 'Insumo', select: 'nombre' }

@@ -92,22 +92,16 @@ const HistorialJornadas = () => {
 
 const handleEliminarActividad = async (jornadaId, actividadId) => {
   const confirmarEliminacion = window.confirm("¿Estás seguro de que deseas eliminar esta actividad?");
-
-  console.log("¿Confirmó la eliminación?", confirmarEliminacion); // ✅ Verifica esta línea en la consola
-
   if (!confirmarEliminacion) {
-    console.log("Eliminación cancelada por el usuario.");
-    return; // ❗ Muy importante: salir aquí
+    return;
   }
 
   try {
-    const response = await axiosInstance.delete(`/produccion/eliminar/${actividadId}`);
-    console.log("Respuesta de eliminación:", response.data);
+    await axiosInstance.delete(`/produccion/eliminar/${actividadId}`);
     toast.success("Actividad eliminada con éxito");
     await fetchJornadas();
   } catch (error) {
-    console.error("Error al eliminar la actividad:", error);
-    toast.error("No se pudo eliminar la actividad.");
+    toast.error("No se pudo eliminar la actividad. Intenta de nuevo más tarde.");
   }
 };
       
