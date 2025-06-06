@@ -1,207 +1,192 @@
 const express = require('express');
 const router = express.Router();
-const { 
-    registrarProduccion,
-    obtenerProducciones,
-    actualizarProduccion,
-    eliminarProduccion,
-    listarProduccion,
-    buscarProduccion,
-    buscarPorFechas 
-} = require('../controllers/productionController');
-const AreaProduccion = require('../models/AreaProduccion');
-const Maquina = require('../models/Maquina');
-const Proceso = require('../models/Proceso');
-const Operario = require('../models/Operario');
-const Insumos = require('../models/Insumos');
-const Produccion = require('../models/Produccion');
-const Oti = require('../models/Oti');
+const Jornada = require('../models/Jornada'); // Asegúrate de que Jornada esté importado
+const Maquina = require('../models/Maquina'); // Asegúrate de que Maquina esté importado
+const AreaProduccion = require('../models/AreaProduccion'); // Asegúrate de que AreaProduccion esté importado
+const Proceso = require('../models/Proceso'); // Asegúrate de que Proceso esté importado
+const Insumo = require('../models/Insumos'); // Asegúrate de que Insumos esté importado
+const Operario = require('../models/Operario'); // Asegúrate de que Operario esté importado
 
-// 📌 Registrar Producción
-router.post('/registrar', registrarProduccion);
-    
-// 📌 Obtener todas las producciones
-router.get('/obtener', obtenerProducciones);
 
-// 📌 Listar producciones con filtros
-router.get('/filtrar', listarProduccion);
-
-// 📌 Actualizar producción
-router.put('/actualizar/:id', actualizarProduccion);
-
-// 📌 Eliminar producción
-router.delete('/eliminar/:id', eliminarProduccion);
-
-// 📌 Buscar producción
-router.get('/buscar-produccion', buscarProduccion);
-
-// 📌 Buscar registros por rango de fechas
-router.get('/buscar-por-fechas', buscarPorFechas);
-
-// Endpoint para obtener registros de producción de un operario en un rango de fechas
-router.get('/operario-produccion', async (req, res) => {
-    try {
-        const { operarioId, fechaInicio, fechaFin } = req.query;
-
-        if (!operarioId || !fechaInicio || !fechaFin) {
-            return res.status(400).json({ msg: 'Faltan parámetros requeridos: operarioId, fechaInicio, fechaFin' });
-        }
-
-        const producciones = await Produccion.find({
-            operario: operarioId,
-            fecha: {
-                $gte: new Date(fechaInicio),
-                $lte: new Date(fechaFin),
-            },
-        })
-            .populate('oti', 'numeroOti')
-            .populate('proceso', 'nombre')
-            .populate('areaProduccion', 'nombre')
-            .populate('maquina', 'nombre')
-            .populate('operario', 'name')
-            .populate('insumos', 'nombre');
-
-        res.status(200).json(producciones);
-    } catch (error) {
-        console.error('Error al obtener registros de producción:', error);
-        res.status(500).json({ msg: 'Error interno del servidor' });
-    }
-});
-
-// Endpoint para obtener la lista de operarios
-router.get('/operarios', async (req, res) => {
-    try {
-        const operarios = await Operario.find({}, 'name _id'); // Selecciona solo los campos necesarios
-        res.status(200).json(operarios);
-    } catch (error) {
-        console.error('Error al obtener la lista de operarios:', error);
-        res.status(500).json({ msg: 'Error al obtener la lista de operarios' });
-    }
-});
-
-router.get('/oti', async (req, res) => {
-    try {
-        const otis = await Oti.find({}, 'numeroOti _id'); // Selecciona solo los campos necesarios
-        res.status(200).json(otis);
-    } catch (error) {
-        console.error('Error al obtener la lista de OTI:', error);
-        res.status(500).json({ msg: 'Error al obtener la lista de OTI' });
-    }
-});
-
-// Endpoint para obtener todas las áreas de producción
-router.get('/areas', async (req, res) => {
-    try {
-        const areas = await AreaProduccion.find({}, 'nombre');
-        res.status(200).json(areas);
-    } catch (error) {
-        console.error('Error al obtener áreas de producción:', error);
-        res.status(500).json({ msg: 'Error al obtener áreas de producción' });
-    }
-});
-
-// Endpoint para obtener todas las máquinas
+// Rutas para obtener listas
 router.get('/maquinas', async (req, res) => {
     try {
-        const maquinas = await Maquina.find({}, 'nombre');
+        const maquinas = await Maquina.find({});
         res.status(200).json(maquinas);
     } catch (error) {
-        console.error('Error al obtener máquinas:', error);
-        res.status(500).json({ msg: 'Error al obtener máquinas' });
+        console.error("Error al obtener máquinas:", error);
+        res.status(500).json({ message: "Error interno del servidor al obtener máquinas." });
     }
 });
 
-// Endpoint para obtener todos los procesos
+router.get('/areas', async (req, res) => {
+    try {
+        const areas = await AreaProduccion.find({});
+        res.status(200).json(areas);
+    } catch (error) {
+        console.error("Error al obtener áreas:", error);
+        res.status(500).json({ message: "Error interno del servidor al obtener áreas." });
+    }
+});
+
 router.get('/procesos', async (req, res) => {
     try {
-        const procesos = await Proceso.find({}, 'nombre');
+        const procesos = await Proceso.find({});
         res.status(200).json(procesos);
     } catch (error) {
-        console.error('Error al obtener procesos:', error);
-        res.status(500).json({ msg: 'Error al obtener procesos' });
+        console.error("Error al obtener procesos:", error);
+        res.status(500).json({ message: "Error interno del servidor al obtener procesos." });
     }
 });
 
-// Endpoint para obtener todos los operarios
-router.get('/operarios', async (req, res) => {
-    try {
-        const operarios = await Operario.find({}, 'name');
-        res.status(200).json(operarios);
-    } catch (error) {
-        console.error('Error al obtener operarios:', error);
-        res.status(500).json({ msg: 'Error al obtener operarios' });
-    }
-});
-
-// Endpoint para obtener todos los insumos
 router.get('/insumos', async (req, res) => {
     try {
-        const insumos = await Insumos.find({}, 'nombre');
+        const insumos = await Insumo.find({});
         res.status(200).json(insumos);
     } catch (error) {
-        console.error('Error al obtener insumos:', error);
-        res.status(500).json({ msg: 'Error al obtener insumos' });
+        console.error("Error al obtener insumos:", error);
+        res.status(500).json({ message: "Error interno del servidor al obtener insumos." });
     }
 });
 
-
-// Endpoint general para filtrar producciones dinámicamente
-router.get('/filtrar-producciones', async (req, res) => {
+// Ruta para obtener jornada por operario y fecha
+router.get('/operario/:operarioId/fecha/:fecha', async (req, res) => {
     try {
-        const filtros = req.query;
-        const query = {};
-
-        // Construir la consulta dinámicamente según los filtros recibidos
-        if (filtros.operario && filtros.operario.trim() !== '') {
-            query.operario = filtros.operario;
+        const { operarioId, fecha } = req.params;
+        const jornada = await Jornada.findOne({ operario: operarioId, fecha });
+        if (!jornada) {
+            return res.status(404).json({ message: "Jornada no encontrada para este operario en esta fecha." });
         }
-        if (filtros.areaProduccion && filtros.areaProduccion.trim() !== '') {
-            query.areaProduccion = filtros.area;
-        }
-        if (filtros.maquina && filtros.maquina.trim() !== '') {
-            query.maquina = filtros.maquina;
-        }
-        if (filtros.proceso && filtros.proceso.trim() !== '') {
-            query.proceso = filtros.proceso;
-        }
-        if (filtros.insumos && filtros.insumos.trim() !== '') {
-            query.insumos = filtros.insumo;
-        }
-        if (filtros.fechaInicio && filtros.fechaFin) {
-            query.fecha = {
-                $gte: new Date(filtros.fechaInicio),
-                $lte: new Date(filtros.fechaFin),
-            };
-        }
-        if (filtros.oti && filtros.oti.trim() !== '') {
-            try {
-                const otiDoc = await Oti.findOne({ numeroOti: filtros.oti });
-                if (otiDoc) {
-                    query.oti = otiDoc._id;
-                } else {
-                    return res.status(404).json({ msg: 'OTI no encontrada' });
-                }
-            } catch (error) {
-                console.error('Error al buscar OTI:', error);
-                return res.status(500).json({ msg: 'Error al procesar el filtro OTI', error: error.message });
-            }
-        }
-
-        // Permitir valores nulos o vacíos en los campos
-        const producciones = await Produccion.find(query)
-            .populate('oti', 'numeroOti')
-            .populate('operario', 'name')
-            .populate('proceso', 'nombre')
-            .populate('areaProduccion', 'nombre')
-            .populate('maquina', 'nombre')
-            .populate('insumos', 'nombre');
-
-
-        res.status(200).json(producciones);
+        res.status(200).json(jornada);
     } catch (error) {
-        console.error('Error al filtrar producciones:', error);
-        res.status(500).json({ msg: 'Error al filtrar producciones', error: error.message });
+        console.error("Error al buscar jornada por operario y fecha:", error);
+        res.status(500).json({ message: "Error interno del servidor." });
     }
 });
+
+// Ruta para crear una nueva jornada
+router.post('/', async (req, res) => {
+    try {
+        const { operario, fecha } = req.body; 
+        if (!operario || !fecha) {
+            return res.status(400).json({ message: "Operario y fecha son campos obligatorios." });
+        }
+
+        const newJornada = new Jornada({
+            operario,
+            fecha,
+            registros: [] 
+        });
+        const savedJornada = await newJornada.save();
+        res.status(201).json(savedJornada);
+    } catch (error) {
+        console.error("Error al crear jornada:", error);
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ message: error.message });
+        }
+        res.status(500).json({ message: "Error interno del servidor al crear jornada." });
+    }
+});
+
+// Ruta para obtener una jornada por su ID
+router.get('/:id', async (req, res) => {
+    try {
+        const jornada = await Jornada.findById(req.params.id);
+        if (!jornada) {
+            return res.status(404).json({ message: "Jornada no encontrada." });
+        }
+        res.status(200).json(jornada);
+    } catch (error) {
+        console.error("Error al buscar jornada por ID:", error);
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: "ID de jornada inválido." });
+        }
+        res.status(500).json({ message: "Error interno del servidor." });
+    }
+});
+
+// Ruta para actualizar una jornada (normalmente por ID)
+router.put('/:id', async (req, res) => {
+    try {
+        const { registros } = req.body; 
+        const updatedJornada = await Jornada.findByIdAndUpdate(
+            req.params.id,
+            { $set: { registros: registros } }, 
+            { new: true, runValidators: true }
+        );
+        if (!updatedJornada) {
+            return res.status(404).json({ message: "Jornada no encontrada para actualizar." });
+        }
+        res.status(200).json(updatedJornada);
+    } catch (error) {
+        console.error("Error al actualizar jornada:", error);
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: "ID de jornada inválido." });
+        }
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ message: error.message });
+        }
+        res.status(500).json({ message: "Error interno del servidor." });
+    }
+});
+
+// Ruta para actualizar una jornada completa
+router.put('/completa/:id', async (req, res) => {
+    try {
+        const { jornadaData, actividades } = req.body; 
+        const updatedJornada = await Jornada.findByIdAndUpdate(
+            req.params.id,
+            { ...jornadaData, registros: actividades }, 
+            { new: true, runValidators: true }
+        );
+        if (!updatedJornada) {
+            return res.status(404).json({ message: "Jornada no encontrada para actualización completa." });
+        }
+        res.status(200).json(updatedJornada);
+    } catch (error) {
+        console.error("Error al actualizar jornada completa:", error);
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: "ID de jornada inválido." });
+        }
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({ message: error.message });
+        }
+        res.status(500).json({ message: "Error interno del servidor." });
+    }
+});
+
+// ESTA ES LA RUTA QUE ESTABA MAL ANIDADA Y AHORA ESTÁ EN EL NIVEL CORRECTO
+router.post('/:jornadaId/actividades', async (req, res) => {
+    try {
+        const { jornadaId } = req.params;
+        const nuevaActividad = req.body; 
+
+        // 1. Encuentra la jornada por su ID
+        const jornada = await Jornada.findById(jornadaId);
+
+        if (!jornada) {
+            return res.status(404).json({ message: "Jornada no encontrada." });
+        }
+
+        // 2. Agrega la nueva actividad al array de registros
+        jornada.registros.push(nuevaActividad);
+
+        // 3. Guarda la jornada actualizada
+        const updatedJornada = await jornada.save();
+
+        // 4. Responde con la jornada actualizada o solo la actividad añadida si lo prefieres
+        res.status(201).json(updatedJornada); 
+    } catch (error) {
+        console.error("Error al agregar actividad a la jornada:", error);
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: "ID de jornada inválido." });
+        }
+        if (error.name === 'ValidationError') {
+             return res.status(400).json({ message: error.message });
+        }
+        res.status(500).json({ message: "Error interno del servidor al agregar actividad." });
+    }
+});
+
 
 module.exports = router;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-
+import EditarProduccion from './pages/EditarProduccion'; // Componente para editar producción
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword'; // Componente de recuperación
 import AdminDashboard from './pages/AdminDashboard';
@@ -9,9 +9,10 @@ import ConsultaJornadas from './pages/ConsultaJornadas';
 import ValidateCedula from './pages/ValidateCedula';
 import OperarioDashboard from './pages/OperarioDashboard';
 import RegistroProduccion from './components/RegistroProduccion';
-import EditarProduccion from './pages/EditarProduccion';
+
 import MiJornada from './pages/MiJornada';
 import HistorialJornadas from './pages/HistorialJornadas';
+import AdminJornadaDetalle from './pages/AdminJornadaDetalle'; // <--- Importar AdminJornadaDetalle
 
 import ProtectedRoute from './components/ProtectedRoute';
 import MaquinasPage from './pages/Maquinas';
@@ -67,6 +68,16 @@ function App() {
         <Route path="/admin/operarios" element={<OperariosPage />} />
         <Route path="/admin/usuarios" element={<UsuariosPage />} />
 
+        {/* Nueva ruta para el detalle de la jornada del admin */}
+        <Route
+          path="/admin/jornada/:id"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminJornadaDetalle />
+            </ProtectedRoute>
+          }
+        />
+
         {/* PRODUCCIÓN */}
         {/* Ruta protegida: Validar Cédula */}
         <Route
@@ -119,7 +130,7 @@ function App() {
         />
 
         <Route path="/mi-jornada" element={<MiJornada />} />
-        <Route path="/historial-jornadas" element={<HistorialJornadas />} />
+
       </Routes>
     </Router>
   );

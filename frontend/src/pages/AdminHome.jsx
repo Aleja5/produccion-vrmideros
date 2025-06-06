@@ -116,6 +116,11 @@ const TablaJornadasRecientes = ({ jornadas, loading, navigate }) => {
   );
 };
 
+const ajustarFechaLocal = (fechaUTC) => {
+  const fecha = new Date(fechaUTC);
+  return new Date(fecha.getTime() + fecha.getTimezoneOffset() * 60000);
+};
+
 const AdminHome = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -192,7 +197,7 @@ const AdminHome = () => {
                   icon={KpiIcons.Registros}
                   bgColor="bg-purple-50"
                   textColor="text-purple-600"
-                />                
+                />
               </div>
             </section>
 

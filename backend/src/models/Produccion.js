@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose; // Añade esto si no lo tienes
 
 const produccionSchema = new mongoose.Schema({
     oti: { type: mongoose.Schema.Types.ObjectId, ref: 'Oti', required: true },

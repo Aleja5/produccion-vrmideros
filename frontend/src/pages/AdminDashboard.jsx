@@ -391,7 +391,7 @@ const AdminDashboard = () => {
                   />
                 </div>
               )}
-            </Card>            
+            </Card>
           </div>
         </div>
       </div>

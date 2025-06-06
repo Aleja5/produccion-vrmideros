@@ -106,6 +106,13 @@ exports.forgotPassword = async (req, res) => {
       `,
     };
 
+        console.log('Intentando enviar correo con:');
+        console.log('FROM:', process.env.EMAIL_USER);
+        console.log('TO:', email);
+        console.log('Subject:', mailOptions.subject);
+        // No imprimas EMAIL_PASS por seguridad, pero verifica que la variable exista
+        console.log('EMAIL_PASS length:', process.env.EMAIL_PASS ? process.env.EMAIL_PASS.length : 'undefined');
+
     await transporter.sendMail(mailOptions);
 
     res.status(200).json({
