@@ -540,7 +540,7 @@ const OperarioDashboard = () => {
                     <div className="container mx-auto px-4 py-6">
                         <div className="flex justify-between items-center mb-6">
                             <h1 className="text-2xl font-bold">Producción VR Mideros</h1>
-                            <h3 className="font-semibold">Bienvenido, {operarioName}</h3>
+                           
                         </div>
 
                         <div className="flex justify-between items-center mt-6">
@@ -548,9 +548,7 @@ const OperarioDashboard = () => {
                             <Button className="bg-blue-200 blue font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500 transition-all duration-300 cursor-pointer" onClick={handleRegistroProduccion}>
                                 {jornadaActual ? 'Añadir actividad a jornada actual' : 'Registrar Nueva Producción'}
                             </Button>
-                            <Button className="bg-red-200 text-gray-800 hover:bg-red-500 hover:text-red-100 px-6 py-3 rounded-xl shadow transition-all duration-300 cursor-pointer" variant="ghost" onClick={() => navigate('/validate-cedula')}>
-                                Salir
-                            </Button>
+                           
                         </div>
 
                         <div className="mt-6 mb-4 max-w-sm">

@@ -21,6 +21,7 @@ import AreasPage from './pages/Areas';
 import OperariosPage from './pages/Operarios';
 import UsuariosPage from './pages/Usuarios';
 import ResetPassword from './pages/ResetPassword';
+import NotFound from './pages/NotFound';
 
 
 function App() {
@@ -119,7 +120,7 @@ function App() {
         />
 
         <Route path="/mi-jornada" element={<MiJornada />} />
-
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   );
