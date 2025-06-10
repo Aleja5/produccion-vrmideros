@@ -62,6 +62,9 @@ router.get('/insumos', async (req, res) => {
 
 router.post('/registrar', productionController.registrarProduccion);
 
+// Ruta para actualizar una producción específica
+router.put('/actualizar/:id', productionController.actualizarProduccion);
+
 // Ruta para obtener jornada por operario y fecha
 router.get('/operario/:operarioId/fecha/:fecha', async (req, res) => {
     try {

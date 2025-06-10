@@ -22,8 +22,51 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
   const [insumosColeccion, setInsumosColeccion] = useState([]);
   const [maquinas, setMaquinas] = useState([]);
   const [areasProduccion, setAreasProduccion] = useState([]);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   const navigate = useNavigate();
+
+  // Hook para manejar el tamaño de ventana
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Helper function to get responsive select styles
+  const getSelectStyles = () => ({
+    control: (base, state) => ({ 
+      ...base, 
+      borderColor: state.isFocused ? '#3B82F6' : 'hsl(var(--input))', 
+      '&:hover': { borderColor: '#3B82F6' },
+      minHeight: windowWidth < 640 ? '36px' : '40px',
+      fontSize: windowWidth < 640 ? '14px' : '16px',
+      boxShadow: state.isFocused ? '0 0 0 2px rgba(59, 130, 246, 0.1)' : base.boxShadow
+    }), 
+    placeholder: (base) => ({ 
+      ...base, 
+      color: 'hsl(var(--muted-foreground))',
+      fontSize: windowWidth < 640 ? '14px' : '16px'
+    }),
+    multiValue: (base) => ({
+      ...base,
+      fontSize: windowWidth < 640 ? '12px' : '14px',
+      backgroundColor: '#EBF8FF'
+    }),
+    multiValueLabel: (base) => ({
+      ...base,
+      color: '#1E40AF'
+    }),
+    option: (base, state) => ({
+      ...base,
+      fontSize: windowWidth < 640 ? '14px' : '16px',
+      backgroundColor: state.isSelected ? '#3B82F6' : state.isFocused ? '#EBF8FF' : base.backgroundColor
+    }),
+    menu: (base) => ({
+      ...base,
+      zIndex: 9999
+    })
+  });
 
   // Helper function to format time values
   const formatTime = (timeValue) => {
@@ -44,7 +87,6 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
     // Fallback for unparseable or unexpected formats
     return "";
   };
-
   // Normaliza el campo OTI para que siempre sea { numeroOti: string }
   function normalizeOti(oti) {
     if (!oti) return { numeroOti: "" };
@@ -328,22 +370,36 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
       }
     }
   };
+  // Función de validación mejorada
+  const validateForm = () => {
+    const errors = [];
+    
+    if (!registroEditado.fecha) errors.push("La fecha es requerida");
+    if (!registroEditado.procesos || registroEditado.procesos.length === 0) errors.push("Debe seleccionar al menos un proceso");
+    if (!registroEditado.insumos || registroEditado.insumos.length === 0) errors.push("Debe seleccionar al menos un insumo");
+    if (!registroEditado.maquina) errors.push("La máquina es requerida");
+    if (!registroEditado.areaProduccion) errors.push("El área de producción es requerida");
+    if (!registroEditado.tipoTiempo) errors.push("El tipo de tiempo es requerido");
+    if (!registroEditado.horaInicio) errors.push("La hora de inicio es requerida");
+    if (!registroEditado.horaFin) errors.push("La hora de fin es requerida");
+    
+    if (registroEditado.horaInicio && registroEditado.horaFin) {
+      const inicio = new Date(`1970-01-01T${registroEditado.horaInicio}:00`);
+      const fin = new Date(`1970-01-01T${registroEditado.horaFin}:00`);
+      if (fin <= inicio) {
+        errors.push("La hora de fin debe ser posterior a la hora de inicio");
+      }
+    }
+    
+    return errors;
+  };
 
   const guardarEdicion = async () => {
     try {
-      if (
-        !registroEditado.fecha ||
-        !registroEditado.procesos ||
-        !Array.isArray(registroEditado.procesos) ||
-        registroEditado.procesos.length === 0 ||
-        !registroEditado.insumos ||
-        !registroEditado.maquina ||
-        !registroEditado.areaProduccion ||
-        !registroEditado.tipoTiempo ||
-        !registroEditado.horaInicio ||
-        !registroEditado.horaFin
-      ) {
-        toast.error("⚠️ Por favor, completa todos los campos obligatorios antes de guardar.");
+      // Validación mejorada
+      const validationErrors = validateForm();
+      if (validationErrors.length > 0) {
+        toast.error(`⚠️ ${validationErrors[0]}`);
         return;
       }
 
@@ -365,11 +421,10 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
                 return;
               }
 
-              const normalizarTexto = (texto) => (typeof texto === 'string' ? texto.trim().toLowerCase() : texto);
-
-              // --- OTI PATCH: Mantener el número OTI en el estado tras guardar ---
+              const normalizarTexto = (texto) => (typeof texto === 'string' ? texto.trim().toLowerCase() : texto);              // --- OTI PATCH: Mantener el número OTI en el estado tras guardar ---
               const numeroOtiOriginalFormulario = registroEditado.oti?.numeroOti || "";
-              const otiId = await verificarYCrear(normalizarTexto(numeroOtiOriginalFormulario), "oti");
+              // No need to call verificarYCrear here - send the OTI number to backend directly
+              // const otiId = await verificarYCrear(normalizarTexto(numeroOtiOriginalFormulario), "oti");
               // Asegurar que procesos e insumos sean siempre arrays de strings
               const procesosIds = Array.isArray(registroEditado.procesos)
                 ? registroEditado.procesos.filter(Boolean).map(String)
@@ -378,9 +433,7 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
                 ? registroEditado.insumos.filter(Boolean).map(String)
                 : registroEditado.insumos ? [String(registroEditado.insumos)] : [];
               const areaId = registroEditado.areaProduccion;
-              const maquinaId = registroEditado.maquina;
-
-              if (!otiId || !procesosIds || procesosIds.length === 0 || !areaId || !maquinaId || !insumosIds || insumosIds.length === 0) {
+              const maquinaId = registroEditado.maquina;              if (!procesosIds || procesosIds.length === 0 || !areaId || !maquinaId || !insumosIds || insumosIds.length === 0) {
                 toast.error("❌ No se pudieron verificar o crear todas las entidades requeridas.");
                 return;
               }
@@ -398,11 +451,9 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
                 if (fin > inicio) {
                   tiempo = Math.floor((fin - inicio) / 60000);
                 }
-              }
-
-              const datosActualizados = {
+              }              const datosActualizados = {
                 _id: currentProduccionId,
-                oti: otiId,
+                oti: numeroOtiOriginalFormulario,
                 operario: produccionLocal?.operario?._id || produccionLocal?.operario || registroEditado.operario,
                 procesos: procesosIds,
                 insumos: insumosIds,
@@ -414,37 +465,42 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
                 horaFin: horaFinISO,
                 tiempo,
                 observaciones: registroEditado.observaciones
-              };
-
-              // --- BEGIN ADDED LOGS ---
+              };              // --- BEGIN ADDED LOGS ---
               console.log("Frontend: currentProduccionId", currentProduccionId);
+              console.log("Frontend: numeroOtiOriginalFormulario", numeroOtiOriginalFormulario);
               console.log("Frontend: datosActualizados", datosActualizados);
               // --- END ADDED LOGS ---
 
               const response = await axiosInstance.put(`/produccion/actualizar/${currentProduccionId}`, datosActualizados);
 
-              if (response.status >= 200 && response.status < 300) {
-                toast.success("✅ Producción actualizada con éxito");
+              console.log("Backend response:", response.data);
 
-                if (response.data && response.data.produccion) {
+              if (response.status >= 200 && response.status < 300) {
+                toast.success("✅ Producción actualizada con éxito");                if (response.data && response.data.produccion) {
                   const produccionActualizadaBackend = response.data.produccion;
 
-                  // Preparar datos para setProduccionLocal, preservando el OTI number string
+                  console.log("Backend returned produccion:", produccionActualizadaBackend);
+                  console.log("Backend returned OTI:", produccionActualizadaBackend.oti);
+
+                  // Preparar datos para setProduccionLocal, preservando la estructura OTI del backend
                   const nuevaProduccionLocal = {
                     ...produccionActualizadaBackend,
-                    oti: { numeroOti: numeroOtiOriginalFormulario }, // Use the string OTI number from form
-                    // Backend might return ISO strings for dates/times, keep them as is for produccionLocal
-                    // or re-normalize if needed. For display, formatTime will be used by setRegistroEditado.
+                    // Preservar la estructura OTI que viene del backend (que ya está populada)
+                    oti: produccionActualizadaBackend.oti && produccionActualizadaBackend.oti.numeroOti 
+                      ? produccionActualizadaBackend.oti 
+                      : { numeroOti: numeroOtiOriginalFormulario }
                   };
-                  setProduccionLocal(nuevaProduccionLocal);
 
-                  // También actualizar el formulario de edición para reflejar los datos guardados
+                  console.log("Processed nuevaProduccionLocal OTI:", nuevaProduccionLocal.oti);
+                  
+                  setProduccionLocal(nuevaProduccionLocal);// También actualizar el formulario de edición para reflejar los datos guardados
                   // y mantener la consistencia, especialmente el OTI.
                   setRegistroEditado({
-                    ...nuevaProduccionLocal, // Start with the updated local data (which includes correct OTI string)
+                    ...nuevaProduccionLocal, // Start with the updated local data (which includes correct OTI structure)
                     // Ensure all fields for the form are correctly set and formatted for display
                     fecha: nuevaProduccionLocal.fecha ? new Date(nuevaProduccionLocal.fecha).toISOString().split('T')[0] : "",
-                    // oti is already correct from nuevaProduccionLocal
+                    // oti: use the correct OTI structure from nuevaProduccionLocal
+                    oti: nuevaProduccionLocal.oti || { numeroOti: numeroOtiOriginalFormulario },
                     procesos: (nuevaProduccionLocal.procesos || []).map(p => (typeof p === 'object' && p !== null ? p._id : p)).filter(Boolean),
                     insumos: (nuevaProduccionLocal.insumos || []).map(i => (typeof i === 'object' && i !== null ? i._id : i)).filter(Boolean),
                     maquina: nuevaProduccionLocal.maquina?._id || nuevaProduccionLocal.maquina || "",
@@ -496,21 +552,41 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
     guardarEdicion();
   };
 
-  const renderContent = () => {
-    if (isLoading) {
+  // Helper component for required field labels
+  const RequiredLabel = ({ htmlFor, children, required = false }) => (
+    <label htmlFor={htmlFor} className="block text-sm font-semibold text-gray-700">
+      {children}
+      {required && <span className="text-red-500 ml-1">*</span>}
+    </label>
+  );
+
+  const renderContent = () => {    if (isLoading) {
       return (
-        <Card className="w-full max-w-lg p-8 rounded-3xl shadow-2xl bg-white">
-          <h2 className="text-2xl font-bold text-center text-blue-700">Cargando Datos...</h2>
+        <Card className="w-full max-w-xs sm:max-w-sm md:max-w-md p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl bg-white">
+          <div className="flex flex-col items-center justify-center py-4 sm:py-8">
+            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-700 mb-4"></div>
+            <h2 className="text-lg sm:text-2xl font-bold text-center text-blue-700">Cargando Datos...</h2>
+            <p className="text-sm sm:text-base text-gray-500 mt-2 text-center">Por favor espere mientras cargamos la información</p>
+          </div>
         </Card>
       );
     }
 
     if (error) { 
       return (
-        <Card className="w-full max-w-lg p-8 rounded-3xl shadow-2xl bg-white">
-          <h2 className="text-2xl font-bold text-center text-red-700">{error}</h2>
-          <div className="flex justify-center mt-4">
-            <Button onClick={() => { if (onClose) onClose(); else navigate(-1); }} className="border-gray-300 px-6 py-2 rounded-lg">
+        <Card className="w-full max-w-xs sm:max-w-sm md:max-w-md p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl bg-white">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-lg sm:text-2xl font-bold text-red-700 mb-2">{error}</h2>
+            <p className="text-sm sm:text-base text-gray-600 mb-6">Ha ocurrido un error al cargar los datos</p>
+            <Button 
+              onClick={() => { if (onClose) onClose(); else navigate(-1); }} 
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 sm:px-6 py-2 rounded-lg text-sm sm:text-base w-full sm:w-auto"
+            >
               {onClose ? 'Cerrar' : 'Volver'}
             </Button>
           </div>
@@ -518,13 +594,21 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
       );
     }
     
-    
-    if (!produccionLocal && ((!paramId && !produccionProp && invokedAsModal) || (!paramId && !invokedAsModal))) {
+      if (!produccionLocal && ((!paramId && !produccionProp && invokedAsModal) || (!paramId && !invokedAsModal))) {
         return (
-            <Card className="w-full max-w-lg p-8 rounded-3xl shadow-2xl bg-white">
-                <h2 className="text-2xl font-bold text-center text-red-700">No hay datos de producción para editar.</h2>
-                <div className="flex justify-center mt-4">
-                    <Button onClick={() => { if (onClose) onClose(); else navigate(-1); }} className="border-gray-300 px-6 py-2 rounded-lg">
+            <Card className="w-full max-w-xs sm:max-w-sm md:max-w-md p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl bg-white">
+                <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+                        <svg className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h2 className="text-lg sm:text-2xl font-bold text-red-700 mb-2">No hay datos de producción para editar</h2>
+                    <p className="text-sm sm:text-base text-gray-600 mb-6">No se encontraron datos de producción válidos</p>
+                    <Button 
+                        onClick={() => { if (onClose) onClose(); else navigate(-1); }} 
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 sm:px-6 py-2 rounded-lg text-sm sm:text-base w-full sm:w-auto"
+                    >
                         {onClose ? 'Cerrar' : 'Volver'}
                     </Button>
                 </div>
@@ -534,103 +618,65 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
 
    
     if (!produccionLocal) {
-        
         return (
-            <Card className="w-full max-w-lg p-8 rounded-3xl shadow-2xl bg-white">
-                <h2 className="text-2xl font-bold text-center text-red-700">Datos de producción no disponibles.</h2>
-                 <div className="flex justify-center mt-4">
-                    <Button onClick={() => { if (onClose) onClose(); else navigate(-1); }} className="border-gray-300 px-6 py-2 rounded-lg">
+            <Card className="w-full max-w-xs sm:max-w-sm md:max-w-md p-6 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl bg-white">
+                <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                        <svg className="w-6 h-6 sm:w-8 sm:h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </div>
+                    <h2 className="text-lg sm:text-2xl font-bold text-red-700 mb-2">Datos no disponibles</h2>
+                    <p className="text-sm sm:text-base text-gray-600 mb-6">Los datos de producción no están disponibles en este momento</p>
+                    <Button 
+                        onClick={() => { if (onClose) onClose(); else navigate(-1); }} 
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 sm:px-6 py-2 rounded-lg text-sm sm:text-base w-full sm:w-auto"
+                    >
                         {onClose ? 'Cerrar' : 'Volver'}
                     </Button>
                 </div>
             </Card>
         );
     }
-
-   
-    return (
-      <Card className="w-full max-w-md p-6 rounded-3xl shadow-2xl bg-white transform transition-all duration-300 scale-100 opacity-100 translate-y-0 animate-fade-in-up border border-blue-100">
-        <h2 className="text-2xl font-bold text-center mb-6 text-blue-700 tracking-tight">Editar Producción</h2>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <Input
-            label="OTI"
-            value={registroEditado.oti?.numeroOti || ''}
-            onChange={(e) => setRegistroEditado(prev => ({ ...prev, oti: { ...prev.oti, numeroOti: e.target.value } }))}
-            className="focus:ring-2 focus:ring-blue-400"
-          />
-          <Input
-            label="Fecha"
-            type="date"
-            value={registroEditado.fecha?.split('T')[0] || ''}
-            onChange={handleChange}
-            name="fecha"
-            className="focus:ring-2 focus:ring-blue-400"
-          />
+    return (      <Card className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xl bg-white transform transition-all duration-300 scale-100 opacity-100 translate-y-0 animate-fade-in-up border border-blue-100">
+        <h2 className="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6 text-blue-700 tracking-tight">Editar Producción</h2>
+        
+        {/* Required fields note */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 sm:mb-6">
+          <p className="text-xs sm:text-sm text-blue-800">
+            <span className="text-red-500 font-semibold">*</span> Campos obligatorios
+          </p>
+        </div>
+        
+        <form className="space-y-3 sm:space-y-4" onSubmit={handleSubmit}>{/* OTI y Fecha en grid responsive */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-2">
+              <RequiredLabel htmlFor="oti">OTI</RequiredLabel>
+              <Input
+                id="oti"
+                value={registroEditado.oti?.numeroOti || ''}
+                onChange={(e) => setRegistroEditado(prev => ({ ...prev, oti: { ...prev.oti, numeroOti: e.target.value } }))}
+                className="focus:ring-2 focus:ring-blue-400 text-sm sm:text-base"
+              />
+            </div>
+            <div className="space-y-2">
+              <RequiredLabel htmlFor="fecha" required>Fecha</RequiredLabel>
+              <Input
+                id="fecha"
+                type="date"
+                value={registroEditado.fecha?.split('T')[0] || ''}
+                onChange={handleChange}
+                name="fecha"
+                className="focus:ring-2 focus:ring-blue-400 text-sm sm:text-base"
+                required
+              />
+            </div>
+          </div>          {/* Área de Producción */}
           <div className="space-y-2">
-            <label htmlFor="procesos" className="block text-sm font-semibold text-gray-700">Proceso(s)</label>
-            <Select
-              inputId="procesos"
-              isMulti
-              name="procesos"
-              options={availableProcesos.map(p => ({ value: p._id, label: p.nombre }))}
-              value={registroEditado.procesos
-                ? registroEditado.procesos.map(pId => {
-                    const procesoInfo = availableProcesos.find(ap => String(ap._id) === String(pId));
-                    return procesoInfo ? { value: procesoInfo._id, label: procesoInfo.nombre } : null;
-                  }).filter(p => p !== null)
-                : []}
-              onChange={(selectedOptions, actionMeta) => handleChangeRelacion(selectedOptions, { name: 'procesos', action: actionMeta.action })}
-              className="w-full basic-multi-select"
-              classNamePrefix="select"
-              placeholder="Seleccionar Proceso(s)"
-              isDisabled={!registroEditado.areaProduccion || (availableProcesos && availableProcesos.length === 0)}
-              styles={{ control: (base) => ({ ...base, borderColor: 'hsl(var(--input))', '&:hover': { borderColor: 'hsl(var(--input))' } }), placeholder: (base) => ({ ...base, color: 'hsl(var(--muted-foreground))' }) }}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="insumos" className="block text-sm font-semibold text-gray-700">Insumo(s)</label>
-            <Select
-              inputId="insumos"
-              isMulti
-              name="insumos"
-              options={insumosColeccion
-                .sort((a, b) => a.nombre.localeCompare(b.nombre))
-                .map(i => ({ value: i._id, label: i.nombre }))}
-              value={registroEditado.insumos
-                ? registroEditado.insumos.map(insumoId => {
-                    const insumoInfo = insumosColeccion.find(i => i._id === insumoId);
-                    return insumoInfo ? { value: insumoInfo._id, label: insumoInfo.nombre } : null;
-                  }).filter(i => i !== null)
-                : []}
-              onChange={(selectedOptions, actionMeta) => handleChangeRelacion(selectedOptions, { name: 'insumos', action: actionMeta.action })}
-              className="w-full basic-multi-select"
-              classNamePrefix="select"
-              placeholder="Seleccionar Insumo(s)"
-              styles={{ control: (base) => ({ ...base, borderColor: 'hsl(var(--input))', '&:hover': { borderColor: 'hsl(var(--input))' } }), placeholder: (base) => ({ ...base, color: 'hsl(var(--muted-foreground))' }) }}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="maquina" className="block text-sm font-semibold text-gray-700">Máquina</label>
-            <select
-              id="maquina"
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
-              value={registroEditado.maquina || ''}
-              onChange={handleChangeRelacion}
-              name="maquina"
-            >
-              <option value="">Seleccionar Máquina</option>
-              {maquinas.map((maquina) => (
-                <option key={maquina._id} value={maquina._id}>{maquina.nombre}</option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="areaProduccion" className="block text-sm font-semibold text-gray-700">Área de Producción</label>
+            <RequiredLabel htmlFor="areaProduccion" required>Área de Producción</RequiredLabel>
             <select
               id="areaProduccion"
-              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
+              className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 text-sm sm:text-base px-3 py-2"
               value={registroEditado.areaProduccion || ''}
               onChange={handleChangeRelacion}
               name="areaProduccion"
@@ -641,81 +687,162 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
               ))}
             </select>
           </div>
+
+          {/* Procesos e Insumos en grid responsive */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">            <div className="space-y-2">
+              <RequiredLabel htmlFor="procesos" required>Proceso(s)</RequiredLabel>
+              <Select
+                inputId="procesos"
+                isMulti
+                name="procesos"
+                options={availableProcesos.map(p => ({ value: p._id, label: p.nombre }))}
+                value={registroEditado.procesos
+                  ? registroEditado.procesos.map(pId => {
+                      const procesoInfo = availableProcesos.find(ap => String(ap._id) === String(pId));
+                      return procesoInfo ? { value: procesoInfo._id, label: procesoInfo.nombre } : null;
+                    }).filter(p => p !== null)
+                  : []}                onChange={(selectedOptions, actionMeta) => handleChangeRelacion(selectedOptions, { name: 'procesos', action: actionMeta.action })}
+                className="w-full basic-multi-select"
+                classNamePrefix="select"
+                placeholder="Seleccionar Proceso(s)"
+                isDisabled={!registroEditado.areaProduccion || (availableProcesos && availableProcesos.length === 0)}
+                styles={getSelectStyles()}
+                required
+              />
+            </div>            <div className="space-y-2">
+              <RequiredLabel htmlFor="insumos" required>Insumo(s)</RequiredLabel>
+              <Select
+                inputId="insumos"
+                isMulti
+                name="insumos"
+                options={insumosColeccion
+                  .sort((a, b) => a.nombre.localeCompare(b.nombre))
+                  .map(i => ({ value: i._id, label: i.nombre }))}
+                value={registroEditado.insumos
+                  ? registroEditado.insumos.map(insumoId => {
+                      const insumoInfo = insumosColeccion.find(i => i._id === insumoId);
+                      return insumoInfo ? { value: insumoInfo._id, label: insumoInfo.nombre } : null;
+                    }).filter(i => i !== null)
+                  : []}                onChange={(selectedOptions, actionMeta) => handleChangeRelacion(selectedOptions, { name: 'insumos', action: actionMeta.action })}
+                className="w-full basic-multi-select"
+                classNamePrefix="select"
+                placeholder="Seleccionar Insumo(s)"
+                styles={getSelectStyles()}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Máquina y Tipo de Tiempo en grid responsive */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">            <div className="space-y-2">
+              <RequiredLabel htmlFor="maquina" required>Máquina</RequiredLabel>
+              <select
+                id="maquina"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 text-sm sm:text-base px-3 py-2"
+                value={registroEditado.maquina || ''}
+                onChange={handleChangeRelacion}
+                name="maquina"
+              >
+                <option value="">Seleccionar Máquina</option>
+                {maquinas.map((maquina) => (
+                  <option key={maquina._id} value={maquina._id}>{maquina.nombre}</option>
+                ))}
+              </select>
+            </div>            <div className="space-y-2">
+              <RequiredLabel htmlFor="tipoTiempo" required>Tipo de Tiempo</RequiredLabel>
+              <select
+                id="tipoTiempo"
+                className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 text-sm sm:text-base px-3 py-2"
+                value={registroEditado.tipoTiempo || ''}
+                onChange={handleChangeRelacion}
+                name="tipoTiempo"
+                required
+              >
+                <option value="">Seleccionar Tipo de Tiempo</option>
+                <option value="Preparación">Preparación</option>
+                <option value="Operación">Operación</option>
+                <option value="Alimentacion">Alimentación</option>
+              </select>
+            </div>
+          </div>          {/* Horas en grid responsive */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-2">
+              <RequiredLabel htmlFor="horaInicio" required>Hora Inicio</RequiredLabel>
+              <Input
+                id="horaInicio"
+                type="time"
+                value={registroEditado.horaInicio || ''}
+                onChange={handleChange}
+                name="horaInicio"
+                className="focus:ring-2 focus:ring-blue-400 text-sm sm:text-base"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <RequiredLabel htmlFor="horaFin" required>Hora Fin</RequiredLabel>
+              <Input
+                id="horaFin"
+                type="time"
+                value={registroEditado.horaFin || ''}
+                onChange={handleChange}
+                name="horaFin"
+                className="focus:ring-2 focus:ring-blue-400 text-sm sm:text-base"
+                required
+              />
+            </div>
+          </div>          {/* Tiempo calculado */}
           <div className="space-y-2">
-          <label htmlFor="tipoTiempo" className="block text-sm font-semibold text-gray-700">Tipo de Tiempo</label>
-          <select
-            id="tipoTiempo"
-            className="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 sm:text-sm"
-            value={registroEditado.tipoTiempo || ''}
-            onChange={handleChangeRelacion}
-            name="tipoTiempo"
-            required
-          >
-            <option value="">Seleccionar Tipo de Tiempo</option>
-            <option value="Preparación">Preparación</option>
-            <option value="Operación">Operación</option>
-            <option value="Alimentacion">Alimentación</option>
-          </select>
-        </div>
-          <div className="flex gap-4">
+            <label htmlFor="tiempo" className="block text-sm font-semibold text-gray-700">Tiempo (minutos)</label>
             <Input
-              label="Hora Inicio"
-              type="time"
-              value={registroEditado.horaInicio || ''}
-              onChange={handleChange}
-              name="horaInicio"
-              className="focus:ring-2 focus:ring-blue-400"
-              required
-            />
-            <Input
-              label="Hora Fin"
-              type="time"
-              value={registroEditado.horaFin || ''}
-              onChange={handleChange}
-              name="horaFin"
-              className="focus:ring-2 focus:ring-blue-400"
-              required
+              id="tiempo"
+              type="number"
+              value={((inicioStr, finStr) => {
+                if (inicioStr && finStr) {
+                  const inicio = new Date(`1970-01-01T${inicioStr}:00`);
+                  const fin = new Date(`1970-01-01T${finStr}:00`);
+                  if (fin > inicio) {
+                    return Math.floor((fin - inicio) / 60000);
+                  }
+                }
+                return 0;
+              })(registroEditado.horaInicio, registroEditado.horaFin)}
+              readOnly
+              disabled
+              className="focus:ring-2 focus:ring-blue-400 bg-gray-100 cursor-not-allowed text-sm sm:text-base"
             />
           </div>
-          <Input
-            label="Tiempo (minutos)"
-            type="number"
-            value={((inicioStr, finStr) => {
-              if (inicioStr && finStr) {
-                const inicio = new Date(`1970-01-01T${inicioStr}:00`);
-                const fin = new Date(`1970-01-01T${finStr}:00`);
-                if (fin > inicio) {
-                  return Math.floor((fin - inicio) / 60000);
-                }
-              }
-              return 0;
-            })(registroEditado.horaInicio, registroEditado.horaFin)}
-            readOnly
-            disabled
-            className="focus:ring-2 focus:ring-blue-400 bg-gray-100 cursor-not-allowed"
-          />
-          <Input
-            label="Observaciones"
-            value={registroEditado.observaciones || ''}
-            onChange={handleChange}
-            name="observaciones"
-            className="focus:ring-2 focus:ring-blue-400"
-          />
-          <div className="flex justify-end gap-4 pt-5">
+
+          {/* Observaciones */}
+          <div className="space-y-2">
+            <label htmlFor="observaciones" className="block text-sm font-semibold text-gray-700">Observaciones</label>
+            <textarea
+              id="observaciones"
+              value={registroEditado.observaciones || ''}
+              onChange={handleChange}
+              name="observaciones"
+              rows="3"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 text-sm sm:text-base resize-none"
+              placeholder="Ingrese observaciones adicionales..."
+            />
+          </div>
+
+          {/* Botones responsive */}
+          <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4 sm:pt-5">
             <Button
               type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg shadow-md transition-all"
+              className="order-2 sm:order-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 sm:px-6 py-2.5 sm:py-2 rounded-lg shadow-md transition-all text-sm sm:text-base w-full sm:w-auto"
             >
               Guardar Cambios
             </Button>
             <Button 
+              type="button"
               variant="secondary" 
               onClick={() => {
                 if (onClose) onClose();
                 else if (paramId) navigate(-1); 
                 else navigate('/operario-dashboard'); 
               }} 
-              className="border-gray-300 px-6 py-2 rounded-lg"
+              className="order-1 sm:order-2 border-gray-300 px-4 sm:px-6 py-2.5 sm:py-2 rounded-lg text-sm sm:text-base w-full sm:w-auto"
             >
               Cancelar
             </Button>
@@ -725,20 +852,22 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
     );
   };
 
-
   if (invokedAsModal) {
     return (
-      <div className="fixed inset-0 z-50 flex justify-center items-start overflow-y-auto pt-10 pb-10 px-4">
-       
-        <div className="fixed inset-0 bg-black bg-opacity-60 transition-opacity duration-300" />
-        {renderContent()}
+      <div className="fixed inset-0 z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4">
+        {/* Backdrop mejorado */}
+        <div className="fixed inset-0 bg-black bg-opacity-60 transition-opacity duration-300" onClick={onClose} />
+        
+        {/* Contenedor del modal con scroll seguro */}
+        <div className="relative w-full max-h-screen overflow-y-auto py-4 sm:py-8">
+          {renderContent()}
+        </div>
       </div>
     );
   }
 
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-sky-100 flex flex-col justify-center items-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-sky-100 flex flex-col justify-center items-center p-2 sm:p-4">
       {renderContent()} 
     </div>
   );
