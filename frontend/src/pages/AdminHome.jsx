@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../utils/axiosInstance';
 import { toast } from 'react-toastify';
 import { SidebarAdmin } from '../components/SidebarAdmin';
-import Navbar from '../components/Navbar';
 import { Card } from '../components/ui';
 
 // Iconos para las tarjetas KPI
 const KpiIcons = {
   Jornadas: (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
     </svg>
   ),
   Minutos: (
@@ -26,15 +25,17 @@ const KpiIcons = {
 };
 
 // Componente para tarjetas KPI
-const ResumenKPI = ({ title, value, icon, bgColor, textColor }) => {
+const ResumenKPI = ({ title, value, icon, bgColor, textColor}) => {
   return (
-    <Card className={`${bgColor} p-6 rounded-2xl shadow-lg transition-transform transform hover:scale-105 border border-gray-200`}>
-      <div className="flex items-center justify-between gap-4">
+    <Card className={`${bgColor} p-6 rounded-2xl shadow-lg transition-transform transform hover:scale-105 border-none`}>
+      <div className="flex justify-between items-start">
         <div>
-          <h3 className="text-base font-semibold text-gray-700 tracking-wide uppercase">{title}</h3>
-          <p className={`text-3xl font-extrabold ${textColor} mt-2 drop-shadow-sm`}>{value}</p>
+          <h3 className="text-sm font-semibold text-gray-600 tracking-wide">{title}</h3>
+          <p className={`text-4xl font-extrabold ${textColor} mt-1 drop-shadow-sm`}>{value}</p>          
         </div>
-        <div className="bg-white p-4 rounded-full shadow-md border border-gray-100 flex items-center justify-center"></div>
+        <div className="p-2">
+          {icon}
+        </div>
       </div>
     </Card>
   );
@@ -158,42 +159,41 @@ const AdminHome = () => {
   }, []);
 
   return (
-    <>
-      <Navbar />
+    <>  
       <div className="flex bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50 h-screen">
         <SidebarAdmin />
-        <div className="flex-1 p-6 md:p-10 overflow-y-auto">
-          <div className="max-w-7xl mx-auto space-y-10">
+        <div className="flex-1 overflow-auto">
+          <div className="container mx-auto px-4 py-6">
             {/* Encabezado */}
             <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
                 <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight drop-shadow-sm">Panel de Administración</h1>
                 <p className="text-lg text-gray-500 mt-2">Bienvenido al sistema de gestión de producción</p>
               </div>
-              <img src="/src/assets/logo.png" alt="Logo" className="h-16 w-auto hidden md:block" />
+              {/* Logo removed from here */}
             </div>
 
             {/* Tarjetas KPI */}
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-700 mb-6 tracking-tight">Resumen del día</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <ResumenKPI 
-                  title="Jornadas Activas" 
-                  value={loading ? "..." : kpis.jornadasHoy} 
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"> {/* Changed to lg:grid-cols-3 and gap-6 */}
+                <ResumenKPI
+                  title="Jornadas Activas"
+                  value={loading ? "..." : kpis.jornadasHoy}
                   icon={KpiIcons.Jornadas}
                   bgColor="bg-blue-50"
                   textColor="text-blue-600"
                 />
-                <ResumenKPI 
-                  title="Minutos Trabajados" 
-                  value={loading ? "..." : `${kpis.minutosHoy} min`} 
+                <ResumenKPI
+                  title="Minutos Trabajados"
+                  value={loading ? "..." : kpis.minutosHoy}
                   icon={KpiIcons.Minutos}
                   bgColor="bg-green-50"
                   textColor="text-green-600"
                 />
-                <ResumenKPI 
-                  title="Registros Hoy" 
-                  value={loading ? "..." : kpis.registrosHoy} 
+                <ResumenKPI
+                  title="Registros Hoy"
+                  value={loading ? "..." : kpis.registrosHoy}
                   icon={KpiIcons.Registros}
                   bgColor="bg-purple-50"
                   textColor="text-purple-600"
@@ -201,51 +201,74 @@ const AdminHome = () => {
               </div>
             </section>
 
-            {/* Jornadas Recientes */}
-            <section className="mb-12">
-              <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <h2 className="text-2xl font-bold text-gray-700 tracking-tight">Jornadas Recientes</h2>
-                <button 
-                  onClick={() => navigate('/admin-dashboard')}
-                  className="px-5 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors text-base font-semibold"
-                >
-                  Ver todas
-                </button>
-              </div>
-              <TablaJornadasRecientes 
-                jornadas={jornadasRecientes} 
-                loading={loading} 
-                navigate={navigate}
-              />
-            </section>
+            {/* Jornadas Recientes y Accesos Rápidos */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+              {/* Jornadas Recientes */}
+              <section className="lg:col-span-2">
+                <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                  <h2 className="text-2xl font-bold text-gray-700 tracking-tight">Jornadas Recientes</h2>
+                  <button
+                    onClick={() => navigate('/admin/jornadas')}
+                    className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center"
+                  >
+                    Ver todas
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </button>
+                </div>
+                <TablaJornadasRecientes
+                  jornadas={jornadasRecientes}
+                  loading={loading}
+                  navigate={navigate}
+                />
+              </section>
 
-            {/* Botones de Acceso Rápido */}
-            <section>
-              <h2 className="text-2xl font-bold text-gray-700 mb-6 tracking-tight">Accesos Rápidos</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                <button
-                  onClick={() => navigate('/admin/operarios')}
-                  className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-100 to-blue-50 rounded-2xl shadow-md hover:shadow-lg transition-all border border-blue-200 group"
-                >
-                  <span className="text-3xl mb-2 group-hover:scale-110 transition-transform">👥</span>
-                  <span className="font-bold text-blue-800 text-lg">Gestionar Operarios</span>
-                </button>
-                <button
-                  onClick={() => navigate('/admin/procesos')}
-                  className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-purple-100 to-purple-50 rounded-2xl shadow-md hover:shadow-lg transition-all border border-purple-200 group"
-                >
-                  <span className="text-3xl mb-2 group-hover:scale-110 transition-transform">⚙️</span>
-                  <span className="font-bold text-purple-800 text-lg">Gestionar Procesos</span>
-                </button>
-                <button
-                  onClick={() => navigate('/admin/maquinas')}
-                  className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-green-100 to-green-50 rounded-2xl shadow-md hover:shadow-lg transition-all border border-green-200 group"
-                >
-                  <span className="text-3xl mb-2 group-hover:scale-110 transition-transform">🔧</span>
-                  <span className="font-bold text-green-800 text-lg">Gestionar Máquinas</span>
-                </button>
-              </div>
-            </section>
+              {/* Botones de Acceso Rápido */}
+              <section className="lg:col-span-1">
+                <h2 className="text-2xl font-bold text-gray-700 mb-6 tracking-tight">Accesos Rápidos</h2>
+                <div className="grid grid-cols-1 gap-4"> {/* Reduced gap from gap-6 to gap-4 */}
+                  <button
+                    onClick={() => navigate('/admin/operarios')}
+                    className="flex items-center p-4 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-all group min-h-[40px]" /* Adjusted padding, min-height and removed flex-col, items-start, justify-between */
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-white opacity-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                    </svg>
+                    <div className="text-left"> {/* Ensured text is aligned left */}
+                      <span className="font-semibold text-m">Gestionar Operarios</span> {/* Adjusted font size */}
+                      <p className="text-xs text-blue-200 mt-0.5">Administrar personal</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => navigate('/admin/procesos')}
+                    className="flex items-center p-4 bg-purple-600 text-white rounded-lg shadow-md hover:bg-purple-700 transition-all group min-h-[40px]"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-white opacity-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.43.992a6.759 6.759 0 010 1.255c-.008.378.137.75.43.991l1.004.827c.432.356.533.98.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.61 6.61 0 01-.22.128c-.332.183-.582.495-.644.869l-.213 1.28c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.538 6.538 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.759 6.759 0 010-1.255c.008-.378-.137-.75-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <div className="text-left">
+                      <span className="font-semibold text-m">Gestionar Procesos</span>
+                      <p className="text-xs text-purple-200 mt-0.5">Configurar workflows</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => navigate('/admin/maquinas')}
+                    className="flex items-center p-4 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition-all group min-h-[40px]"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-white opacity-90 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.471-2.471a3.75 3.75 0 00-5.303-5.303l-2.471 2.471M11.42 15.17L5.877 21M11.42 15.17l2.471 2.471M18.375 3.622L17.25 4.75M9.75 9.75L8.625 8.625M3 12.75l1.125-1.125" />
+                    </svg>
+                    <div className="text-left">
+                      <span className="font-semibold text-m">Gestionar Máquinas</span>
+                      <p className="text-xs text-green-200 mt-0.5">Control de equipos</p>
+                    </div>
+                  </button>
+                </div>
+              </section>
+            </div>
+
           </div>
         </div>
       </div>

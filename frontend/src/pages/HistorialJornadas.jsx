@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from "react-router-dom"; // Import useLocati
 import { toast } from "react-toastify";
 import { Card, Button } from "../components/ui/index";
 import { Sidebar } from "../components/Sidebar";
-import Navbar from "../components/Navbar";
 import { ChevronDownIcon, ChevronUpIcon, Pencil, Trash2 } from "lucide-react";
 import EditarProduccion from "./EditarProduccion";
 
@@ -110,8 +109,7 @@ const handleEliminarActividad = async (jornadaId, actividadId) => {
   return (
     <div className="flex bg-gray-100 h-screen">
       <Sidebar />
-      <div className="flex flex-col flex-1"> 
-        <Navbar /> 
+      <div className="flex flex-col flex-1">   
         <div className="flex-1 overflow-auto p-6"> 
           <div className="container mx-auto">
             <div className="flex flex-wrap justify-between items-center mb-6">

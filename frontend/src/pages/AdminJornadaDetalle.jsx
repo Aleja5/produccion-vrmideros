@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axiosInstance from '../utils/axiosInstance';
 import { toast } from 'react-toastify';
-import Navbar from '../components/Navbar';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import { Card } from '../components/ui';
 import { ClipboardList, UserCircle, Clock, Calendar, ChevronLeft } from 'lucide-react';
@@ -47,12 +46,11 @@ const AdminJornadaDetalle = () => {
   }
 
   return (
-    <>
-      <Navbar />
-      <div className="flex bg-gray-100 min-h-screen">
+    <>     
+      <div className="flex bg-gray-100 h-screen">
         <SidebarAdmin />
-        <div className="flex-1 p-6 overflow-y-auto">
-          <div className="max-w-5xl mx-auto"> {/* Aumentado el max-w para la tabla */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="container mx-auto px-4 py-6"> {/* Aumentado el max-w para la tabla */}
             <button onClick={() => navigate(-1)} className="mb-6 flex items-center text-indigo-600 hover:underline font-medium">
               <ChevronLeft className="w-5 h-5 mr-1" /> Volver
             </button>
@@ -98,33 +96,47 @@ const AdminJornadaDetalle = () => {
                 </h2>
               </div>
               {jornada.registros && jornada.registros.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
+                <div className="overflow-x-auto shadow-md rounded-lg border border-gray-200">
+                  <table className="min-w-full divide-y divide-gray-300">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Proceso</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">OTI</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Área</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Máquina</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">H. Inicio</th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">H. Fin</th>
+                        <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Proceso</th>                        
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">OTI</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Área</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Máquina</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Insumos</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tipo Tiempo</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Inicio</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Fin</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tiempo (min)</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Observaciones</th>                    
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="divide-y divide-gray-200 bg-white">
                       {jornada.registros.map((actividad) => (
                         <tr key={actividad._id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                             {actividad.procesos?.map(p => p.nombre).join(', ') || 'N/A'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.oti?.numeroOti || 'N/A'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.areaProduccion?.nombre || 'N/A'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.maquina?.nombre || 'N/A'}</td>
+                          <td className="px-3 py-4 text-sm text-gray-500">
+                            {actividad.insumos && actividad.insumos.length > 0 ? (
+                              actividad.insumos.map(i => <div key={i._id || i.nombre}>{i.nombre}</div>)
+                            ) : (
+                              "N/A"
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tipoTiempo || "N/A"}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                           </td>
+                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tiempo}</td>
+                          <td className="px-3 py-4 text-sm text-gray-500 max-w-xs whitespace-normal break-words">{actividad.observaciones || "N/A"}</td>
                         </tr>
                       ))}
                     </tbody>

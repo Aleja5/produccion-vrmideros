@@ -5,8 +5,8 @@ import Pagination from '../components/Pagination';
 import { toast } from 'react-toastify';
 import { Button, Card } from '../components/ui';
 import DetalleJornadaModal from '../components/DetalleJornadaModal';
-import Navbar from '../components/Navbar';
-import { SidebarAdmin } from '../components/SidebarAdmin'; 
+import { SidebarAdmin } from '../components/SidebarAdmin';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 // Helper function to parse date strings as local dates at midnight
 const parseLocalDate = (dateString) => {
@@ -18,6 +18,7 @@ const parseLocalDate = (dateString) => {
 };
 
 const ConsultaJornadas = () => {
+  const navigate = useNavigate(); // Initialize navigate
   const [jornadas, setJornadas] = useState([]);
   const [loading, setLoading] = useState(true); // Combined loading state for this page
   const [jornadaSearch, setJornadaSearch] = useState("");
@@ -26,7 +27,6 @@ const ConsultaJornadas = () => {
   const [selectedJornadaId, setSelectedJornadaId] = useState(null);
   const [jornadasTablePage, setJornadasTablePage] = useState(1);
   const jornadasTableItemsPerPage = 5; // Or your preferred number
-
   useEffect(() => {
     const fetchJornadas = async () => {
       setLoading(true);
@@ -34,6 +34,7 @@ const ConsultaJornadas = () => {
         const response = await axiosInstance.get('/jornadas');
         setJornadas(response.data);
       } catch (error) {
+        console.error('Error al cargar jornadas:', error);
         toast.error('No se pudieron cargar las jornadas. Intenta de nuevo más tarde.');
         setJornadas([]); // Ensure jornadas is an array on error
       } finally {
@@ -84,6 +85,8 @@ const ConsultaJornadas = () => {
         'Fecha': fechaJornada ? fechaJornada.toLocaleDateString() : 'N/A',
         'Operario': j.operario?.name || 'N/A',
         'N.º Actividades': j.registros?.length || 0,
+        'Hora Inicio': j.horaInicio ? new Date(j.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+        'Hora Fin': j.horaFin ? new Date(j.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
         'Tiempo Total': `${j.totalTiempoActividades?.horas ?? 0}h ${j.totalTiempoActividades?.minutos ?? 0}m`,
       };
     });
@@ -138,14 +141,13 @@ const ConsultaJornadas = () => {
   const totalFilteredJornadas = filteredJornadas.length;
 
   return (
-    <>
-      <Navbar />
+    <>    
       <div className="flex min-h-screen bg-gradient-to-br from-gray-100 to-blue-100 overflow-hidden">
         <div className="h-screen w-64 flex-shrink-0 bg-white shadow-lg z-20 overflow-y-auto">
           <SidebarAdmin />
         </div>
-        <div className="flex-1 flex flex-col bg-transparent overflow-auto min-w-0">
-          <div className="p-4 md:p-8 max-w-7xl mx-auto w-full min-w-0">
+        <div className="flex-1 overflow-auto">
+          <div className="container mx-auto px-4 py-6">
             <div className="mb-6">
                 <h1 className="text-3xl md:text-4xl font-extrabold text-blue-800 tracking-tight drop-shadow-sm">Consulta de Jornadas</h1>
                 <p className="text-base md:text-lg text-gray-500 mt-1">Visualiza, filtra y exporta las jornadas registradas.</p>
@@ -208,6 +210,7 @@ const ConsultaJornadas = () => {
                         <th className="p-3 font-semibold text-blue-800 text-left">Fecha</th>
                         <th className="p-3 font-semibold text-blue-800 text-left">Operario</th>
                         <th className="p-3 font-semibold text-blue-800 text-center">N.º Actividades</th>
+                        <th className="p-3 font-semibold text-blue-800 text-left">Hora Inicio - Hora Fin</th>
                         <th className="p-3 font-semibold text-blue-800 text-left">Tiempo Total</th>
                         <th className="p-3 font-semibold text-blue-800 text-center">Acciones</th>
                       </tr>
@@ -221,14 +224,19 @@ const ConsultaJornadas = () => {
                           <td className="p-3 whitespace-nowrap">{j.operario?.name || 'N/A'}</td>
                           <td className="p-3 whitespace-nowrap text-center">{j.registros?.length || 0}</td>
                           <td className="p-3 whitespace-nowrap">
+                            {j.horaInicio && j.horaFin ? (
+                              (new Date(j.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })) +
+                              ' - ' +
+                              (new Date(j.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }))
+                            ) : 'N/A'}
+                          </td>
+                          <td className="p-3 whitespace-nowrap">
                             {`${j.totalTiempoActividades?.horas ?? 0}h ${j.totalTiempoActividades?.minutos ?? 0}m`}
                           </td>
                           <td className="p-3 whitespace-nowrap text-center">
                             <Button
-                              variant="link"
-                              size="sm"
-                              onClick={() => setSelectedJornadaId(j._id)}
-                              className="text-blue-600 hover:text-blue-800"
+                              onClick={() => navigate(`/admin/jornada/${j._id}`)}                                                          
+                              className="text-indigo-600 hover:text-indigo-900 font-semibold px-3 py-1 rounded transition-colors bg-indigo-50 hover:bg-indigo-100"
                             >
                               Ver Detalles
                             </Button>

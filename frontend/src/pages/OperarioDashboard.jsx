@@ -7,7 +7,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import { confirmAlert } from 'react-confirm-alert';
 import 'react-confirm-alert/src/react-confirm-alert.css';
 import { Sidebar } from '../components/Sidebar';
-import Navbar from '../components/Navbar';
 import { Button, Card, Input } from '../components/ui/index';
 import EditarProduccion from './EditarProduccion';
 import DetalleJornadaModal from '../components/DetalleJornadaModal';
@@ -217,8 +216,6 @@ const OperarioDashboard = () => {
 
     const handleRegistroProduccion = useCallback(() => {
         if (jornadaActual && jornadaActual._id) {
-            navigate(`/registro-produccion/${jornadaActual._id}`);
-        } else {
             navigate('/registro-produccion');
         }
     }, [navigate, jornadaActual]);
@@ -307,8 +304,7 @@ const OperarioDashboard = () => {
 
     // --- Render JSX ---
     return (
-        <>
-            <Navbar />
+        <>       
             <div className="flex bg-gray-100 min-h-screen h-screen">
                 <Sidebar className="h-full flex flex-col" />
                 <div className="flex-1 p-6 overflow-auto">

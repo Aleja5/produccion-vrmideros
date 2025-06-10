@@ -7,6 +7,11 @@ const { recalcularTiempoTotal } = require('../utils/recalcularTiempo');
 const fs = require('fs');
 const path = require('path');
 const verificarYCrearOti = require('../utils/verificarYCrearEntidad');
+const Operario = require('../models/Operario'); // <--- AÑADIDO: Importar modelo Operario
+const Proceso = require('../models/Proceso'); // Added import
+const AreaProduccion = require('../models/AreaProduccion'); // Added import
+const Maquina = require('../models/Maquina'); // Added import
+const Insumo = require('../models/Insumos'); // Corrected import path from Insumo to Insumos
 
 
 // Configuración del logger
@@ -334,67 +339,151 @@ exports.buscarProduccion = async (req, res) => {
         const query = {};
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
+        // Log de parámetros recibidos
+        console.log('Parámetros de búsqueda recibidos:', req.query);
+
+        // Filter by OTI
         if (oti && oti.trim() !== '') {
-            query.oti = oti;
+            const otiTrimmed = oti.trim();
+            if (mongoose.Types.ObjectId.isValid(otiTrimmed)) {
+                query.oti = new mongoose.Types.ObjectId(otiTrimmed);
+                console.log('Filtro OTI aplicado (ID):', query.oti);
+            } else {
+                const otiDoc = await Oti.findOne({ numeroOti: otiTrimmed });
+                if (otiDoc) {
+                    query.oti = otiDoc._id;
+                    console.log('Filtro OTI aplicado (nombre):', query.oti);
+                } else {
+                    console.log('OTI no encontrada:', otiTrimmed);
+                    return res.status(200).json({ totalResultados: 0, resultados: [] });
+                }
+            }
         }
 
+        // Filter by Operario
         if (operario && operario.trim() !== '') {
-            query.operario = operario;
+            const operarioTrimmed = operario.trim();
+            if (mongoose.Types.ObjectId.isValid(operarioTrimmed)) {
+                query.operario = new mongoose.Types.ObjectId(operarioTrimmed);
+                console.log('Filtro Operario aplicado (ID):', query.operario);
+            } else {
+                const operarioDoc = await Operario.findOne({ name: operarioTrimmed });
+                if (operarioDoc) {
+                    query.operario = operarioDoc._id;
+                    console.log('Filtro Operario aplicado (nombre):', query.operario);
+                } else {
+                    console.log('Operario no encontrado:', operarioTrimmed);
+                    return res.status(200).json({ totalResultados: 0, resultados: [] });
+                }
+            }
         }
 
+        // Filter by Date Range
         if (fechaInicio && fechaFin) {
             const inicio = new Date(fechaInicio);
             inicio.setHours(0, 0, 0, 0);
-
             const fin = new Date(fechaFin);
             fin.setHours(23, 59, 59, 999);
-
-            query.fecha = {
-                $gte: inicio,
-                $lte: fin,
-            };
+            query.fecha = { $gte: inicio, $lte: fin };
+            console.log('Filtro de fechas aplicado:', query.fecha);
         }
 
-        if (proceso && proceso.trim() !== '') { // Should be procesos
-            // If 'proceso' is an array of IDs
-            if (Array.isArray(proceso) && proceso.length > 0) {
-                query.procesos = { $in: proceso.map(p => new mongoose.Types.ObjectId(p)) };
-            } else if (mongoose.Types.ObjectId.isValid(proceso)) {
-                 // If 'proceso' is a single ID string 
-                query.procesos = new mongoose.Types.ObjectId(proceso);
+        // Filter by Proceso (searches if the ID is in the 'procesos' array)
+        if (proceso && proceso.trim() !== '') {
+            const procesoTrimmed = proceso.trim();
+            let procesoIdToQuery;
+            if (mongoose.Types.ObjectId.isValid(procesoTrimmed)) {
+                procesoIdToQuery = new mongoose.Types.ObjectId(procesoTrimmed);
+            } else {
+                const procesoDoc = await Proceso.findOne({ nombre: procesoTrimmed });
+                if (procesoDoc) {
+                    procesoIdToQuery = procesoDoc._id; // This is already an ObjectId
+                } else {
+                    console.log('Proceso no encontrado:', procesoTrimmed);
+                    return res.status(200).json({ totalResultados: 0, resultados: [] });
+                }
+            }
+            if (procesoIdToQuery) {
+                query.procesos = { $in: [procesoIdToQuery] };
+                console.log('Filtro Proceso aplicado:', query.procesos);
             }
         }
 
+        // Filter by Area de Producción
         if (areaProduccion && areaProduccion.trim() !== '') {
-            query.areaProduccion = areaProduccion;
-        }
-
-        if (maquina && maquina.trim() !== '') {
-            query.maquina = maquina;
-        }
-
-        if (insumos && insumos.trim() !== '') { // Should be insumos, and handle array
-            // If 'insumos' is an array of IDs
-            if (Array.isArray(insumos) && insumos.length > 0) {
-                query.insumos = { $in: insumos.map(i => new mongoose.Types.ObjectId(i)) };
-            } else if (mongoose.Types.ObjectId.isValid(insumos)){
-                // If 'insumos' is a single ID string
-                query.insumos = new mongoose.Types.ObjectId(insumos);
+            const areaTrimmed = areaProduccion.trim();
+            if (mongoose.Types.ObjectId.isValid(areaTrimmed)) {
+                query.areaProduccion = new mongoose.Types.ObjectId(areaTrimmed);
+                console.log('Filtro Área aplicado (ID):', query.areaProduccion);
+            } else {
+                const areaDoc = await AreaProduccion.findOne({ nombre: areaTrimmed });
+                if (areaDoc) {
+                    query.areaProduccion = areaDoc._id;
+                    console.log('Filtro Área aplicado (nombre):', query.areaProduccion);
+                } else {
+                    console.log('Área no encontrada:', areaTrimmed);
+                    return res.status(200).json({ totalResultados: 0, resultados: [] });
+                }
             }
         }
+
+        // Filter by Maquina
+        if (maquina && maquina.trim() !== '') {
+            const maquinaTrimmed = maquina.trim();
+            if (mongoose.Types.ObjectId.isValid(maquinaTrimmed)) {
+                query.maquina = new mongoose.Types.ObjectId(maquinaTrimmed);
+                console.log('Filtro Máquina aplicado (ID):', query.maquina);
+            } else {
+                const maquinaDoc = await Maquina.findOne({ nombre: maquinaTrimmed });
+                if (maquinaDoc) {
+                    query.maquina = maquinaDoc._id;
+                    console.log('Filtro Máquina aplicado (nombre):', query.maquina);
+                } else {
+                    console.log('Máquina no encontrada:', maquinaTrimmed);
+                    return res.status(200).json({ totalResultados: 0, resultados: [] });
+                }
+            }
+        }
+
+        // Filter by Insumos (searches if the ID is in the 'insumos' array)
+        if (insumos && insumos.trim() !== '') {
+            const insumosTrimmed = insumos.trim();
+            let insumoIdToQuery;
+            if (mongoose.Types.ObjectId.isValid(insumosTrimmed)) {
+                insumoIdToQuery = new mongoose.Types.ObjectId(insumosTrimmed);
+            } else {
+                const insumoDoc = await Insumo.findOne({ nombre: insumosTrimmed });
+                if (insumoDoc) {
+                    insumoIdToQuery = insumoDoc._id; // This is already an ObjectId
+                } else {
+                    console.log('Insumo no encontrado:', insumosTrimmed);
+                    return res.status(200).json({ totalResultados: 0, resultados: [] });
+                }
+            }
+            if (insumoIdToQuery) {
+                query.insumos = { $in: [insumoIdToQuery] };
+                console.log('Filtro Insumos aplicado:', query.insumos);
+            }
+        }
+
+        // Log de la consulta final construida
+        console.log('Consulta MongoDB construida:', JSON.stringify(query, null, 2));
 
         const totalResultados = await Produccion.countDocuments(query);
+        console.log('Total de resultados encontrados:', totalResultados);
 
         const producciones = await Produccion.find(query)
             .skip(skip)
             .limit(parseInt(limit))
             .populate('oti', '_id numeroOti')
             .populate('operario', 'name')
-            .populate('procesos', 'nombre') // Changed from proceso to procesos
+            .populate('procesos', 'nombre')
             .populate('areaProduccion', 'nombre')
             .populate('maquina', 'nombre')
             .populate('insumos', 'nombre');
 
+        console.log('Producciones encontradas:', producciones.length);
+        
         res.status(200).json({ totalResultados, resultados: producciones });
     } catch (error) {
         logger.error('Error al buscar producciones:', error);
@@ -434,5 +523,70 @@ exports.buscarPorFechas = async (req, res) => {
     } catch (error) {
         logger.error("Error al buscar por fechas:", error);
         res.status(500).json({ msg: "Error al buscar registros" });
+    }
+};
+
+// NUEVO: Obtener todas las OTIs para filtros
+exports.getAllOtiParaFiltros = async (req, res) => {
+    try {
+        const otis = await Oti.find({}, '_id numeroOti').sort({ numeroOti: 1 });
+        res.status(200).json(otis);
+    } catch (error) {
+        logger.error("Error al obtener OTIs para filtros:", error);
+        res.status(500).json({ msg: "Error interno del servidor al obtener OTIs" });
+    }
+};
+
+// NUEVO: Obtener todos los Operarios para filtros
+exports.getAllOperariosParaFiltros = async (req, res) => {
+    try {
+        const operarios = await Operario.find({}, '_id name').sort({ name: 1 }); // Asumiendo que el campo es 'name'
+        res.status(200).json(operarios);
+    } catch (error) {
+        logger.error("Error al obtener Operarios para filtros:", error);
+        res.status(500).json({ msg: "Error interno del servidor al obtener Operarios" });
+    }
+};
+
+// NUEVO: Función de debug para verificar datos existentes
+exports.debugDatos = async (req, res) => {
+    try {
+        console.log('=== DEBUG: Verificando datos en la base de datos ===');
+        
+        // Contar total de registros de producción
+        const totalProduccion = await Produccion.countDocuments({});
+        console.log('Total de registros de producción:', totalProduccion);
+        
+        // Obtener algunos registros de muestra
+        const muestraProduccion = await Produccion.find({})
+            .limit(3)
+            .populate('operario', 'name')
+            .populate('oti', 'numeroOti');
+        
+        console.log('Muestra de registros de producción:');
+        muestraProduccion.forEach((prod, index) => {
+            console.log(`Registro ${index + 1}:`, {
+                _id: prod._id,
+                operario: prod.operario,
+                oti: prod.oti,
+                fecha: prod.fecha
+            });
+        });
+        
+        // Verificar operarios existentes
+        const operarios = await Operario.find({}, '_id name').limit(5);
+        console.log('Operarios en la base de datos:');
+        operarios.forEach(op => {
+            console.log(`- ${op.name} (ID: ${op._id})`);
+        });
+        
+        res.status(200).json({
+            totalProduccion,
+            muestraProduccion,
+            operarios
+        });
+    } catch (error) {
+        console.error('Error en debug:', error);
+        res.status(500).json({ error: error.message });
     }
 };

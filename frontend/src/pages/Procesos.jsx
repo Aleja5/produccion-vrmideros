@@ -4,7 +4,6 @@ import ProcesoForm from '../components/ProcesoForm';
 import ProcesosList from '../components/ProcesosList';
 import Pagination from '../components/Pagination';
 import { SidebarAdmin } from '../components/SidebarAdmin';
-import Navbar from '../components/Navbar';
 
 const ProcesoPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 8 }) => {
     const [procesos, setProcesos] = useState([]);
@@ -103,13 +102,12 @@ const ProcesoPage = ({ currentPage: propCurrentPage, totalResults: propTotalResu
 
 
     return (
-        <>
-        <Navbar />
+        <>       
         <div className="flex bg-gray-100 h-screen">
             <SidebarAdmin />
 
-            <div className="flex-1 flex flex-col overflow-y-auto">
-                <div className="p-4 sm:p-6 md:p-8"> 
+            <div className="flex-1 overflow-auto">
+                <div className="container mx-auto px-4 py-6">
                     <div className="bg-white shadow-xl rounded-2xl p-6 md:p-8">
                         <h1 className="text-3xl font-bold text-gray-800 mb-8">Gestión de Procesos</h1>
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">

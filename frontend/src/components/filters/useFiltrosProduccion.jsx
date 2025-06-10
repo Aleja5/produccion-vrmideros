@@ -25,6 +25,8 @@ export const useFiltrosProduccion = () => {
           axiosInstance.get("produccion/areas"),
           axiosInstance.get("produccion/maquinas")
         ]);
+        console.log("OTI Data:", otiData);
+        console.log("Operarios Data:", operariosData);
 
         setOti(otiData);
         setOperarios(operariosData);

@@ -45,25 +45,13 @@ exports.getDashboardKpi = async (req, res) => {
         }, 0);
 
         console.log('⏱ Minutos trabajados:', minutosHoy);
-
-        // Contar OTIs activas (sin fecha de finalización)
-        // y que fueron creadas o actualizadas hoy (UTC)
-        const otisActivas = await Oti.countDocuments({
-            fechaFin: null,
-            $or: [
-                { fechaCreacion: { $gte: todayUTC, $lt: tomorrowUTC } },
-                { fechaActualizacion: { $gte: todayUTC, $lt: tomorrowUTC } }
-            ]
-        });
-
-        console.log('🔧 OTIs activas:', otisActivas);
-
+    
         // Devolver los KPIs
         res.json({
             jornadasHoy,
             minutosHoy,
             registrosHoy: registrosHoy.length,
-            otisActivas
+            
         });
     } catch (error) {
         console.error('Error al obtener KPIs del dashboard:', error);

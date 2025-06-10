@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "../../utils/cn";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/Collapsible";
-import { useFiltrosProduccion } from "./useFiltrosProduccion";
+import { useFiltrosProduccion } from "./useFiltrosProduccion.jsx";
 import { filterFields } from "./fields";
 
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { User, Cpu, LayoutDashboard, Settings, Home, HardHat, ShoppingCart, ChevronLeft, ChevronRight, LogOut } from "lucide-react"
+import { Calendar, User, Cpu, LayoutDashboard, Settings, Home, HardHat, ShoppingCart, ChevronLeft, ChevronRight, LogOut } from "lucide-react"
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {motion} from "framer-motion";
+import logo from '../assets/2.png'; // Importar el logo
 
 export const SidebarAdmin = () => {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ export const SidebarAdmin = () => {
   const menuItems = [
   { to: "/admin-home", icon: Home, label: "Dashboard" },
   { to: "/admin-dashboard", icon: LayoutDashboard, label: "Consultas" },
-  { to: "/admin/jornadas", icon: LayoutDashboard, label: "Jornadas" },
+  { to: "/admin/jornadas", icon: Calendar, label: "Jornadas" },
   { to: "/admin/usuarios", icon: User, label: "Usuarios" },
   { to: "/admin/maquinas", icon: Cpu, label: "Máquinas" },
   { to: "/admin/areas", icon: LayoutDashboard, label: "Áreas de Producción" },
@@ -44,14 +45,17 @@ export const SidebarAdmin = () => {
       animate={{ width: collapsed ? 64 : 256 }} // Animar el cambio de tamaño
       transition={{ duration: 0.3 }} // Duración de la animación
     >
-      {/* Toggle Button */}
-      <div className="flex justify-end p-2">
+      {/* Logo and Toggle Button */}
+      <div className={`flex items-center p-4 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+        {!collapsed && (
+          <img src={logo} alt="Logo" className="h-30 w-auto" /> // Mostrar logo cuando no está colapsado
+        )}
         <button
           onClick={toggleSidebar}
           className="text-white focus:outline-none"
           aria-label="Toggle sidebar"
         >
-          {collapsed ? <ChevronRight /> : <ChevronLeft />}
+          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
       </div>
       {/* Menu */}

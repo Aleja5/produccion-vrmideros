@@ -8,6 +8,16 @@ const Insumo = require('../models/Insumos'); // Asegúrate de que Insumos esté 
 const Operario = require('../models/Operario'); // Asegúrate de que Operario esté importado
 const productionController = require('../controllers/productionController'); // Importar el controlador de producción
 
+// Rutas para obtener listas para los filtros del FilterPanel
+router.get('/oti', productionController.getAllOtiParaFiltros);
+router.get('/operarios', productionController.getAllOperariosParaFiltros);
+
+// Ruta para buscar producción con filtros dinámicos
+router.get('/buscar-produccion', productionController.buscarProduccion); // <--- AÑADIDO: Ruta para buscar producción
+
+// Ruta de debug para verificar datos
+router.get('/debug-datos', productionController.debugDatos); // <--- AÑADIDO: Ruta de debug
+
 
 // Rutas para obtener listas
 router.get('/maquinas', async (req, res) => {
@@ -50,8 +60,6 @@ router.get('/insumos', async (req, res) => {
     }
 });
 
-// NUEVA RUTA para registrar una producción (actividad individual)
-// Esto conectará la llamada frontend a /api/produccion/registrar con el controlador existente
 router.post('/registrar', productionController.registrarProduccion);
 
 // Ruta para obtener jornada por operario y fecha

@@ -231,9 +231,8 @@ const AdminDashboard = () => {
       if (!allResults.length) {
         toast.info('No hay datos para exportar.');
         return;
-      }
-      const rows = allResults.map((r) => ({
-        Fecha: new Date(r.fecha).toLocaleDateString(),
+      }      const rows = allResults.map((r) => ({
+        Fecha: new Date(r.fecha).toISOString().split('T')[0],
         Area: r.areaProduccion?.nombre || '',
         OTI: r.oti?.numeroOti || '',
         Proceso: r.procesos && r.procesos.length > 0 ? r.procesos.map(p => p.nombre).join(', ') : '',
@@ -263,126 +262,146 @@ const AdminDashboard = () => {
 
 
   return (
-    <>
-      <Navbar />
-      <div className="flex min-h-screen bg-gradient-to-br from-gray-100 to-blue-100 overflow-hidden">
+    <>    
+      <div className="flex h-screen bg-gradient-to-br from-gray-100 to-blue-100 overflow-hidden"> {/* Changed min-h-screen to h-screen */}
         {/* Sidebar con ancho fijo y scroll independiente */}
-        <div className="h-screen w-64 flex-shrink-0 bg-white shadow-lg z-20 overflow-y-auto">
+        <div className="h-screen w-64 flex-shrink-0 bg-white shadow-lg z-20 overflow-y-auto print:hidden"> {/* Added print:hidden */}
           <SidebarAdmin />
         </div>
 
         {/* Contenido principal con scroll y ancho flexible */}
-        <div className="flex-1 flex flex-col bg-transparent overflow-auto min-w-0">
-          <div className="p-4 md:p-8 max-w-7xl mx-auto w-full min-w-0">
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="container mx-auto px-4 py-8 flex flex-col flex-grow overflow-hidden">
             {/* Encabezado */}
-            <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-2 flex-shrink-0">
               <div>
                 <h1 className="text-3xl md:text-4xl font-extrabold text-blue-800 tracking-tight drop-shadow-sm">Consultas de Producción</h1>
-                <p className="text-base md:text-lg text-gray-500 mt-1">Panel de consulta y exportación de registros de producción</p>
+                <p className="text-base md:text-lg text-gray-600 mt-1">Panel de consulta y exportación de registros de producción</p> {/* Slightly darker text */}
               </div>
-              <div className="flex gap-2 mt-2 md:mt-0">
-                <Button variant="primary" onClick={exportarExcel} className="shadow">Exportar Excel</Button>
+              <div className="flex gap-3 mt-2 md:mt-0"> {/* Increased gap */}
+                {/* Styled Exportar Excel button */}
+                <button
+                  onClick={exportarExcel}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:shadow-lg transition duration-150 ease-in-out flex items-center gap-2"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-file-down"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="m15 15-3 3-3-3"/></svg>
+                  Exportar Excel
+                </button>
               </div>
             </div>
 
             {/* Filtros */}
-            <Card className="mb-6 p-4 shadow-lg border border-blue-100">
+            {/* Updated Card styling */}
+            <Card className="mb-4 p-3 bg-white shadow-lg rounded-lg"> {/* Removed flex-shrink-0 */}
               <FilterPanel onBuscar={handleBuscar} onExportar={exportarExcel} />
             </Card>
 
             {/* Resultados */}
-            <Card className="mb-8 p-4 shadow-lg border border-blue-100">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
-                <h2 className="text-xl font-bold text-blue-700">Resultados</h2>
-                <div className="relative inline-block text-left ml-auto mr-2 md:mr-0 md:ml-4 order-first md:order-none">
-                  <Button 
-                    onClick={() => setIsColumnDropdownOpen(prev => !prev)} 
-                    variant="outline" 
-                    size="sm"
-                  >
-                    Configurar Columnas
-                  </Button>
-                  {isColumnDropdownOpen && (
-                    <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
-                      <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
-                        {columnOptions.map(col => (
-                          <label key={col.key} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full text-left cursor-pointer" role="menuitem">
-                            <input
-                              type="checkbox"
-                              checked={!!columnVisibility[col.key]}
-                              onChange={() => handleColumnToggle(col.key)}
-                              className="mr-3 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                            />
-                            {col.label}
-                          </label>
-                        ))}
+            {/* Updated Card styling */}
+            <Card className="mb-8 p-4 bg-white shadow-xl rounded-xl flex flex-col flex-grow overflow-hidden">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3 flex-shrink-0"> {/* Increased mb and gap */}
+                <h2 className="text-2xl font-bold text-blue-700">Resultados</h2> {/* Increased text size */}
+                <div className="flex items-center gap-4"> {/* Grouped button and total */}
+                  <div className="relative inline-block text-left">
+                    {/* Styled Configurar Columnas button */}
+                    <Button
+                      onClick={() => setIsColumnDropdownOpen(prev => !prev)}
+                      variant="outline"
+                      size="sm"
+                      className="border-gray-300 hover:bg-gray-100 text-gray-700 font-medium py-2 px-3 rounded-lg shadow-sm hover:shadow transition duration-150 ease-in-out flex items-center gap-2 text-sm"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings-2"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
+                      Columnas
+                    </Button>
+                    {isColumnDropdownOpen && (
+                      <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-50">
+                        <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
+                          {columnOptions.map(col => (
+                            <label key={col.key} className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 w-full text-left cursor-pointer" role="menuitem">
+                              <input
+                                type="checkbox"
+                                checked={!!columnVisibility[col.key]}
+                                onChange={() => handleColumnToggle(col.key)}
+                                className="mr-3 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-offset-0" // Added focus:ring-offset-0
+                              />
+                              {col.label}
+                            </label>
+                          ))}
+                        </div>
                       </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex-grow overflow-y-auto border border-gray-200 rounded-lg">
+              {loading ? (
+                <div className="flex justify-center items-center h-full"> {/* Increased py */}
+                  <span className="loader border-blue-500"></span>
+                  <span className="ml-3 text-blue-600 text-lg">Cargando registros...</span> {/* Increased ml and text size */}
+                </div>              
+              ) : (
+                <>
+                  {resultados.length > 0 ? (
+                    <table className="w-full bg-white text-sm">{/* Removed rounded from table itself, ensured no space before thead */}
+                      <thead className="bg-gray-100 sticky top-0 z-10">{/* Darker gray for header, ensured no space before tr */}
+                        <tr>
+                          {/* Adjusted padding, text alignment, and font style for th */}
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">OTI</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Operario</th>
+                          {columnVisibility.fecha && <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Fecha</th>}
+                          {columnVisibility.proceso && <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Proceso</th>}
+                          {columnVisibility.maquina && <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Máquina</th>}
+                          {columnVisibility.area && <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Área</th>}
+                          {columnVisibility.insumos && <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Insumos</th>}
+                          {columnVisibility.observaciones && <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Observaciones</th>}
+                          {columnVisibility.tipoTiempo && <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tipo de Tiempo</th>}
+                          {columnVisibility.tiempo && <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Tiempo (min)</th>}
+                        </tr>
+                      </thead>{/* Ensured no space after thead */}
+                      <tbody className="bg-white divide-y divide-gray-200">{/* Ensured no space before tr */}
+                        {resultados.map((r, idx) => (
+                          <tr
+                            key={r._id}
+                            className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors duration-150`}
+                          >{/* Ensured no space before td */}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{r.oti?.numeroOti || 'N/A'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{r.operario?.name || 'N/A'}</td>
+                            {columnVisibility.fecha ? <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{new Date(r.fecha).toISOString().split('T')[0]}</td> : null}
+                            {columnVisibility.proceso ? (
+                              <td className="px-6 py-4 text-sm text-gray-700">
+                                {r.procesos && r.procesos.length > 0 ? (
+                                  r.procesos.map(p => <div key={p._id || p.nombre}>{p.nombre}</div>)
+                                ) : (
+                                  'N/A'
+                                )}
+                              </td>
+                            ) : null}
+                            {columnVisibility.maquina ? <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{r.maquina?.nombre || 'N/A'}</td> : null}
+                            {columnVisibility.area ? <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{r.areaProduccion?.nombre || 'N/A'}</td> : null}
+                            {columnVisibility.insumos ? (
+                              <td className="px-6 py-4 text-sm text-gray-700 max-w-xs whitespace-normal break-words">
+                                {r.insumos && r.insumos.length > 0 ? r.insumos.map(i => i.nombre).join(', ') : 'N/A'}
+                              </td>
+                            ) : null}
+                            {columnVisibility.observaciones ? <td className="px-6 py-4 text-sm text-gray-700 whitespace-normal text-left max-w-md break-words">{r.observaciones || ''}</td> : null}
+                            {columnVisibility.tipoTiempo ? <td className="px-6 py-4 text-sm text-gray-700 text-center">{getTipoTiempoBadge(r.tipoTiempo)}</td> : null}
+                            {columnVisibility.tiempo ? <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">{r.tiempo} min</td> : null}
+                          </tr>
+                        ))}
+                      </tbody>{/* Ensured no space after tbody */}
+                    </table>
+                  ) : (
+                    <div className="flex justify-center items-center h-full"> {/* Wrapper to center "no results" message */}
+                      <p className="py-8 text-center text-gray-500">No se encontraron registros con los filtros aplicados.</p>
                     </div>
                   )}
-                </div>
-                <p className="text-base text-right md:text-left">Total de minutos trabajados: <span className="font-semibold text-blue-600">{totalHoras}</span></p>
-              </div>
-              {loading ? (
-                <div className="flex justify-center items-center py-8">
-                  <span className="loader border-blue-500"></span>
-                  <span className="ml-2 text-blue-500">Cargando registros...</span>
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-lg border border-gray-200">
-                  <table className="w-full bg-white rounded text-sm">
-                    <thead className="bg-blue-100">
-                      <tr>
-                        <th className="p-2 font-semibold text-blue-800">OTI</th>
-                        <th className="p-2 font-semibold text-blue-800">Operario</th>
-                        {columnVisibility.fecha && <th className="p-2 font-semibold text-blue-800">Fecha</th>}
-                        {columnVisibility.proceso && <th className="p-2 font-semibold text-blue-800">Proceso</th>}
-                        {columnVisibility.maquina && <th className="p-2 font-semibold text-blue-800">Máquina</th>}
-                        {columnVisibility.area && <th className="p-2 font-semibold text-blue-800">Área</th>}
-                        {columnVisibility.insumos && <th className="p-2 font-semibold text-blue-800">Insumos</th>}
-                        {columnVisibility.observaciones && <th className="p-2 font-semibold text-blue-800">Observaciones</th>}
-                        {columnVisibility.tipoTiempo && <th className="p-2 font-semibold text-blue-800">Tipo de Tiempo</th>}
-                        {columnVisibility.tiempo && <th className="p-2 font-bold text-blue-800">Tiempo (min)</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {resultados.map((r, idx) => (
-                        <tr
-                          key={r._id}
-                          className={`text-center border-b last:border-b-0 ${idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'} hover:bg-blue-50 transition`}
-                        >
-                          <td className="p-2 whitespace-nowrap">{r.oti?.numeroOti || 'N/A'}</td>
-                          <td className="p-2 whitespace-nowrap">{r.operario?.name || 'N/A'}</td>
-                          {columnVisibility.fecha && <td className="p-2 whitespace-nowrap">{new Date(r.fecha).toISOString().split('T')[0]}</td>}
-                          {columnVisibility.proceso && (
-                            <td className="p-2">
-                              {r.procesos && r.procesos.length > 0 ? (
-                                r.procesos.map(p => <div key={p._id || p.nombre}>{p.nombre}</div>)
-                              ) : (
-                                'N/A'
-                              )}
-                            </td>
-                          )}
-                          {columnVisibility.maquina && <td className="p-2 whitespace-nowrap">{r.maquina?.nombre || 'N/A'}</td>}
-                          {columnVisibility.area && <td className="p-2 whitespace-nowrap">{r.areaProduccion?.nombre || 'N/A'}</td>}
-                          {columnVisibility.insumos && (
-                            <td className="p-2 whitespace-normal">
-                              {r.insumos && r.insumos.length > 0 ? r.insumos.map(i => i.nombre).join(', ') : 'N/A'}
-                            </td>
-                          )}
-                          {columnVisibility.observaciones && <td className="p-2 whitespace-normal text-left">{r.observaciones || ''}</td>}
-                          {columnVisibility.tipoTiempo && <td className="p-2">{getTipoTiempoBadge(r.tipoTiempo)}</td>}
-                          {columnVisibility.tiempo && <td className="p-2 font-semibold text-green-600 whitespace-nowrap">{r.tiempo} min</td>}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  {resultados.length === 0 && !loading && (
-                    <p className="mt-4 text-gray-600 text-center">No se encontraron registros con los filtros aplicados.</p>
-                  )}
-                </div>
-              )}
-              {totalResults > itemsPerPage && (
-                <div className="bg-white p-4 shadow-md rounded-b-lg border-t border-gray-200 mt-2 flex justify-center sticky bottom-0 z-10">
+                </>
+              )}           
+              </div> {/* This closes flex-grow overflow-y-auto... */}
+
+              {totalResults > itemsPerPage && !loading && ( // Added !loading condition here
+                // Consistent pagination container style
+                <div className="bg-white px-4 py-3 flex items-center justify-center border-t border-gray-200 sm:px-6 mt-auto rounded-b-lg flex-shrink-0">
                   <Pagination
                     currentPage={currentPage}
                     totalResults={totalResults}
@@ -391,26 +410,26 @@ const AdminDashboard = () => {
                   />
                 </div>
               )}
-            </Card>
+            </Card>            
           </div>
         </div>
-      </div>
+      </div>      
       {/* Loader CSS */}
       <style>{`
         .loader {
-          border: 4px solid #e0e7ef;
-          border-top: 4px solid #3b82f6;
+          border: 4px solid #e0e7ef; /* Lighter border */
+          border-top: 4px solid #3b82f6; /* Blue accent */
           border-radius: 50%;
-          width: 32px;
-          height: 32px;
+          width: 32px; /* Slightly smaller */
+          height: 32px; /* Slightly smaller */
           animation: spin 1s linear infinite;
         }
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-      `}</style>
-    </>
+      `}</style>      
+    </>    
   );
 };
 
