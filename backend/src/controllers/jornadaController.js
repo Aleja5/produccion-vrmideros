@@ -138,7 +138,7 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
     const { fecha } = req.query; // Optional date filter
 
     try {
-        console.log(`🔎 Buscando jornadas para el operario con ID: ${id}`);
+        console.log(`🔎 Buscando jornadas para el operario con ID: ${id}${fecha ? ` con filtro de fecha: ${fecha}` : ''}`);
 
         // Verificar si el operario existe
         const operarioExiste = await Operario.findById(id);
@@ -148,8 +148,26 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
         }
         console.log(`✅ Operario encontrado:`, operarioExiste.name);
 
-        // Obtener las jornadas sin populate por ahora
-        const jornadas = await Jornada.find({ operario: id }).sort({ fecha: -1 });
+        // Construir el filtro de búsqueda
+        let filtro = { operario: id };
+
+        // Si se proporciona una fecha, agregar filtro de fecha
+        if (fecha) {
+            const targetDate = new Date(fecha);
+            const startOfDay = new Date(targetDate);
+            startOfDay.setUTCHours(0, 0, 0, 0);
+
+            const endOfDay = new Date(targetDate);
+            endOfDay.setUTCHours(23, 59, 59, 999);
+
+            filtro.fecha = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
+        }
+
+        // Obtener las jornadas con el filtro aplicado
+        const jornadas = await Jornada.find(filtro).sort({ fecha: -1 });
 
         // Si no hay jornadas, devolver un array vacío inmediatamente
         if (!jornadas || jornadas.length === 0) { // Añadimos .length === 0 para claridad
@@ -373,12 +391,24 @@ exports.agregarActividadAJornada = async (req, res) => {
 // @route   POST /api/jornadas/completa (RUTA QUE USAS PARA "GUARDAR JORNADA COMPLETA")
 exports.guardarJornadaCompleta = async (req, res) => {
     try {
+        console.log('🔄 Recibiendo petición para guardar jornada completa');
+        console.log('📋 Datos recibidos:', JSON.stringify(req.body, null, 2));
+
         const { operario, fecha, horaInicio, horaFin, actividades } = req.body;
 
         // Validar ObjectId para operario
         if (!mongoose.Types.ObjectId.isValid(operario)) {
+            console.error('❌ ID de operario inválido:', operario);
             return res.status(400).json({ error: 'ID de operario inválido' });
         }
+
+        // Validar que hay actividades
+        if (!Array.isArray(actividades) || actividades.length === 0) {
+            console.error('❌ No se proporcionaron actividades o el array está vacío');
+            return res.status(400).json({ error: 'Debe proporcionar al menos una actividad' });
+        }
+
+        console.log(`📊 Procesando ${actividades.length} actividad(es)`);
 
         // Normalizar la fecha de la jornada
         const fechaNormalizada = new Date(fecha);
@@ -387,6 +417,7 @@ exports.guardarJornadaCompleta = async (req, res) => {
         let jornada = await Jornada.findOne({ operario: operario, fecha: fechaNormalizada });
 
         if (!jornada) {
+            console.log('🆕 Creando nueva jornada');
             // Crear nueva jornada si no existe
             jornada = new Jornada({
                 operario,
@@ -397,6 +428,7 @@ exports.guardarJornadaCompleta = async (req, res) => {
                 // totalTiempoActividades se calculará con el hook pre-save o recalcularHorasJornada
             });
         } else {
+            console.log('🔄 Actualizando jornada existente');
             // Actualizar horas de jornada existente si se proporcionan y son diferentes
             if (horaInicio && jornada.horaInicio !== horaInicio) {
                 jornada.horaInicio = horaInicio;
@@ -409,14 +441,42 @@ exports.guardarJornadaCompleta = async (req, res) => {
         // Procesar y agregar actividades
         const idsNuevosRegistros = [];
         if (Array.isArray(actividades) && actividades.length > 0) {
-            for (const actividad of actividades) {
-                // Validaciones básicas de campos requeridos para la actividad
+            for (const actividad of actividades) {                // Validaciones básicas de campos requeridos para la actividad
                 if (!actividad.oti || !actividad.areaProduccion || !actividad.maquina || !actividad.tipoTiempo || !actividad.horaInicio || !actividad.horaFin) {
                     return res.status(400).json({ error: `Faltan campos requeridos en una actividad: ${JSON.stringify(actividad)}` });
                 }
 
-                // Validar IDs de ObjectId
-                if (!mongoose.Types.ObjectId.isValid(actividad.oti)) return res.status(400).json({ error: 'ID de OTI inválido en actividad' });
+                // Función para verificar y crear OTI si es necesario
+                const verificarYCrearOti = async (numeroOti) => {
+                    const Oti = require('../models/Oti');
+                    try {
+                        // Si ya es un ObjectId válido, retornarlo
+                        if (mongoose.Types.ObjectId.isValid(numeroOti) && numeroOti.length === 24) {
+                            return numeroOti;
+                        }
+                        
+                        // Si es un string, buscar o crear el OTI
+                        let oti = await Oti.findOne({ numeroOti: numeroOti });
+                        if (!oti) {
+                            oti = new Oti({ numeroOti });
+                            await oti.save();
+                        }
+                        return oti._id;
+                    } catch (error) {
+                        console.error('Error al verificar/crear OTI:', error);
+                        throw new Error(`Error al procesar OTI: ${numeroOti}`);
+                    }
+                };
+
+                // Validar y obtener ObjectId para OTI
+                let otiId;
+                try {
+                    otiId = await verificarYCrearOti(actividad.oti);
+                } catch (error) {
+                    return res.status(400).json({ error: error.message });
+                }
+
+                // Validar IDs de ObjectId para otros campos
                 if (!mongoose.Types.ObjectId.isValid(actividad.areaProduccion)) return res.status(400).json({ error: 'ID de Área de Producción inválido en actividad' });
                 if (!mongoose.Types.ObjectId.isValid(actividad.maquina)) return res.status(400).json({ error: 'ID de Máquina inválido en actividad' });
 
@@ -443,14 +503,11 @@ exports.guardarJornadaCompleta = async (req, res) => {
                             }
                         }
                     }
-                }
-
-
-                // Crear y guardar cada registro de producción
+                }                // Crear y guardar cada registro de producción
                 const nuevoRegistro = new Produccion({
                     operario: jornada.operario, // Usar el operario de la jornada
                     fecha: jornada.fecha,       // Usar la fecha de la jornada
-                    oti: actividad.oti,
+                    oti: otiId, // Usar el ObjectId verificado/creado
                     procesos: actividad.procesos, // Array de ObjectIds
                     areaProduccion: actividad.areaProduccion,
                     maquina: actividad.maquina,
@@ -472,14 +529,15 @@ exports.guardarJornadaCompleta = async (req, res) => {
         const nuevosRegistrosComoStrings = idsNuevosRegistros.map(id => id.toString());
         
         const todosLosRegistrosUnicos = [...new Set([...registrosActualesComoStrings, ...nuevosRegistrosComoStrings])];
-        jornada.registros = todosLosRegistrosUnicos.map(idStr => new mongoose.Types.ObjectId(idStr));
-
+        jornada.registros = todosLosRegistrosUnicos.map(idStr => new mongoose.Types.ObjectId(idStr));        console.log(`✅ Se crearon ${idsNuevosRegistros.length} nuevos registros`);
+        console.log('💾 Guardando jornada con registros actualizados');
 
         await jornada.save(); // Esto disparará los hooks pre-save de Jornada para recalcular tiempos y horas
 
         // No es necesario llamar a recalcularHorasJornada explícitamente si el hook pre-save lo hace.
         // await recalcularHorasJornada(jornada._id); // Comentado si el hook pre-save ya lo maneja
 
+        console.log('🔍 Populando jornada final para respuesta');
         const jornadaFinal = await Jornada.findById(jornada._id)
             .populate('operario', 'name cedula')
             .populate({
@@ -493,11 +551,13 @@ exports.guardarJornadaCompleta = async (req, res) => {
                 ]
             });
 
+        console.log('🎉 Jornada guardada exitosamente');
         res.status(201).json({ msg: 'Jornada y actividades guardadas con éxito', jornada: jornadaFinal });
 
     } catch (error) {
-        console.error('Error al guardar la jornada completa:', error);
+        console.error('❌ Error al guardar la jornada completa:', error);
         if (error.name === 'ValidationError') {
+            console.error('❌ Error de validación:', error.errors);
             return res.status(400).json({ msg: error.message, errors: error.errors });
         }
         res.status(500).json({ error: 'Hubo un error al guardar la jornada completa' });

@@ -437,10 +437,33 @@ export default function  RegistroProduccion() {
         console.log("Fecha combinada:", date);
 
         return isNaN(date.getTime()) ? null : date.toISOString(); // Convertir a ISO string para enviar al backend
-    };
-
-    const handleSubmitJornada = async (e) => {
+    };    const handleSubmitJornada = async (e) => {
         e.preventDefault();
+
+        // Validar que haya al menos una actividad
+        if (!actividades || actividades.length === 0) {
+            toast.error("Debe agregar al menos una actividad para guardar la jornada.");
+            return;
+        }
+
+        // Validar que todas las actividades estén completas
+        for (let i = 0; i < actividades.length; i++) {
+            const actividad = actividades[i];
+            const camposFaltantes = [];
+            
+            if (!actividad.oti) camposFaltantes.push('OTI');
+            if (!actividad.areaProduccion) camposFaltantes.push('Área de Producción');
+            if (!actividad.maquina) camposFaltantes.push('Máquina');
+            if (!actividad.procesos || actividad.procesos.length === 0) camposFaltantes.push('Proceso(s)');
+            if (!actividad.tipoTiempo) camposFaltantes.push('Tipo de Tiempo');
+            if (!actividad.horaInicio) camposFaltantes.push('Hora de Inicio');
+            if (!actividad.horaFin) camposFaltantes.push('Hora de Fin');
+            
+            if (camposFaltantes.length > 0) {
+                toast.error(`Actividad ${i + 1}: Faltan los siguientes campos: ${camposFaltantes.join(', ')}`);
+                return;
+            }
+        }
 
         if (!jornadaData.horaInicio || !jornadaData.horaFin) {
             toast.error("Horas de inicio o fin de jornada vacías.");
@@ -454,21 +477,21 @@ export default function  RegistroProduccion() {
             fecha: jornadaData.fecha, // La fecha ya está en formato YYYY-MM-DD
             horaInicio: combinarFechaYHora(jornadaData.fecha, jornadaData.horaInicio),
             horaFin: combinarFechaYHora(jornadaData.fecha, jornadaData.horaFin),
-            // Asegurarse de que oti y demás campos referenciados se envíen como string
-            registros: actividades.map(actividad => ({
-                ...actividad,
-                oti: actividad.oti, // Asumimos que oti es un string o ObjectId
+            actividades: actividades.map(actividad => ({
+                oti: actividad.oti, // Mantenemos como string, el backend debe manejarlo
                 areaProduccion: actividad.areaProduccion,
                 maquina: actividad.maquina,
                 procesos: actividad.procesos, // Array de IDs de procesos
-                insumos: actividad.insumos, // Array de IDs de insumos
+                insumos: actividad.insumos || [], // Array de IDs de insumos (puede estar vacío)
                 tipoTiempo: actividad.tipoTiempo,
                 horaInicio: actividad.horaInicio && actividad.horaInicio !== "" ? combinarFechaYHora(jornadaData.fecha, actividad.horaInicio) : null,
                 horaFin: actividad.horaFin && actividad.horaFin !== "" ? combinarFechaYHora(jornadaData.fecha, actividad.horaFin) : null,
                 tiempo: actividad.tiempo || 0,
-                availableProcesos: undefined
-                }))
+                observaciones: actividad.observaciones || null
+            }))
         };
+
+        console.log('Datos enviados al backend:', dataToSend);
 
         try {
             const endpoint = urlJornadaId
@@ -485,19 +508,21 @@ export default function  RegistroProduccion() {
             const result = await response.json();
 
             if (!response.ok) {
-                toast.error(`Error al guardar la jornada: ${result.msg || "Error inesperado"}`);
-                setLoading(false); // Ensure loading is set to false on error
+                console.error('Error del backend:', result);
+                toast.error(`Error al guardar la jornada: ${result.error || result.msg || "Error inesperado"}`);
+                setLoading(false);
                 return;
             }
 
             toast.success("Jornada guardada exitosamente");
             if (!urlJornadaId) {
-                resetFormForNewJornada(); // Call the reset function only for new jornadas
-                navigate("/operario-dashboard"); // Navigate after successful creation
+                resetFormForNewJornada();
+                navigate("/operario-dashboard");
             } else {
-                navigate("/mi-jornada"); // Navigate back to mi-jornada after edit
+                navigate("/mi-jornada");
             }
         } catch (error) {
+            console.error('Error en la petición:', error);
             toast.error("No se pudo guardar la jornada. Intenta de nuevo más tarde.");
         } finally {
             setLoading(false);

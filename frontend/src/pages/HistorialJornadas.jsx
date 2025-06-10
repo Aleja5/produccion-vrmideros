@@ -59,14 +59,16 @@ const HistorialJornadas = () => {
     fetchJornadas();
     
   }, [fetchJornadas, location]); // Add location to the dependency array
-
-  const handleFiltrarPorFecha = () => {
-    fetchJornadas(fechaFiltro); // Pass the current fechaFiltro
+  const handleFiltrarPorFecha = async () => {
+    if (!fechaFiltro) {
+      toast.info("Por favor selecciona una fecha para filtrar.");
+      return;
+    }
+    await fetchJornadas(fechaFiltro); // Pass the current fechaFiltro
   };
-
-  const handleLimpiarFiltro = () => {
+  const handleLimpiarFiltro = async () => {
     setFechaFiltro(''); // Clear the date input
-    fetchJornadas(''); // Fetch all jornadas by passing an empty string
+    await fetchJornadas(''); // Fetch all jornadas by passing an empty string
   };
 
   const toggleExpand = (jornadaId) => {
@@ -135,16 +137,11 @@ const handleEliminarActividad = async (jornadaId, actividadId) => {
                   />
                 </div>
                 <Button 
-                  onClick={handleFiltrarPorFecha} 
-                  className="bg-blue-200 blue font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500 transition-all duration-300 cursor-pointer h-10 flex items-center" // Ajuste de altura y alineación
-                >
-                  Filtrar
-                </Button>
-                <Button 
                   onClick={handleLimpiarFiltro} 
-                  className="bg-gray-200 gray font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-gray-500 transition-all duration-300 cursor-pointer h-10 flex items-center" // Ajuste de altura y alineación
+                  disabled={loading}
+                  className="bg-gray-200 gray font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-gray-500 transition-all duration-300 cursor-pointer h-10 flex items-center disabled:opacity-50 disabled:cursor-not-allowed" // Ajuste de altura y alineación
                 >
-                  Limpiar Filtro
+                  {loading ? 'Limpiando...' : 'Limpiar Filtro'}
                 </Button>
               </div>
             </div>

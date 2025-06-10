@@ -65,6 +65,9 @@ router.post('/registrar', productionController.registrarProduccion);
 // Ruta para actualizar una producción específica
 router.put('/actualizar/:id', productionController.actualizarProduccion);
 
+// Ruta para eliminar una producción específica
+router.delete('/eliminar/:id', productionController.eliminarProduccion);
+
 // Ruta para obtener jornada por operario y fecha
 router.get('/operario/:operarioId/fecha/:fecha', async (req, res) => {
     try {

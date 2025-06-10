@@ -212,13 +212,10 @@ const OperarioDashboard = () => {
         const hours = Math.floor(diffMinutes / 60);
         const minutes = diffMinutes % 60;
         return `${diffMinutes} min (${hours} horas ${minutes} min)`;
-    };
-
-    const handleRegistroProduccion = useCallback(() => {
-        if (jornadaActual && jornadaActual._id) {
-            navigate('/registro-produccion');
-        }
-    }, [navigate, jornadaActual]);
+    };    
+      const handleRegistroProduccion = useCallback(() => {
+        navigate('/registro-produccion');
+    }, [navigate]);
 
 
     const handleVerDetalleJornada = useCallback((jornadaId) => {
@@ -238,10 +235,9 @@ const OperarioDashboard = () => {
         const nuevoTimestamp = Date.now();
         console.log('🔄 Forzando recarga de jornadas - Nuevo timestamp:', nuevoTimestamp);
         setActualizarKey(nuevoTimestamp);
-    }, []);
-
-    const handleAgregarActividad = useCallback((jornadaId) => {
-        navigate(`/registro-produccion/${jornadaId}`);
+        
+    }, []);    const handleAgregarActividad = useCallback(() => {
+        navigate('/registro-produccion');
     }, [navigate]);
 
     const handleEliminarActividad = useCallback((actividad) => {
@@ -359,11 +355,10 @@ const OperarioDashboard = () => {
                                                     />
                                                 );
                                             })
-                                        ) : (
-                                            <div className="text-center col-span-full py-8 text-gray-500">
+                                        ) : (                                            <div className="text-center col-span-full py-8 text-gray-500">
                                                 <p className="mb-4">No hay actividades registradas para hoy en esta jornada.</p>
                                                 <Button
-                                                    onClick={() => handleAgregarActividad(jornadaActual._id)}
+                                                    onClick={handleAgregarActividad}
                                                     className="bg-blue-500 hover:bg-blue-600 text-white"
                                                 >
                                                     Agregar Primera Actividad a esta Jornada
@@ -386,12 +381,12 @@ const OperarioDashboard = () => {
                                 </motion.div>
                             ) : (
                                 <div className="text-center py-12 text-gray-500">
-                                    <p className="mb-6 text-xl">No hay jornada registrada para hoy.</p>
+                                    <p className="mb-6 text-xl">Parece que no tienes una jornada activa registrada para hoy.</p>
                                     <Button
                                         onClick={handleRegistroProduccion}
                                         className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg rounded-lg shadow-md"
                                     >
-                                        Crear Jornada Hoy
+                                        Comenzar Registro de Tiempo
                                     </Button>
                                 </div>
                             )}
@@ -417,14 +412,15 @@ const OperarioDashboard = () => {
                                 setActividadAEditar(null);
                                 setActualizarKey(Date.now()); // Use setActualizarKey
                             }}
-                        />
-                    )}                     
-                        <div className="flex justify-between items-center mt-6">
-                            {/* Changed this button to use the new handleRegistroProduccion logic */}
-                            <Button className="bg-blue-200 blue font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500 transition-all duration-300 cursor-pointer" onClick={handleRegistroProduccion}>
-                                {jornadaActual ? 'Añadir actividad a jornada actual' : 'Registrar Nueva Producción'}
-                            </Button>                           
-                        </div>
+                        />                    )}                     
+                        {/* Solo mostrar el botón si existe una jornada actual con actividades registradas */}
+                        {jornadaActual && jornadaActual.registros && jornadaActual.registros.length > 0 && (
+                            <div className="flex justify-between items-center mt-6">
+                                <Button className="bg-blue-200 blue font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500 transition-all duration-300 cursor-pointer" onClick={handleRegistroProduccion}>
+                                    Añadir actividad a jornada actual
+                                </Button>                           
+                            </div>
+                        )}
                     
                 </div>
             </div>
