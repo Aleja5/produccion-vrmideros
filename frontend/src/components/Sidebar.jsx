@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Home, PlusCircle, ClipboardList, History, LogOut, ChevronLeft, ChevronRight} from "lucide-react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
+import logo from '../assets/2.png'; 
 
 export const Sidebar = () => {
   const navigate = useNavigate();
@@ -20,9 +21,6 @@ export const Sidebar = () => {
   };
 
   const handleLogout = () => {
-    // Es buena práctica limpiar los datos de sesión al cerrar sesión
-    localStorage.clear();
-    sessionStorage.clear();
     navigate("/validate-cedula");
   };
 
@@ -40,16 +38,19 @@ export const Sidebar = () => {
       } flex flex-col`}
       initial={{ width: collapsed ? 64 : 256 }}
       animate={{ width: collapsed ? 64 : 256 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.1 }}
     >
-      {/* Toggle Button - Mantenerlo en la parte superior */}
-      <div className="flex justify-end p-2 mb-4">
+      {/* Logo and Toggle Button */}
+      <div className={`flex items-center p-4 ${collapsed ? 'justify-center' : 'justify-between'}`}>
+        {!collapsed && (
+          <img src={logo} alt="Logo" className="h-30 w-auto" /> // Mostrar logo cuando no está colapsado
+        )}
         <button
           onClick={toggleSidebar}
           className="text-white focus:outline-none"
           aria-label="Toggle sidebar"
         >
-          {collapsed ? <ChevronRight /> : <ChevronLeft />}
+          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
       </div>
 

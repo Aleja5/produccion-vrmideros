@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Calendar, User, Cpu, LayoutDashboard, Settings, Home, HardHat, ShoppingCart, ChevronLeft, ChevronRight, LogOut } from "lucide-react"
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {motion} from "framer-motion";
-import logo from '../assets/2.png'; // Importar el logo
+import logo from '../assets/2.png'; 
 
 export const SidebarAdmin = () => {
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ export const SidebarAdmin = () => {
       } flex flex-col`}
       initial={{ width: collapsed ? 64 : 256 }} // Establecer el tamaño inicial
       animate={{ width: collapsed ? 64 : 256 }} // Animar el cambio de tamaño
-      transition={{ duration: 0.3 }} // Duración de la animación
+      transition={{ duration: 0.1 }} // Duración de la animación
     >
       {/* Logo and Toggle Button */}
       <div className={`flex items-center p-4 ${collapsed ? 'justify-center' : 'justify-between'}`}>
@@ -58,6 +58,7 @@ export const SidebarAdmin = () => {
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
       </div>
+
       {/* Menu */}
       <nav className="flex-1 px-2 py-4 space-y-2">
         {menuItems.map(({ to, icon: Icon, label }) => (

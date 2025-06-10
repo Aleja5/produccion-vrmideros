@@ -16,14 +16,14 @@ const obtenerProcesos = async (req, res) => {
         query.nombre = { $regex: search, $options: 'i' };
     }
 
-    if (areaId) { // Filter by areaId if provided
-        query.areaId = areaId;
+    if (areaId) { // Filter by areaId if provided - buscar en el array areas
+        query.areas = { $in: [areaId] }; // Buscar procesos que contengan el areaId en su array areas
     }
 
     try {
         const totalResults = await Proceso.countDocuments(query);
         const procesos = await Proceso.find(query)
-            .populate('areaId') // Optionally populate area details
+            .populate('areas') // Cambiar areaId por areas para popular todas las áreas
             .sort({ nombre: 1 }) // Default sort by nombre ascending (A-Z)
             .skip((page - 1) * limit)
             .limit(Number(limit));
@@ -54,16 +54,23 @@ const obtenerProceso = async (req, res) => {
 
 // Crear un nuevo proceso
 const crearProceso = async (req, res) => {
-    const { nombre, areaId } = req.body; // Added areaId
-    // Ensure areaId is provided if it's required by your logic/model (currently not strictly required in model)
-    if (!areaId) {
-        // return res.status(400).json({ message: 'El campo areaId es requerido.' }); // Uncomment if areaId becomes strictly required
+    const { nombre, areas } = req.body; // Cambiar areaId por areas (array)
+    
+    // Validar que areas sea un array si se proporciona
+    if (areas && !Array.isArray(areas)) {
+        return res.status(400).json({ message: 'El campo areas debe ser un array de IDs.' });
     }
-    const nuevoProceso = new Proceso({ nombre, areaId }); // Added areaId
-    try {
+    
+    const nuevoProceso = new Proceso({ 
+        nombre, 
+        areas: areas || [] // Si no se proporcionan áreas, usar array vacío
+    });
+      try {
         const procesoGuardado = await nuevoProceso.save();
-        console.log('Proceso guardado:', procesoGuardado);
-        res.status(201).json(procesoGuardado);
+        // Poplar las áreas antes de enviar la respuesta
+        const procesoConAreas = await Proceso.findById(procesoGuardado._id).populate('areas');
+        console.log('Proceso guardado:', procesoConAreas);
+        res.status(201).json(procesoConAreas);
     } catch (error) {
         console.error('Error al guardar proceso:', error);
         res.status(400).json({ message: error.message });
@@ -73,11 +80,23 @@ const crearProceso = async (req, res) => {
 // Actualizar un proceso
 const actualizarProceso = async (req, res) => {
     try {
-        const proceso = await Proceso.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const { areas } = req.body;
+        
+        // Validar que areas sea un array si se proporciona
+        if (areas && !Array.isArray(areas)) {
+            return res.status(400).json({ message: 'El campo areas debe ser un array de IDs.' });
+        }
+        
+        const proceso = await Proceso.findByIdAndUpdate(
+            req.params.id, 
+            req.body, 
+            { new: true }
+        ).populate('areas'); // Popular las áreas en la respuesta
+        
         if (!proceso) {
             return res.status(404).json({ message: 'Proceso no encontrado' });
         }
-        res.json(proceso); 
+        res.json(proceso);
         } catch (error) {
         res.status(500).json({ message: error.message });
         }

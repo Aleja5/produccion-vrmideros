@@ -23,18 +23,22 @@ const ProcesoList = ({ procesos, onEditar, onEliminar }) => {
     return (
         <div className="overflow-x-auto">
                 <table className="min-w-full table-auto border-separate border-spacing-y-2">
-                    <thead className="bg-gray-100 text-gray-600 uppercase text-sm tracking-wider">
-                        <tr>
+                    <thead className="bg-gray-100 text-gray-600 uppercase text-sm tracking-wider">                        <tr>
                             <th className="px-6 py-3 text-left">Nombre del Proceso</th>
-                            <th className="px-6 py-3 text-center">Area de Producción</th>
+                            <th className="px-6 py-3 text-center">Áreas de Producción</th>
                             <th className="px-6 py-3 text-right">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody className="text-gray-700">
-                        {procesos.map(proceso => (
+                    <tbody className="text-gray-700">                        {procesos.map(proceso => (
                             <tr key={proceso._id} className="bg-white hover:shadow rounded-lg">
                                 <td className="px-6 py-1 rounded-l-lg">{proceso.nombre}</td>
-                                <td className="px-6 py-1 text-center rounded-r-lg">{proceso.areaId && typeof proceso.areaId === 'object' && proceso.areaId.nombre ? proceso.areaId.nombre : 'N/A'}
+                                <td className="px-6 py-1 text-center rounded-r-lg">
+                                    {proceso.areas && Array.isArray(proceso.areas) && proceso.areas.length > 0 
+                                        ? proceso.areas.map(area => area.nombre || area).join(', ')
+                                        : proceso.areaId && typeof proceso.areaId === 'object' && proceso.areaId.nombre 
+                                            ? proceso.areaId.nombre 
+                                            : 'Sin áreas asignadas'
+                                    }
                                 </td>
                                 <td className="px-6 py-1 text-right text-sm font-medium space-x-2">
                                     <div className="flex justify-center space-x-2">
