@@ -757,11 +757,10 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
                 onChange={handleChangeRelacion}
                 name="tipoTiempo"
                 required
-              >
-                <option value="">Seleccionar Tipo de Tiempo</option>
+              >                <option value="">Seleccionar Tipo de Tiempo</option>
                 <option value="Preparación">Preparación</option>
                 <option value="Operación">Operación</option>
-                <option value="Alimentacion">Alimentación</option>
+                <option value="Alimentación">Alimentación</option>
               </select>
             </div>
           </div>          {/* Horas en grid responsive */}
