@@ -180,24 +180,35 @@ const OperarioDashboard = () => {
     const jornadaActual = jornadasFiltradas.find(jornada => {
         const fechaJornada = getFechaISOForComparison(jornada.fecha);
         return fechaJornada === hoyISO;
-    });
+    });    const calcularTotalTiempo = (jornada) => {
+        if (!jornada?.totalTiempoActividades) {
+            return 'N/A';
+        }
 
-    const jornadasAnteriores = jornadasFiltradas.filter(jornada => {
-        const fechaJornada = getFechaISOForComparison(jornada.fecha);
-        return fechaJornada !== hoyISO && fechaJornada.includes(filtro);
-    });
+        const tiempoData = jornada.totalTiempoActividades;
+        
+        // Usar tiempo efectivo si está disponible, sino usar el método anterior
+        const tiempoMinutos = tiempoData.tiempoEfectivo !== undefined ? 
+            tiempoData.tiempoEfectivo : 
+            (tiempoData.horas * 60 + tiempoData.minutos);
 
-    const calcularTotalTiempo = (jornada) => {
-        const totalMinutes = jornada.registros && Array.isArray(jornada.registros)
-            ? jornada.registros.reduce((total, registro) => {
-                  const t = Number(registro.tiempo);
-                  return total + (isNaN(t) ? 0 : t);
-              }, 0)
-            : 0;
-
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        return `${totalMinutes} min (${hours} horas ${minutes} min)`;
+        const hours = Math.floor(tiempoMinutos / 60);
+        const minutes = tiempoMinutos % 60;
+        
+        // Mostrar información adicional si hay solapamientos
+        let textoExtra = '';
+        if (tiempoData.solapamientos) {
+            textoExtra = ` ⚠️ Solapamientos detectados`;
+            // Mostrar diferencia si hay datos disponibles
+            if (tiempoData.tiempoSumado && tiempoData.tiempoEfectivo) {
+                const diferencia = tiempoData.tiempoSumado - tiempoData.tiempoEfectivo;
+                if (diferencia > 0) {
+                    textoExtra += ` (-${diferencia}min)`;
+                }
+            }
+        }
+        
+        return `${tiempoMinutos} min (${hours}h ${minutes}m)${textoExtra}`;
     };
 
     const calcularTiempoTotalJornada = (jornada) => {
@@ -343,13 +354,17 @@ const OperarioDashboard = () => {
                                     className="mb-6"
                                 >
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {/* List of Activities for Today's Jornada */}
-                                        {jornadaActual.registros?.length > 0 ? (
+                                        {/* List of Activities for Today's Jornada */}                                        {jornadaActual.registros?.length > 0 ? (
                                             jornadaActual.registros.map((actividad) => {
+                                                // Añadir el ID de la jornada a la actividad
+                                                const actividadConJornada = {
+                                                    ...actividad,
+                                                    jornada: jornadaActual._id
+                                                };
                                                 return (
                                                     <ActivityCard
                                                         key={actividad._id}
-                                                        actividad={actividad}
+                                                        actividad={actividadConJornada}
                                                         onVerDetalle={handleVerDetalleJornada}
                                                         onEditarActividad={handleEditarActividad}
                                                     />

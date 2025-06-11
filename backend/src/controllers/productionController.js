@@ -244,9 +244,7 @@ exports.actualizarProduccion = async (req, res) => {
         const otiId = await verificarYCrearOti(oti);
         if (!otiId) {
             return res.status(400).json({ msg: "Error al verificar o crear la OTI." });
-        }
-
-        const produccionActualizada = await Produccion.findByIdAndUpdate(
+        }        const produccionActualizada = await Produccion.findByIdAndUpdate(
             _id,
             {
                 operario: operarioId,
@@ -261,7 +259,6 @@ exports.actualizarProduccion = async (req, res) => {
                 horaFin,
                 tipoTiempo,
                 observaciones: observaciones || null
-                // No actualizamos la jornada aquí directamente, se maneja por separado si es necesario
             },
             { new: true, runValidators: true }
         )
@@ -274,6 +271,72 @@ exports.actualizarProduccion = async (req, res) => {
 
         if (!produccionActualizada) {
             return res.status(404).json({ msg: "Registro de producción no encontrado." });
+        }        // Recalcular la jornada asociada si existe
+        if (produccionActualizada.operario && fecha) {
+            try {
+                console.log('🔍 Buscando/creando jornada para recalcular:', {
+                    operario: produccionActualizada.operario._id,
+                    fecha: new Date(fecha)
+                });
+
+                // Normalizar la fecha para buscar la jornada
+                const fechaNormalizada = new Date(fecha);
+                fechaNormalizada.setUTCHours(0, 0, 0, 0);
+
+                let jornada = await Jornada.findOne({
+                    operario: produccionActualizada.operario._id,
+                    fecha: fechaNormalizada
+                });
+
+                if (!jornada) {
+                    console.log('🆕 No existe jornada, creando una nueva');
+                    // Crear nueva jornada si no existe
+                    jornada = new Jornada({
+                        operario: produccionActualizada.operario._id,
+                        fecha: fechaNormalizada,
+                        registros: [],
+                        totalTiempoActividades: { horas: 0, minutos: 0 }
+                    });
+                    await jornada.save();
+                    console.log('✅ Nueva jornada creada:', jornada._id);
+                }                // Buscar todas las producciones de este operario en esta fecha
+                const producciones = await Produccion.find({
+                    operario: produccionActualizada.operario._id,
+                    fecha: {
+                        $gte: fechaNormalizada,
+                        $lt: new Date(fechaNormalizada.getTime() + 24 * 60 * 60 * 1000) // Siguiente día
+                    }
+                });
+
+                console.log(`📋 Encontradas ${producciones.length} producciones para esta fecha`);
+
+                // Actualizar los registros de la jornada con todas las producciones encontradas
+                const registrosIds = producciones.map(p => p._id);
+                jornada.registros = registrosIds;
+
+                console.log('📊 Datos de producciones antes del recálculo:', producciones.map(p => ({
+                    _id: p._id,
+                    tiempo: p.tiempo,
+                    horaInicio: p.horaInicio,
+                    horaFin: p.horaFin,
+                    tipoTiempo: p.tipoTiempo
+                })));
+
+                // Guardar la jornada para activar el hook pre-save y recalcular
+                await jornada.save();
+
+                console.log('✅ Jornada recalculada exitosamente');
+                console.log('📊 Tiempo total calculado:', {
+                    horas: jornada.totalTiempoActividades.horas,
+                    minutos: jornada.totalTiempoActividades.minutos,
+                    tiempoEfectivo: jornada.totalTiempoActividades.tiempoEfectivo,
+                    tiempoSumado: jornada.totalTiempoActividades.tiempoSumado
+                });
+
+            } catch (jornadaError) {
+                console.error('❌ Error al recalcular la jornada:', jornadaError);
+                // No fallar la actualización de producción por un error en la jornada
+            }
         }
 
         res.status(200).json({ msg: "Producción actualizada exitosamente", produccion: produccionActualizada });
@@ -376,16 +439,37 @@ exports.buscarProduccion = async (req, res) => {
                     return res.status(200).json({ totalResultados: 0, resultados: [] });
                 }
             }
-        }
-
-        // Filter by Date Range
+        }        // Filter by Date Range
         if (fechaInicio && fechaFin) {
-            const inicio = new Date(fechaInicio);
-            inicio.setHours(0, 0, 0, 0);
-            const fin = new Date(fechaFin);
-            fin.setHours(23, 59, 59, 999);
+            // Si las fechas vienen en formato YYYY-MM-DD, crear fechas locales explícitamente
+            let inicio, fin;
+            
+            if (fechaInicio.includes('T')) {
+                // Formato ISO completo
+                inicio = new Date(fechaInicio);
+            } else {
+                // Formato YYYY-MM-DD, crear fecha local
+                const [year, month, day] = fechaInicio.split('-').map(Number);
+                inicio = new Date(year, month - 1, day, 0, 0, 0, 0);
+            }
+            
+            if (fechaFin.includes('T')) {
+                // Formato ISO completo
+                fin = new Date(fechaFin);
+            } else {
+                // Formato YYYY-MM-DD, crear fecha local
+                const [year, month, day] = fechaFin.split('-').map(Number);
+                fin = new Date(year, month - 1, day, 23, 59, 59, 999);
+            }
+            
             query.fecha = { $gte: inicio, $lte: fin };
-            console.log('Filtro de fechas aplicado:', query.fecha);
+            console.log('🗓️ Filtro de fechas aplicado:', {
+                fechaInicio: fechaInicio,
+                fechaFin: fechaFin,
+                inicioProcessed: inicio,
+                finProcessed: fin,
+                query: query.fecha
+            });
         }
 
         // Filter by Proceso (searches if the ID is in the 'procesos' array)

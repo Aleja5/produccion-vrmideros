@@ -16,4 +16,7 @@ router.get('/:id', jornadaController.obtenerJornada);
 router.put('/:id', jornadaController.actualizarJornada);
 router.delete('/:id', jornadaController.eliminarJornada);
 
+// Ruta para recalcular tiempos efectivos (Admin only)
+router.post('/recalcular-tiempos', jornadaController.recalcularTiemposEfectivos);
+
 module.exports = router;

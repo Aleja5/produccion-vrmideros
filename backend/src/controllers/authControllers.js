@@ -48,9 +48,7 @@ exports.login = async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    console.log('Token generado:', token);
-
-    res.json({
+    console.log('Token generado:', token);    res.json({
       message: 'Inicio de sesión exitoso',
       token,
       user: {
@@ -58,7 +56,7 @@ exports.login = async (req, res) => {
         email: user.email,
         role: user.role,
       },
-      redirect: user.role === 'admin' ? '/admin-dashboard' : '/validate-cedula',
+      redirect: user.role === 'admin' ? '/admin-home' : '/validate-cedula',
     });
   } catch (error) {
     console.error('Error en el servidor (login):', error);

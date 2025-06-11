@@ -396,15 +396,25 @@ export default function  RegistroProduccion() {
                 } else if (name === 'procesos') {
                     updatedAct.procesos = value;
                 } else if (name === 'insumos') {
-                    updatedAct.insumos = value;
-                } else if (name === 'horaInicio' || name === 'horaFin') {
+                    updatedAct.insumos = value;                } else if (name === 'horaInicio' || name === 'horaFin') {
                     updatedAct[name] = value;
                     // Calcular tiempos de inicio y fin
                     const inicio = updatedAct.horaInicio;
                     const fin = updatedAct.horaFin;
                     if (inicio && fin) {
                         const inicioDate = new Date(`1970-01-01T${inicio}:00`);
-                        const finDate = new Date(`1970-01-01T${fin}:00`);
+                        let finDate = new Date(`1970-01-01T${fin}:00`);
+                        
+                        // Manejar cruce de medianoche: si fin <= inicio, asumir que fin es del día siguiente
+                        if (finDate <= inicioDate) {
+                            finDate = new Date(`1970-01-02T${fin}:00`); // Día siguiente
+                            console.log('🌙 Detectado cruce de medianoche:', {
+                                inicio: inicio,
+                                fin: fin,
+                                duracionCalculada: Math.floor((finDate - inicioDate) / 60000)
+                            });
+                        }
+                        
                         if (finDate > inicioDate) {
                             updatedAct.tiempo = Math.floor((finDate - inicioDate) / 60000);
                         } else {

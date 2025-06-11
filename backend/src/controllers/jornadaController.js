@@ -6,6 +6,7 @@ const Jornada = require('../models/Jornada');
 const Operario = require('../models/Operario');
 const { recalcularTiempoTotal } = require('../utils/recalcularTiempo');
 const { recalcularHorasJornada } = require('../utils/recalcularHoras');
+const { recalcularTiemposJornadas } = require('../utils/recalcularTiemposEfectivos');
 
 exports.crearJornada = async (req, res) => {
     try {
@@ -564,51 +565,80 @@ exports.guardarJornadaCompleta = async (req, res) => {
     }
 };
 
-// ** ESTA ES LA FUNCIÓN QUE DEBE ESTAR EN EL BLOQUE PRINCIPAL exports **
-// @desc    Obtener jornadas por operario y fecha
-// @route   GET /api/jornadas/operario/:operarioId/fecha/:fecha
-exports.obtenerJornadasPorOperarioYFecha = async (req, res) => {
+// @desc    Recalcular tiempos efectivos en todas las jornadas
+// @route   POST /api/jornadas/recalcular-tiempos
+// @access  Admin only
+exports.recalcularTiemposEfectivos = async (req, res) => {
     try {
-        const { operarioId, fecha } = req.params;
-        console.log(`🔎 Buscando jornadas para el operario con ID: ${operarioId} y fecha: ${fecha}`);
-
-        // Opcional: Verificar si el operario existe (solo para logs, no es estrictamente necesario para la query)
-        const operario = await Operario.findById(operarioId);
-        if (operario) {
-            console.log(`✅ Operario encontrado: ${operario.name}`);
-        } else {
-            console.log(`⚠️ Operario no encontrado con ID: ${operarioId}`);
-        }
-
-        // Convertir la fecha a un objeto Date y buscar por operario y fecha exacta
-        const targetDate = new Date(fecha);
-        const startOfDay = new Date(targetDate);
-        startOfDay.setUTCHours(0, 0, 0, 0); // Inicio del día en UTC
-
-        const endOfDay = new Date(targetDate);
-        endOfDay.setUTCHours(23, 59, 59, 999); // Fin del día en UTC
-
-        const jornadas = await Jornada.find({
-            operario: operarioId,
-            fecha: {
-                $gte: startOfDay, // Mayor o igual que el inicio del día
-                $lte: endOfDay    // Menor o igual que el fin del día
-            }
-        });
-
-        console.log(`✅ Jornadas encontradas para ${operario ? operario.name : 'ID ' + operarioId}: ${jornadas.length}`);
-
+        console.log('🔄 Iniciando recálculo de tiempos efectivos...');
+        
+        const jornadas = await Jornada.find({}).populate('registros');
+        
         if (jornadas.length === 0) {
-            return res.status(404).json({ message: "No se encontraron jornadas para este operario en esta fecha." });
+            return res.status(404).json({ 
+                message: 'No hay jornadas para procesar',
+                estadisticas: {
+                    totalJornadas: 0,
+                    jornadasActualizadas: 0,
+                    errores: 0
+                }
+            });
         }
-        res.status(200).json(jornadas); // Devolver array de jornadas
+        
+        let jornadasActualizadas = 0;
+        let errores = 0;
+        let jornadasConSolapamientos = 0;
+        let tiempoTotalRecuperado = 0;
+        
+        for (const jornada of jornadas) {
+            try {
+                const tiempoAnterior = jornada.totalTiempoActividades?.tiempoSumado || 0;
+                
+                // Guardar la jornada para activar el pre-save hook con nueva lógica
+                await jornada.save();
+                
+                jornadasActualizadas++;
+                
+                // Verificar si hay solapamientos
+                if (jornada.totalTiempoActividades?.solapamientos) {
+                    jornadasConSolapamientos++;
+                    const tiempoRecuperado = (jornada.totalTiempoActividades.tiempoSumado || 0) - 
+                                           (jornada.totalTiempoActividades.tiempoEfectivo || 0);
+                    tiempoTotalRecuperado += tiempoRecuperado;
+                }
+                
+                console.log(`✅ Jornada ${jornada._id} actualizada - Efectivo: ${jornada.totalTiempoActividades?.tiempoEfectivo || 0}min`);
+                
+            } catch (error) {
+                console.error(`❌ Error procesando jornada ${jornada._id}:`, error.message);
+                errores++;
+            }
+        }
+        
+        const estadisticas = {
+            totalJornadas: jornadas.length,
+            jornadasActualizadas,
+            errores,
+            jornadasConSolapamientos,
+            tiempoTotalRecuperado,
+            tiempoRecuperadoFormateado: {
+                horas: Math.floor(tiempoTotalRecuperado / 60),
+                minutos: tiempoTotalRecuperado % 60
+            }
+        };
+        
+        console.log('📊 Recálculo completado:', estadisticas);
+        
+        res.status(200).json({
+            message: 'Recálculo de tiempos efectivos completado',
+            estadisticas
+        });
+        
     } catch (error) {
-        console.error("Error al buscar jornada por operario y fecha:", error);
-        // Manejo de CastError para ObjectId inválidos
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: "ID de operario o formato de fecha inválido." });
-        }
-        res.status(500).json({ message: "Error interno del servidor." });
-    };
-    
+        console.error('❌ Error durante el recálculo de tiempos:', error);
+        res.status(500).json({ 
+            error: 'Error interno del servidor durante el recálculo',
+            details: error.message 
+        });
+    }
 };

@@ -382,10 +382,16 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
     if (!registroEditado.tipoTiempo) errors.push("El tipo de tiempo es requerido");
     if (!registroEditado.horaInicio) errors.push("La hora de inicio es requerida");
     if (!registroEditado.horaFin) errors.push("La hora de fin es requerida");
-    
-    if (registroEditado.horaInicio && registroEditado.horaFin) {
+      if (registroEditado.horaInicio && registroEditado.horaFin) {
       const inicio = new Date(`1970-01-01T${registroEditado.horaInicio}:00`);
-      const fin = new Date(`1970-01-01T${registroEditado.horaFin}:00`);
+      let fin = new Date(`1970-01-01T${registroEditado.horaFin}:00`);
+      
+      // Permitir cruce de medianoche: si fin <= inicio, considerarlo válido (día siguiente)
+      if (fin <= inicio) {
+        fin = new Date(`1970-01-02T${registroEditado.horaFin}:00`); // Día siguiente
+      }
+      
+      // Solo validar si después del ajuste sigue siendo inválido
       if (fin <= inicio) {
         errors.push("La hora de fin debe ser posterior a la hora de inicio");
       }
@@ -443,11 +449,23 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
               let horaFinISO = null;
               if (registroEditado.horaInicio && registroEditado.horaFin && registroEditado.fecha) {
                 // Combinar fecha y hora para formato ISO
-                const [year, month, day] = registroEditado.fecha.split('-');
-                horaInicioISO = new Date(Number(year), Number(month) - 1, Number(day), ...registroEditado.horaInicio.split(':')).toISOString();
+                const [year, month, day] = registroEditado.fecha.split('-');                horaInicioISO = new Date(Number(year), Number(month) - 1, Number(day), ...registroEditado.horaInicio.split(':')).toISOString();
                 horaFinISO = new Date(Number(year), Number(month) - 1, Number(day), ...registroEditado.horaFin.split(':')).toISOString();
                 const inicio = new Date(horaInicioISO);
-                const fin = new Date(horaFinISO);
+                let fin = new Date(horaFinISO);
+                
+                // Manejar cruce de medianoche: si fin <= inicio, agregar un día a fin
+                if (fin <= inicio) {
+                  fin = new Date(fin.getTime() + 24 * 60 * 60 * 1000); // Agregar 24 horas
+                  horaFinISO = fin.toISOString(); // Actualizar el ISO para enviar al backend
+                  console.log('🌙 Ajustando cruce de medianoche al guardar:', {
+                    inicioOriginal: inicio.toISOString(),
+                    finOriginal: new Date(horaFinISO.replace(/24.*/, '00:00:00.000Z')).toISOString(),
+                    finAjustado: horaFinISO,
+                    duracionCalculada: Math.floor((fin - inicio) / 60000)
+                  });
+                }
+                
                 if (fin > inicio) {
                   tiempo = Math.floor((fin - inicio) / 60000);
                 }
@@ -791,14 +809,24 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
             </div>
           </div>          {/* Tiempo calculado */}
           <div className="space-y-2">
-            <label htmlFor="tiempo" className="block text-sm font-semibold text-gray-700">Tiempo (minutos)</label>
-            <Input
+            <label htmlFor="tiempo" className="block text-sm font-semibold text-gray-700">Tiempo (minutos)</label>              <Input
               id="tiempo"
               type="number"
               value={((inicioStr, finStr) => {
                 if (inicioStr && finStr) {
                   const inicio = new Date(`1970-01-01T${inicioStr}:00`);
-                  const fin = new Date(`1970-01-01T${finStr}:00`);
+                  let fin = new Date(`1970-01-01T${finStr}:00`);
+                  
+                  // Manejar cruce de medianoche: si fin <= inicio, asumir que fin es del día siguiente
+                  if (fin <= inicio) {
+                    fin = new Date(`1970-01-02T${finStr}:00`); // Día siguiente
+                    console.log('🌙 Detectado cruce de medianoche en edición:', {
+                      inicio: inicioStr,
+                      fin: finStr,
+                      duracionCalculada: Math.floor((fin - inicio) / 60000)
+                    });
+                  }
+                  
                   if (fin > inicio) {
                     return Math.floor((fin - inicio) / 60000);
                   }

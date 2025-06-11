@@ -89,9 +89,7 @@ const AdminDashboard = () => {
     } else {
       setTotalHoras(0);
     }
-  };
-
-    const handleBuscar = async (filtrosRecibidos) => {
+  };    const handleBuscar = async (filtrosRecibidos) => {
         setLoading(true);
         setError(null);
         setCurrentPage(1); 
@@ -99,16 +97,29 @@ const AdminDashboard = () => {
 
         try {
             const filtrosAjustados = { ...filtrosRecibidos };
+            
+            // Manejo correcto de fechas para evitar problemas de zona horaria
             if (filtrosRecibidos.fechaInicio) {
                 const date = new Date(filtrosRecibidos.fechaInicio);
-                date.setDate(date.getDate() - 1);
-                filtrosAjustados.fechaInicio = date.toISOString();
+                // Usar formato YYYY-MM-DD para evitar conversión de zona horaria
+                const fechaLocal = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                filtrosAjustados.fechaInicio = fechaLocal;
+                console.log('🗓️ Fecha inicio procesada:', {
+                    original: filtrosRecibidos.fechaInicio,
+                    procesada: fechaLocal,
+                    local: date.toLocaleDateString()
+                });
             }
             if (filtrosRecibidos.fechaFin) {
                 const date = new Date(filtrosRecibidos.fechaFin);
-              
-                date.setHours(23, 59, 59, 999); 
-                filtrosAjustados.fechaFin = date.toISOString();
+                // Usar formato YYYY-MM-DD para evitar conversión de zona horaria
+                const fechaLocal = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                filtrosAjustados.fechaFin = fechaLocal;
+                console.log('🗓️ Fecha fin procesada:', {
+                    original: filtrosRecibidos.fechaFin,
+                    procesada: fechaLocal,
+                    local: date.toLocaleDateString()
+                });
             }
 
             const params = {
@@ -152,18 +163,20 @@ const AdminDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      let response;
-      if (currentFilters && Object.keys(currentFilters).length > 0) {
+      let response;      if (currentFilters && Object.keys(currentFilters).length > 0) {
         // Fetch filtered data
         const filtrosAjustados = { ...currentFilters };
+        
+        // Manejo correcto de fechas para evitar problemas de zona horaria
         if (currentFilters.fechaInicio) {
             const date = new Date(currentFilters.fechaInicio);
-            filtrosAjustados.fechaInicio = date.toISOString();
+            const fechaLocal = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            filtrosAjustados.fechaInicio = fechaLocal;
         }
         if (currentFilters.fechaFin) {
             const date = new Date(currentFilters.fechaFin);
-            date.setHours(23, 59, 59, 999);
-            filtrosAjustados.fechaFin = date.toISOString();
+            const fechaLocal = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            filtrosAjustados.fechaFin = fechaLocal;
         }
 
         const params = {
@@ -203,18 +216,19 @@ const AdminDashboard = () => {
 
   const exportarExcel = async () => {
     try {
-      let allResults = [];
-      if (currentFilters && Object.keys(currentFilters).length > 0) {
+      let allResults = [];      if (currentFilters && Object.keys(currentFilters).length > 0) {
         // Si hay filtros, pedir todos los resultados filtrados (sin paginación)
         const filtrosAjustados = { ...currentFilters };
+          // Manejo correcto de fechas para evitar problemas de zona horaria
         if (currentFilters.fechaInicio) {
           const date = new Date(currentFilters.fechaInicio);
-          filtrosAjustados.fechaInicio = date.toISOString();
+          const fechaLocal = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          filtrosAjustados.fechaInicio = fechaLocal;
         }
         if (currentFilters.fechaFin) {
           const date = new Date(currentFilters.fechaFin);
-          date.setHours(23, 59, 59, 999);
-          filtrosAjustados.fechaFin = date.toISOString();
+          const fechaLocal = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          filtrosAjustados.fechaFin = fechaLocal;
         }
         const params = {
           page: 1,

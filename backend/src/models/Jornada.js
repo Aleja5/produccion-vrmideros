@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
+const { calcularTiempoEfectivo } = require('../utils/calcularTiempoEfectivo');
 
 const jornadaSchema = new Schema({
     operario: {
@@ -36,35 +37,86 @@ const jornadaSchema = new Schema({
 
 jornadaSchema.pre('save', async function (next) {
     try {
+        console.log('🔄 Ejecutando pre-save hook de Jornada:', this._id);
+        
         if (this.registros && this.registros.length > 0) {
             const Produccion = mongoose.model('Produccion');
             const registros = await Produccion.find({ _id: { $in: this.registros } });
 
-            // Calcular horaInicio y horaFin de la jornada
-            const horasInicio = registros.map(registro => registro.horaInicio).filter(Boolean);
-            const horasFin = registros.map(registro => registro.horaFin).filter(Boolean);
+            console.log('📋 Registros encontrados en jornada:', registros.length);
+            console.log('📊 Datos de registros:', registros.map(r => ({
+                _id: r._id,
+                tiempo: r.tiempo,
+                horaInicio: r.horaInicio,
+                horaFin: r.horaFin,
+                tipoTiempo: r.tipoTiempo
+            })));
 
-            this.horaInicio = horasInicio.length > 0 ? new Date(Math.min(...horasInicio.map(h => h.getTime()))) : null;
-            this.horaFin = horasFin.length > 0 ? new Date(Math.max(...horasFin.map(h => h.getTime()))) : null;
+            // Si no hay registros asociados, buscar por operario y fecha
+            if (registros.length === 0 && this.operario && this.fecha) {
+                console.log('🔍 No hay registros en la jornada, buscando por operario y fecha');
+                const registrosPorFecha = await Produccion.find({
+                    operario: this.operario,
+                    fecha: this.fecha
+                });
+                
+                console.log('📋 Producciones encontradas por fecha:', registrosPorFecha.length);
+                
+                if (registrosPorFecha.length > 0) {
+                    // Actualizar los registros de la jornada
+                    this.registros = registrosPorFecha.map(r => r._id);
+                    registros.push(...registrosPorFecha);
+                }
+            }
 
-            // Calcular los tiempos totales en horas y minutos
-            const totalMinutos = registros.reduce((total, registro) => {
-                return total + (registro.tiempo || 0);
-            }, 0);
+            // Usar la función avanzada para calcular tiempo efectivo
+            const calculoTiempo = calcularTiempoEfectivo(registros);
 
+            console.log('📊 Resultado del cálculo de tiempo:', calculoTiempo);
+
+            // Asignar horas de inicio y fin
+            this.horaInicio = calculoTiempo.horaInicio;
+            this.horaFin = calculoTiempo.horaFin;
+
+            // Calcular tiempo efectivo en horas y minutos
+            const tiempoEfectivoMinutos = calculoTiempo.tiempoEfectivoMinutos;
+
+            // Guardar información completa del tiempo
             this.totalTiempoActividades = {
-                horas: Math.floor(totalMinutos / 60),
-                minutos: totalMinutos % 60
+                horas: Math.floor(tiempoEfectivoMinutos / 60),
+                minutos: tiempoEfectivoMinutos % 60,
+                tiempoEfectivo: tiempoEfectivoMinutos, // Tiempo real sin solapamientos
+                tiempoRango: calculoTiempo.tiempoRangoMinutos, // Tiempo desde primera a última hora
+                tiempoSumado: calculoTiempo.tiempoSumadoMinutos, // Suma individual de actividades
+                solapamientos: calculoTiempo.solapamientos, // Si hay actividades solapadas
+                estadisticas: calculoTiempo.estadisticas // Información adicional
             };
 
+            console.log(`📊 Jornada ${this._id}: Tiempo efectivo ${tiempoEfectivoMinutos}min (${Math.floor(tiempoEfectivoMinutos / 60)}h ${tiempoEfectivoMinutos % 60}m), Tiempo sumado ${calculoTiempo.tiempoSumadoMinutos}min, Solapamientos: ${calculoTiempo.solapamientos}`);
+
         } else {
-            this.totalTiempoActividades = { horas: 0, minutos: 0 };
+            console.log('⚠️ Jornada sin registros, inicializando en cero');
+            this.totalTiempoActividades = { 
+                horas: 0, 
+                minutos: 0,
+                tiempoEfectivo: 0,
+                tiempoRango: 0,
+                tiempoSumado: 0,
+                solapamientos: false,
+                estadisticas: {
+                    totalActividades: 0,
+                    actividadesConHorario: 0,
+                    intervalosUnificados: 0,
+                    diferenciaSolapamiento: 0
+                }
+            };
             this.horaInicio = null;
             this.horaFin = null;
         }
 
         next();
     } catch (error) {
+        console.error('❌ Error en pre-save de Jornada:', error);
         next(error);
     }
 });

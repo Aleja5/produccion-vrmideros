@@ -13,4 +13,4 @@ const operarioSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Operario', operarioSchema,);
+module.exports = mongoose.model('Operario', operarioSchema);

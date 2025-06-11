@@ -124,9 +124,7 @@ const ActivityCard = ({ actividad, onVerDetalle, onEditarActividad }) => {
                     </span>
                     {displayState === 'En progreso' && tiempoEstimadoEnMinutos > 0 &&
                         <span className="text-xs text-gray-400"> (Est. {tiempoEstimadoEnMinutos} min)</span>}
-                </div>
-                <div className="flex gap-2">
-                    <Button
+                </div>                <div className="flex gap-2">                    <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => onVerDetalle(actividad.jornada)}
