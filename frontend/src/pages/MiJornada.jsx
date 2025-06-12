@@ -8,8 +8,14 @@ import EditarProduccion from "./EditarProduccion";
 import { Pencil, Trash2 } from "lucide-react"; // Importing icons
 
 const ajustarFechaLocal = (fechaUTC) => {
+  // Crear una nueva fecha basada en la fecha UTC recibida
+  // pero interpretada como fecha local para evitar problemas de zona horaria
   const fecha = new Date(fechaUTC);
-  return new Date(fecha.getTime() + fecha.getTimezoneOffset() * 60000);
+  const year = fecha.getUTCFullYear();
+  const month = fecha.getUTCMonth();
+  const day = fecha.getUTCDate();
+  // Crear fecha local con los componentes UTC para evitar desfase de zona horaria
+  return new Date(year, month, day);
 };
 
 const MiJornada = () => {
@@ -36,10 +42,11 @@ const MiJornada = () => {
       const operarioId = localStoredOperario._id;
       const response = await axiosInstance.get(`/jornadas/operario/${operarioId}`);
       const jornadas = response.data;
-      console.log("Todas las jornadas recibidas:", jornadas); 
-      const currentJornada = jornadas.find((jornada) => {
+      console.log("Todas las jornadas recibidas:", jornadas);      const currentJornada = jornadas.find((jornada) => {
         const fechaJornada = ajustarFechaLocal(jornada.fecha).toDateString();
-        const fechaHoy = ajustarFechaLocal(new Date()).toDateString();
+        // Usar fecha actual local sin ajustes de zona horaria
+        const today = new Date();
+        const fechaHoy = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toDateString();
         return fechaJornada === fechaHoy;
       });
       console.log("Jornada actual encontrada:", currentJornada); 
@@ -86,6 +93,7 @@ const MiJornada = () => {
   <div className="flex bg-gray-100 h-screen">
     <Sidebar />
     <div className="flex-1 overflow-auto">
+      <div className="container mx-auto py-8 max-w-7xl">
       <div className="container mx-auto px-4 py-6">
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -232,6 +240,7 @@ const MiJornada = () => {
         }}
       />
     )}
+  </div>
   </div>
 );
 

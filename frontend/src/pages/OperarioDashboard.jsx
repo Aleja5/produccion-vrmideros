@@ -15,7 +15,7 @@ import { motion } from 'framer-motion';
 
 // --- NUEVAS IMPORTACIONES ---
 import ActivityCard from '../components/ActivityCard';
-import { getFormattedLocalDateDisplay, getFechaISOForComparison } from '../utils/helpers'; // Importa de helpers
+import { getFormattedLocalDateDisplay, getFechaISOForComparison, getCurrentLocalDateDisplay } from '../utils/helpers'; // Importa de helpers
 
 // ---
 // Loading Skeleton Component
@@ -190,25 +190,10 @@ const OperarioDashboard = () => {
         // Usar tiempo efectivo si está disponible, sino usar el método anterior
         const tiempoMinutos = tiempoData.tiempoEfectivo !== undefined ? 
             tiempoData.tiempoEfectivo : 
-            (tiempoData.horas * 60 + tiempoData.minutos);
-
-        const hours = Math.floor(tiempoMinutos / 60);
+            (tiempoData.horas * 60 + tiempoData.minutos);        const hours = Math.floor(tiempoMinutos / 60);
         const minutes = tiempoMinutos % 60;
         
-        // Mostrar información adicional si hay solapamientos
-        let textoExtra = '';
-        if (tiempoData.solapamientos) {
-            textoExtra = ` ⚠️ Solapamientos detectados`;
-            // Mostrar diferencia si hay datos disponibles
-            if (tiempoData.tiempoSumado && tiempoData.tiempoEfectivo) {
-                const diferencia = tiempoData.tiempoSumado - tiempoData.tiempoEfectivo;
-                if (diferencia > 0) {
-                    textoExtra += ` (-${diferencia}min)`;
-                }
-            }
-        }
-        
-        return `${tiempoMinutos} min (${hours}h ${minutes}m)${textoExtra}`;
+        return `${tiempoMinutos} min (${hours}h ${minutes}m)`;
     };
 
     const calcularTiempoTotalJornada = (jornada) => {
@@ -251,43 +236,6 @@ const OperarioDashboard = () => {
         navigate('/registro-produccion');
     }, [navigate]);
 
-    const handleEliminarActividad = useCallback((actividad) => {
-        confirmAlert({
-            title: 'Confirmación de eliminación de actividad',
-            message: '¿Estás seguro de que deseas eliminar esta actividad? Esta acción no se puede deshacer.',
-            buttons: [
-                {
-                    label: 'Sí',
-                    onClick: async () => {
-                        try {
-                            console.log('🗑️ Eliminando actividad:', actividad._id);
-                            await axiosInstance.delete(`/produccion/eliminar/${actividad._id}`);
-                            toast.success('Actividad eliminada con éxito');
-                            recargarJornadas();
-                        } catch (error) {
-                            console.error('❌ Error al eliminar actividad:', {
-                                message: error.message,
-                                response: error.response?.data,
-                                status: error.response?.status
-                            });
-
-                            const mensajeError = error.response?.data?.message ||
-                                                 error.response?.data?.error ||
-                                                 'No se pudo eliminar la actividad';
-                            toast.error(mensajeError);
-                        }
-                    }
-                },
-                {
-                    label: 'Cancelar',
-                    onClick: () => {
-                        toast.info('Eliminación cancelada');
-                    }
-                }
-            ]
-        });
-    }, [recargarJornadas]);
-
     // Function to force update after registration
     const forzarActualizacionDespuesDeRegistro = useCallback(() => {
         console.log('🎯 Forzando actualización después de registro...');
@@ -315,11 +263,11 @@ const OperarioDashboard = () => {
             <div className="flex bg-gray-100 min-h-screen h-screen">
                 <Sidebar className="h-full flex flex-col" />
                 <div className="flex-1 p-6 overflow-auto">
+                <div className="container mx-auto py-8 max-w-7xl">
                     <ToastContainer />
                     {/* Section Header */}
                     <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center gap-2 text-2xl font-bold text-gray-800">
-                            <ClipboardList className="w-7 h-7 text-blue-600" aria-label="Producción" />
+                        <div className="text-4xl font-extrabold text-gray-800 tracking-tight drop-shadow-sm">                            
                             Producción VR Mideros
                         </div>
                         <div className="flex flex-col items-center space-y-1 bg-white px-4 py-2 rounded-lg shadow-sm">
@@ -332,12 +280,11 @@ const OperarioDashboard = () => {
                     {loading ? (
                         <LoadingSkeleton />
                     ) : (
-                        <>
-                            {/* Sección de Jornada de Hoy Header */}
+                        <>                            {/* Sección de Jornada de Hoy Header */}
                             <div className="bg-gradient-to-r from-gray-600 to-gray-800 text-white p-4 rounded-lg shadow-md mb-6 flex justify-between items-center">
                                 <div>
                                     <h2 className="text-white font-bold">Jornada de Hoy</h2>
-                                    <p className="text-sm">{getFormattedLocalDateDisplay(jornadaActual?.fecha || new Date().toISOString())}</p>
+                                    <p className="text-sm">{jornadaActual?.fecha ? getFormattedLocalDateDisplay(jornadaActual.fecha) : getCurrentLocalDateDisplay()}</p>
                                 </div>
                                 <div className="text-right">
                                     <span className="text-3xl font-bold">{jornadaActual?.registros?.length || 0}</span>
@@ -406,28 +353,7 @@ const OperarioDashboard = () => {
                                 </div>
                             )}
                         </>
-                    )}
-
-                    {/* Modals */}
-                    {jornadaDetalleId && (
-                        <DetalleJornadaModal
-                            jornadaId={jornadaDetalleId}
-                            onClose={handleCerrarDetalleJornada}
-                            onEditActivity={handleEditarActividad}
-                            onDeleteActivity={handleEliminarActividad}
-                            onUpdate={recargarJornadas}
-                        />
-                    )}
-
-                    {actividadAEditar && (
-                        <EditarProduccion
-                            actividad={actividadAEditar}
-                            onClose={() => setActividadAEditar(null)}
-                            onGuardar={() => {
-                                setActividadAEditar(null);
-                                setActualizarKey(Date.now()); // Use setActualizarKey
-                            }}
-                        />                    )}                     
+                    )}                  
                         {/* Solo mostrar el botón si existe una jornada actual con actividades registradas */}
                         {jornadaActual && jornadaActual.registros && jornadaActual.registros.length > 0 && (
                             <div className="flex justify-between items-center mt-6">
@@ -436,7 +362,7 @@ const OperarioDashboard = () => {
                                 </Button>                           
                             </div>
                         )}
-                    
+                    </div>
                 </div>
             </div>
         </>

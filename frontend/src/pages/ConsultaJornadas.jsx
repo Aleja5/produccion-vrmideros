@@ -143,13 +143,13 @@ const ConsultaJornadas = () => {
   return (
     <>    
       <div className="flex min-h-screen bg-gradient-to-br from-gray-100 to-blue-100 overflow-hidden">
-        <div className="h-screen w-64 flex-shrink-0 bg-white shadow-lg z-20 overflow-y-auto">
+        <div className="flex bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50 h-screen">
           <SidebarAdmin />
         </div>
         <div className="flex-1 overflow-auto">
           <div className="container mx-auto px-4 py-6">
             <div className="mb-6">
-                <h1 className="text-3xl md:text-4xl font-extrabold text-blue-800 tracking-tight drop-shadow-sm">Consulta de Jornadas</h1>
+                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 tracking-tight drop-shadow-sm">Consulta de Jornadas</h1>
                 <p className="text-base md:text-lg text-gray-500 mt-1">Visualiza, filtra y exporta las jornadas registradas.</p>
             </div>
             <Card className="p-4 shadow-lg border border-blue-100">

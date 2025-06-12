@@ -278,8 +278,8 @@ const AdminDashboard = () => {
   return (
     <>    
       <div className="flex h-screen bg-gradient-to-br from-gray-100 to-blue-100 overflow-hidden"> {/* Changed min-h-screen to h-screen */}
-        {/* Sidebar con ancho fijo y scroll independiente */}
-        <div className="h-screen w-64 flex-shrink-0 bg-white shadow-lg z-20 overflow-y-auto print:hidden"> {/* Added print:hidden */}
+        
+        <div className="flex bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50 h-screen">
           <SidebarAdmin />
         </div>
 
@@ -289,8 +289,8 @@ const AdminDashboard = () => {
             {/* Encabezado */}
             <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-2 flex-shrink-0">
               <div>
-                <h1 className="text-3xl md:text-4xl font-extrabold text-blue-800 tracking-tight drop-shadow-sm">Consultas de Producción</h1>
-                <p className="text-base md:text-lg text-gray-600 mt-1">Panel de consulta y exportación de registros de producción</p> {/* Slightly darker text */}
+                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 tracking-tight drop-shadow-sm">Consultas de Producción</h1>
+                <p className="text-lg text-gray-500 mt-2">Panel de consulta y exportación de registros de producción</p> {/* Slightly darker text */}
               </div>
               <div className="flex gap-3 mt-2 md:mt-0"> {/* Increased gap */}
                 {/* Styled Exportar Excel button */}
@@ -312,7 +312,7 @@ const AdminDashboard = () => {
 
             {/* Resultados */}
             {/* Updated Card styling */}
-            <Card className="mb-8 p-4 bg-white shadow-xl rounded-xl flex flex-col flex-grow overflow-hidden">
+            <Card className="mb-8 p-4 bg-white shadow-xl rounded-2xl flex flex-col flex-grow overflow-hidden">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3 flex-shrink-0"> {/* Increased mb and gap */}
                 <h2 className="text-2xl font-bold text-blue-700">Resultados</h2> {/* Increased text size */}
                 <div className="flex items-center gap-4"> {/* Grouped button and total */}

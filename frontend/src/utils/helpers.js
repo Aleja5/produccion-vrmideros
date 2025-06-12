@@ -32,8 +32,27 @@ export const getStateColors = (estado) => {
  */
 export const getFormattedLocalDateDisplay = (isoDateString) => {
     if (!isoDateString) return 'N/A';
+    
+    // Si es una fecha ISO, extraer solo la parte de fecha para evitar problemas de zona horaria
+    if (typeof isoDateString === 'string' && isoDateString.includes('T')) {
+        const fechaSolo = isoDateString.split('T')[0]; // Obtener solo YYYY-MM-DD
+        const [year, month, day] = fechaSolo.split('-').map(Number);
+        const date = new Date(year, month - 1, day); // Crear fecha local sin zona horaria
+        return date.toLocaleDateString('es-CO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+    }
+    
+    // Para otros formatos de fecha
     const date = new Date(isoDateString);
     return date.toLocaleDateString('es-CO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+};
+
+/**
+ * Obtiene la fecha actual en formato local para mostrar
+ * @returns {string} La fecha actual formateada
+ */
+export const getCurrentLocalDateDisplay = () => {
+    const hoy = new Date();
+    return hoy.toLocaleDateString('es-CO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 };
 
 /**

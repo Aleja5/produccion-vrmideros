@@ -170,20 +170,11 @@ const DetalleJornadaModal = ({ jornadaId, onClose, onEditarActividad, onEliminar
                                 <Clock className="w-6 h-6 text-blue-600" />
                             </div>
                             <div className="flex-1">
-                                <p className="text-sm text-gray-500 font-medium">Duración Total</p>
-                                <p className="text-lg font-semibold text-gray-800">
+                                <p className="text-sm text-gray-500 font-medium">Duración Total</p>                                <p className="text-lg font-semibold text-gray-800">
                                     {jornada.totalTiempoActividades ? (
-                                        <>
-                                            {jornada.totalTiempoActividades.tiempoEfectivo !== undefined 
-                                                ? `${Math.floor(jornada.totalTiempoActividades.tiempoEfectivo / 60)}h ${jornada.totalTiempoActividades.tiempoEfectivo % 60}m`
-                                                : `${jornada.totalTiempoActividades.horas || 0}h ${jornada.totalTiempoActividades.minutos || 0}m`
-                                            }
-                                            {jornada.totalTiempoActividades.solapamientos && (
-                                                <span className="block text-xs text-orange-600 font-normal mt-1">
-                                                    ⚠️ Actividades solapadas
-                                                </span>
-                                            )}
-                                        </>
+                                        jornada.totalTiempoActividades.tiempoEfectivo !== undefined 
+                                            ? `${Math.floor(jornada.totalTiempoActividades.tiempoEfectivo / 60)}h ${jornada.totalTiempoActividades.tiempoEfectivo % 60}m`
+                                            : `${jornada.totalTiempoActividades.horas || 0}h ${jornada.totalTiempoActividades.minutos || 0}m`
                                     ) : 'N/A'}
                                 </p>
                             </div>
@@ -200,46 +191,7 @@ const DetalleJornadaModal = ({ jornadaId, onClose, onEditarActividad, onEliminar
                                 </p>
                             </div>
                         </div>
-                    </div>                </div>
-
-                {/* Información adicional de tiempo si hay solapamientos */}
-                {jornada.totalTiempoActividades?.solapamientos && (
-                    <div className="px-8 py-4 bg-orange-50 border-b border-orange-200">
-                        <div className="bg-white p-4 rounded-xl border border-orange-200">
-                            <h4 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
-                                ⚠️ Información de Tiempo Detallada
-                            </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                <div>
-                                    <p className="text-gray-600">Tiempo Efectivo:</p>
-                                    <p className="font-semibold text-green-700">
-                                        {Math.floor((jornada.totalTiempoActividades.tiempoEfectivo || 0) / 60)}h {(jornada.totalTiempoActividades.tiempoEfectivo || 0) % 60}m
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-600">Suma Individual:</p>
-                                    <p className="font-semibold text-blue-700">
-                                        {Math.floor((jornada.totalTiempoActividades.tiempoSumado || 0) / 60)}h {(jornada.totalTiempoActividades.tiempoSumado || 0) % 60}m
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-600">Tiempo Solapado:</p>
-                                    <p className="font-semibold text-red-700">
-                                        {(() => {
-                                            const diferencia = (jornada.totalTiempoActividades.tiempoSumado || 0) - (jornada.totalTiempoActividades.tiempoEfectivo || 0);
-                                            return `${Math.floor(diferencia / 60)}h ${diferencia % 60}m`;
-                                        })()}
-                                    </p>
-                                </div>
-                            </div>
-                            <p className="text-xs text-gray-600 mt-3">
-                                * El tiempo efectivo calcula el período real trabajado eliminando solapamientos entre actividades.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Contenido scrolleable */}
+                    </div>                </div>                {/* Contenido scrolleable */}
                 <div className="overflow-y-auto max-h-[calc(95vh-280px)] px-8 py-6">
                     <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                         <Settings className="w-5 h-5 text-indigo-600" />

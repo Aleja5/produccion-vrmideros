@@ -124,24 +124,6 @@ const ActivityCard = ({ actividad, onVerDetalle, onEditarActividad }) => {
                     </span>
                     {displayState === 'En progreso' && tiempoEstimadoEnMinutos > 0 &&
                         <span className="text-xs text-gray-400"> (Est. {tiempoEstimadoEnMinutos} min)</span>}
-                </div>                <div className="flex gap-2">                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onVerDetalle(actividad.jornada)}
-                        className="text-blue-500 hover:bg-blue-50 hover:text-blue-700"
-                        aria-label="Ver detalles"
-                    >
-                        <Eye className="w-5 h-5" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onEditarActividad(actividad)}
-                        className="text-green-500 hover:bg-green-50 hover:text-green-700"
-                        aria-label="Editar actividad"
-                    >
-                        <Pencil className="w-5 h-5" />
-                    </Button>
                 </div>
             </div>
 

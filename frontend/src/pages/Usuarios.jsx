@@ -110,7 +110,7 @@ const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
                 <div className="flex-1 overflow-auto">
                     <div className="container mx-auto px-4 py-6">
                         <div className="bg-white shadow-xl rounded-2xl p-6 md:p-8">
-                            <h1 className="text-3xl font-bold text-gray-800 mb-8">Gestión de Usuarios</h1>
+                            <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight drop-shadow-sm">Gestión de Usuarios</h1>
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                             <button
                                 onClick={handleCrear}

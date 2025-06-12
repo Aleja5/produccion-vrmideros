@@ -111,7 +111,8 @@ const handleEliminarActividad = async (jornadaId, actividadId) => {
   return (
     <div className="flex bg-gray-100 h-screen">
       <Sidebar />
-      <div className="flex flex-col flex-1">   
+      <div className="flex flex-col flex-1">  
+        <div className="container mx-auto py-8 max-w-7xl">
         <div className="flex-1 overflow-auto p-6"> 
           <div className="container mx-auto">
             <div className="flex flex-wrap justify-between items-center mb-6">
@@ -269,6 +270,7 @@ const handleEliminarActividad = async (jornadaId, actividadId) => {
           onGuardar={handleGuardarEditModal}
         />
       )}
+    </div>
     </div>
   );
 };
