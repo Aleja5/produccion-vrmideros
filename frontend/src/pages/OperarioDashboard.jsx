@@ -1,4 +1,3 @@
-// src/pages/OperarioDashboard.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import axiosInstance from '../utils/axiosInstance';
 import { useNavigate } from 'react-router-dom';
@@ -8,10 +7,10 @@ import { confirmAlert } from 'react-confirm-alert';
 import 'react-confirm-alert/src/react-confirm-alert.css';
 import { Sidebar } from '../components/Sidebar';
 import Navbar from '../components/Navbar';
-import { Button, Card, Input } from '../components/ui/index';
+import { Button, Card, Input } from '../components/ui/index'; // Asegúrate que 'Input' se usa o quítalo si no es necesario
 import EditarProduccion from './EditarProduccion';
 import DetalleJornadaModal from '../components/DetalleJornadaModal';
-import { ClipboardList, Hammer, Eye, Pencil, UserCircle2, CheckCircleIcon} from 'lucide-react';
+import { ClipboardList, UserCircle2 } from 'lucide-react'; // Asumo que CheckCircleIcon no es necesario aquí o viene de otro lugar
 import { motion } from 'framer-motion';
 
 // --- NUEVAS IMPORTACIONES ---
@@ -58,15 +57,16 @@ const LoadingSkeleton = () => (
 );
 
 // ---
+// OperarioDashboard Functional Component
 const OperarioDashboard = () => {
-    console.log(' OperarioDashboard se esta re-renderizando...');
+    console.log('OperarioDashboard se está re-renderizando...');
     // --- State Variables ---
     const [jornadas, setJornadas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actualizarKey, setActualizarKey] = useState(Date.now()); // Using timestamp for force updates
     const [jornadaDetalleId, setJornadaDetalleId] = useState(null);
-    const [filtro, setFiltro] = useState('');
-    const [actividadAEditar, setActividadAEditar] = useState(null); // Define this state as well
+    const [filtro, setFiltro] = useState(''); // No se está usando en el render, considera si es necesario
+    const [actividadAEditar, setActividadAEditar] = useState(null);
 
     const navigate = useNavigate();
 
@@ -92,7 +92,7 @@ const OperarioDashboard = () => {
         }
     }, [operarioId, navigate]);
 
-    // Función memorizada para obtener jornadas con mejor manejo de errores
+    // Función memoizada para obtener jornadas con mejor manejo de errores
     const fetchJornadas = useCallback(async () => {
         if (!operarioId) {
             setLoading(false);
@@ -102,6 +102,7 @@ const OperarioDashboard = () => {
             setLoading(true);
             console.log('🔄 Obteniendo jornadas para operario:', operarioId);
 
+            // Uso de template literals para la URL
             const res = await axiosInstance.get(`/jornadas/operario/${operarioId}`);
 
             console.log('✅ Respuesta del servidor (jornadas):', res.data);
@@ -166,28 +167,23 @@ const OperarioDashboard = () => {
         };
     }, [navigate]);
 
-    const hoyISO = (() => {
-        const hoy = new Date();
-        const year = hoy.getFullYear();
-        const month = String(hoy.getMonth() + 1).padStart(2, '0');
-        const day = String(hoy.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    })();
+    // --- Date and Filtering Logic ---
 
+    // Gets today's date in YYYY-MM-DD format for comparison.
+    // Usando getFechaISOForComparison del helper, esto es más robusto
+    const hoyISO = getFechaISOForComparison(new Date().toISOString());
+
+    // Filter jornadas with at least one activity
     const jornadasFiltradas = jornadas.filter((jornada) =>
         jornada.registros && jornada.registros.length > 0
     );
-
+    // Find today's jornada
     const jornadaActual = jornadasFiltradas.find(jornada => {
         const fechaJornada = getFechaISOForComparison(jornada.fecha);
         return fechaJornada === hoyISO;
     });
 
-    const jornadasAnteriores = jornadasFiltradas.filter(jornada => {
-        const fechaJornada = getFechaISOForComparison(jornada.fecha);
-        return fechaJornada !== hoyISO && fechaJornada.includes(filtro);
-    });
-
+    // Calculate total time by summing activity times for 'Resumen del Día'
     const calcularTotalTiempo = (jornada) => {
         const totalMinutes = jornada.registros && Array.isArray(jornada.registros)
             ? jornada.registros.reduce((total, registro) => {
@@ -201,28 +197,12 @@ const OperarioDashboard = () => {
         return `${totalMinutes} min (${hours} horas ${minutes} min)`;
     };
 
-    const calcularTiempoTotalJornada = (jornada) => {
-        if (!jornada.horaInicio || !jornada.horaFin) {
-            return 'N/A'; // Or handle as appropriate
-        }
-        const inicio = new Date(jornada.horaInicio);
-        const fin = new Date(jornada.horaFin);
-        const diffMs = fin - inicio; // Difference in milliseconds
-        const diffMinutes = Math.floor(diffMs / (1000 * 60)); // Difference in minutes
-
-        const hours = Math.floor(diffMinutes / 60);
-        const minutes = diffMinutes % 60;
-        return `${diffMinutes} min (${hours} horas ${minutes} min)`;
-    };
+    // --- Event Handlers (optimized with useCallback) ---
 
     const handleRegistroProduccion = useCallback(() => {
-        if (jornadaActual && jornadaActual._id) {
-            navigate(`/registro-produccion/${jornadaActual._id}`);
-        } else {
-            navigate('/registro-produccion');
-        }
-    }, [navigate, jornadaActual]);
-
+        // Always navigate to general registration page
+        navigate('/registro-produccion');
+    }, [navigate]);
 
     const handleVerDetalleJornada = useCallback((jornadaId) => {
         setJornadaDetalleId(jornadaId);
@@ -232,7 +212,90 @@ const OperarioDashboard = () => {
         setJornadaDetalleId(null);
     }, []);
 
-    const handleEditarActividad =useCallback ((actividad) => {
+    const handleEliminarJornada = (id) => {
+        confirmAlert({
+            title: 'Confirmación de eliminación de jornada',
+            message: '¿Estás seguro de que deseas eliminar esta jornada y todas sus actividades asociadas? Esta acción no se puede deshacer.',
+            buttons: [
+                {
+                    label: 'Sí',
+                    onClick: async () => {
+                        try {
+                            await axiosInstance.delete(`/jornadas/${id}`);
+                            setActualizarKey(Date.now()); // Forzar actualización
+                            toast.success('Jornada eliminada con éxito');
+                        } catch (error) {
+                            console.error('Error al eliminar la jornada:', error);
+                            toast.error('No se pudo eliminar la jornada.');
+                        }
+                    }
+                },
+                {
+                    label: 'Cancelar',
+                    onClick: () => {
+                        toast.info('Eliminación cancelada');
+                    }
+                }
+            ]
+        });
+    };
+
+    const handleGuardarJornadaCompleta = async (jornadaId) => {
+        confirmAlert({
+            title: 'Confirmación',
+            message: '¿Está seguro de dar la jornada por completada?',
+            buttons: [
+                {
+                    label: 'Sí',
+                    onClick: async () => {
+                        try {
+                            await axiosInstance.put(`/jornadas/${jornadaId}`, { estado: "completa" });
+                            toast.success(`Jornada ${jornadaId} guardada como completa`);
+                            setActualizarKey(Date.now()); // Forzar actualización
+                        } catch (error) {
+                            console.error('Error al guardar la jornada como completa:', error);
+                            toast.error('No se pudo guardar la jornada como completa.');
+                        }
+                    }
+                },
+                {
+                    label: 'No',
+                    onClick: () => console.log('Acción cancelada')
+                }
+            ]
+        });
+    };
+
+    const handleEliminarJornadaActual = async (jornadaId) => {
+        confirmAlert({
+            title: '¿Estás seguro?',
+            message: '¿Quieres eliminar la jornada actual y todas sus actividades?',
+            buttons: [
+                {
+                    label: 'Sí',
+                    onClick: async () => {
+                        try {
+                            await axiosInstance.delete(`/jornadas/${jornadaId}`);
+                            toast.success('Jornada eliminada con éxito');
+                            setActualizarKey(Date.now()); // Forzar actualización
+                        } catch (error) {
+                            console.error('Error al eliminar la jornada:', error);
+                            toast.error('No se pudo eliminar la jornada.');
+                        }
+                    }
+                },
+                {
+                    label: 'Cancelar',
+                    onClick: () => {
+                        toast.info('Eliminación cancelada');
+                    }
+                }
+            ]
+        });
+    };
+
+    // Handlers para editar y eliminar actividad desde el modal de detalle
+    const handleEditarActividad = useCallback((actividad) => {
         setActividadAEditar(actividad);
     }, []);
 
@@ -307,10 +370,10 @@ const OperarioDashboard = () => {
 
     // --- Render JSX ---
     return (
-        <>
-            <Navbar />
-            <div className="flex bg-gray-100 min-h-screen h-screen">
-                <Sidebar className="h-full flex flex-col" />
+        <div className="flex bg-gray-100 h-screen">
+            <Sidebar />
+            <div className="flex flex-col flex-1">
+                <Navbar />
                 <div className="flex-1 p-6 overflow-auto">
                     <ToastContainer />
                     {/* Section Header */}
@@ -353,16 +416,17 @@ const OperarioDashboard = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {/* List of Activities for Today's Jornada */}
                                         {jornadaActual.registros?.length > 0 ? (
-                                            jornadaActual.registros.map((actividad) => {
-                                                return (
-                                                    <ActivityCard
-                                                        key={actividad._id}
-                                                        actividad={actividad}
-                                                        onVerDetalle={handleVerDetalleJornada}
-                                                        onEditarActividad={handleEditarActividad}
-                                                    />
-                                                );
-                                            })
+                                            jornadaActual.registros.map((actividad) => (
+                                                <ActivityCard
+                                                    key={actividad._id}
+                                                    actividad={{
+                                                        ...actividad,
+                                                        oti: typeof actividad.oti === 'object' && actividad.oti !== null ? actividad.oti.numeroOti : actividad.oti
+                                                    }}
+                                                    onVerDetalle={handleVerDetalleJornada}
+                                                    onEditarActividad={handleEditarActividad}
+                                                />
+                                            ))
                                         ) : (
                                             <div className="text-center col-span-full py-8 text-gray-500">
                                                 <p className="mb-4">No hay actividades registradas para hoy en esta jornada.</p>
@@ -402,6 +466,16 @@ const OperarioDashboard = () => {
                         </>
                     )}
 
+                    {/* Botón para registrar nueva producción (general) */}
+                    <div className="flex justify-start items-center mt-6">
+                        <Button
+                            className="bg-blue-200 blue font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500 transition-all duration-300 cursor-pointer"
+                            onClick={handleRegistroProduccion}
+                        >
+                            Registrar Nueva Producción
+                        </Button>
+                    </div>
+
                     {/* Modals */}
                     {jornadaDetalleId && (
                         <DetalleJornadaModal
@@ -419,20 +493,13 @@ const OperarioDashboard = () => {
                             onClose={() => setActividadAEditar(null)}
                             onGuardar={() => {
                                 setActividadAEditar(null);
-                                setActualizarKey(Date.now()); // Use setActualizarKey
+                                setActualizarKey(Date.now()); // Forzar actualización
                             }}
                         />
-                    )}                     
-                        <div className="flex justify-between items-center mt-6">
-                            {/* Changed this button to use the new handleRegistroProduccion logic */}
-                            <Button className="bg-blue-200 blue font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-blue-500 transition-all duration-300 cursor-pointer" onClick={handleRegistroProduccion}>
-                                {jornadaActual ? 'Añadir actividad a jornada actual' : 'Registrar Nueva Producción'}
-                            </Button>                           
-                        </div>
-                    
+                    )}
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 

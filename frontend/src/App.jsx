@@ -1,3 +1,4 @@
+// App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import EditarProduccion from './pages/EditarProduccion';
@@ -20,7 +21,8 @@ import InsumosPage from './pages/Insumos';
 import ProcesosPage from './pages/Procesos';
 import AreasPage from './pages/Areas';
 import OperariosPage from './pages/Operarios';
-import UsuariosPage from './pages/Usuarios';
+import UsuariosPage from './pages/Usuarios'; // Este es tu componente de página principal de usuarios
+import UsuarioForm from './components/UsuarioForm'; // <--- NUEVO: Importa UsuarioForm
 import ResetPassword from './pages/ResetPassword';
 import NotFound from './pages/NotFound';
 
@@ -62,13 +64,41 @@ function App() {
               <ConsultaJornadas />
             </ProtectedRoute>
           }
-        />                
+        />
         <Route path="/admin/maquinas" element={<MaquinasPage />} />
         <Route path="/admin/insumos" element={<InsumosPage />} />
         <Route path="/admin/procesos" element={<ProcesosPage />} />
         <Route path="/admin/areas" element={<AreasPage />} />
         <Route path="/admin/operarios" element={<OperariosPage />} />
-        <Route path="/admin/usuarios" element={<UsuariosPage />} />
+
+        {/* Rutas de Usuarios */}
+        <Route
+          path="/admin/usuarios" // Ruta para la lista de usuarios (UsuariosPage)
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <UsuariosPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* NUEVAS RUTAS PARA CREAR/EDITAR USUARIOS CON USUARIOFORM */}
+        <Route
+          path="/admin/usuarios/crear" // Ruta para crear un nuevo usuario
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <UsuarioForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/usuarios/editar/:id" // Ruta para editar un usuario existente
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              {/* UsuarioForm necesitará lógica para cargar el usuario inicial basado en :id */}
+              <UsuarioForm />
+            </ProtectedRoute>
+          }
+        />
+
 
         {/* Nueva ruta para el detalle de la jornada del admin */}
         <Route
@@ -118,7 +148,12 @@ function App() {
         <Route path="/mi-jornada" element={<MiJornada />} />
         <Route path="/historial-jornadas" element={<HistorialJornadas />} />
 
-        {/* Rutas protegidas para operario */}
+        {/* Rutas para manejo de contraseñas */}
+        {/* Ya estaba, lo muevo aquí para agruparlo */}
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+        {/* Ruta para capturar cualquier ruta no definida */}
+        <Route path="*" element={<NotFound />} />
 
       </Routes>
     </Router>

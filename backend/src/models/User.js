@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'La contraseña es obligatoria'],
-      minlength: [8, 'La contraseña debe tener al menos 8 caracteres'],
+      minlength: [6, 'La contraseña debe tener al menos 6 caracteres'],
     },
     role: {
       type: String,
@@ -49,20 +49,47 @@ userSchema.pre('save', async function (next) {
     return next();
   }
 
-  console.log('Contraseña antes de hash:', this.password);
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  console.log('Contraseña después de hash:', this.password);
-
-  next();
+  try {
+    console.log('Contraseña antes de hash:', this.password);
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    console.log('Contraseña después de hash:', this.password);
+    next();
+  } catch (error) {
+    console.error('Error al hashear la contraseña:', error);
+    next(error);
+  }
 });
 
 // Método para comparar contraseñas
 userSchema.methods.comparePassword = async function (password) {
-  console.log('Comparando contraseña ingresada:', password);
-  const isMatch = await bcrypt.compare(password, this.password);
-  console.log('¿Las contraseñas coinciden?', isMatch);
-  return isMatch;
+  try {
+    console.log('=== Iniciando comparación de contraseñas ===');
+    console.log('Contraseña ingresada:', password);
+    console.log('Hash almacenado:', this.password);
+    
+    if (!password || !this.password) {
+      console.error('ERROR: Contraseña o hash faltante');
+      return false;
+    }
+
+    // Comparar usando bcrypt
+    const isMatch = await bcrypt.compare(password, this.password);
+    console.log('=== Resultado de comparación ===');
+    console.log('¿Las contraseñas coinciden?:', isMatch);
+    
+    if (!isMatch) {
+      // Si no coinciden, vamos a generar un hash de prueba para debug
+      const salt = await bcrypt.genSalt(10);
+      const testHash = await bcrypt.hash(password, salt);
+      console.log('Hash de prueba para la contraseña ingresada:', testHash);
+    }
+    
+    return isMatch;
+  } catch (error) {
+    console.error('Error en la comparación de contraseñas:', error);
+    return false;
+  }
 };
 
 module.exports = mongoose.model('User', userSchema);
