@@ -3,12 +3,10 @@ import axios from 'axios';
 import ProcesoForm from '../components/ProcesoForm';
 import ProcesosList from '../components/ProcesosList';
 import Pagination from '../components/Pagination';
-import { useNavigate } from 'react-router-dom';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import Navbar from '../components/Navbar';
 
 const ProcesoPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 8 }) => {
-    const navigate = useNavigate();
     const [procesos, setProcesos] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
     const [procesoAEditar, setProcesoAEditar] = useState(null);
@@ -140,8 +138,9 @@ const ProcesoPage = ({ currentPage: propCurrentPage, totalResults: propTotalResu
                 </div>
 
                     {loading ? (
-                        <div className="flex justify-center items-center py-12 animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"
-                        ></div>
+                        <div className="flex justify-center items-center py-12">
+                            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 border-solid"></div>
+                        </div>
                     ) : (
                         <>
                         {modo === 'listar' && (
@@ -159,27 +158,32 @@ const ProcesoPage = ({ currentPage: propCurrentPage, totalResults: propTotalResu
                                 <Pagination
                                     totalResults={totalResults}
                                     currentPage={currentPage}
+                                    totalPages={totalPages}
                                     itemsPerPage={itemsPerPage}
                                     onPageChange={handlePageChange}
                                 />
                             </div>
                         )}
 
-                        {modo === 'crear' && (
-                            <div className="mt-6">
-                                <h2 className="text-xl font-semibold mb-2 text-gray-800">Crear Nuevo Proceso</h2>                    
-                                <ProcesoForm onGuardar={handleGuardar} onCancelar={handleCancelar}
-                                />
-                            </div>
-                        )}
-                        {modo === 'editar' && procesoAEditar && (
-                            <div className="mt-6">
-                                <h2 className="text-xl font-semibold mb-2 text-gray-800">Editar proceso</h2>
-                                <button
-                                    onClick={() => setModo('listar')}
-                                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg shadow hover:shadow-md transition duration-150 ease-in-out"
-                                >Volver a la lista</button>
-                                <ProcesoForm procesoInicial={procesoAEditar} onGuardar={handleGuardar} onCancelar={handleCancelar} />
+                        {(modo === 'crear' || (modo === 'editar' && procesoAEditar)) && (
+                            <div className="mt-8 p-6 bg-gray-50 rounded-xl shadow-inner">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-semibold text-gray-800">
+                                        {modo === 'crear' ? 'Crear Nuevo Proceso' : 'Editar Proceso'}
+                                    </h2>
+                                    {modo === 'editar' && (
+                                        <button
+                                            onClick={() => setModo('listar')}
+                                            className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg shadow hover:shadow-md transition duration-150 ease-in-out"
+                                        >
+                                            Volver a la lista
+                                        </button>
+                                    )}
+                                </div>
+                                <ProcesoForm 
+                                procesoInicial={procesoAEditar} 
+                                onGuardar={handleGuardar} 
+                                onCancelar={handleCancelar} />
                             </div>
                         )}
                     </>

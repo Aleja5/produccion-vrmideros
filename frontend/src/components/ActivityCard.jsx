@@ -92,8 +92,9 @@ const ActivityCard = ({ actividad, onVerDetalle, onEditarActividad }) => {
             <div className="relative z-10 flex items-center gap-3 mb-3">
                 <Hammer className="w-6 h-6 text-blue-500" aria-label="Actividad" />
                 <div className="flex-1">
-                    <h4 className="font-medium text-gray-800 text-lg">{actividad.proceso?.nombre || 'N/A'}</h4>
-                    <p className="text-sm text-gray-500">OTI: {actividad.oti || 'N/A'}</p>
+                    <h4 className="font-medium text-gray-800 text-lg">
+                        {actividad.procesos && Array.isArray(actividad.procesos) && actividad.procesos.length > 0 ? actividad.procesos.map(p => p.nombre).join(', ') : actividad.proceso?.nombre || 'N/A'}</h4>
+                    <p className="text-sm text-gray-500">OTI: {actividad.oti?.numeroOti || actividad.oti || 'N/A'}</p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStateColors(displayState)}`}>
                     {displayState}

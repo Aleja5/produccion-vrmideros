@@ -37,24 +37,24 @@ const ProcesoList = ({ procesos, onEditar, onEliminar }) => {
                                 <td className="px-6 py-1 text-center rounded-r-lg">{proceso.areaId && typeof proceso.areaId === 'object' && proceso.areaId.nombre ? proceso.areaId.nombre : 'N/A'}
                                 </td>
                                 <td className="px-6 py-1 text-right text-sm font-medium space-x-2">
-                                    <div className="flex justify-center space-x-2"></div>
-                                    <button
-                                        onClick={() => onEditar(proceso)}
-                                        className="p-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition"
-                                        title="Editar"
-                                    >
-                                        <Pencil size={16} />
-                                        
-                                    </button>
-                                    <button 
-                                        onClick={() => onEliminar(proceso._id)} 
-                                        className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition"
-                                        title="Eliminar"
-                                    >
-                                        <Trash2 size={16} />
-                                        
-                                    </button>
-                                    
+                                    <div className="flex justify-center space-x-2">
+                                        <button
+                                            onClick={() => onEditar(proceso)}
+                                            className="p-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition"
+                                            title="Editar"
+                                        >
+                                            <Pencil size={16} />
+                                            
+                                        </button>
+                                        <button 
+                                            onClick={() => onEliminar(proceso._id)} 
+                                            className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition"
+                                            title="Eliminar"
+                                        >
+                                            <Trash2 size={16} />
+                                            
+                                        </button>
+                                    </div>                                    
                                 </td>
                             </tr>
                         ))}

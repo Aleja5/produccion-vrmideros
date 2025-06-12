@@ -106,7 +106,7 @@ const MiJornada = () => {
           <div className="flex justify-center items-center h-48">
             <p className="text-lg text-gray-600">Cargando información de la jornada...</p>
           </div>
-        ) : jornadaActual ? (
+        ) : jornadaActual && jornadaActual.registros && jornadaActual.registros.length > 0 ? (
           <>
             <Card className="mb-6 bg-white shadow-xl rounded-2xl border border-gray-100">
               <div className="p-6 space-y-4">
@@ -124,71 +124,79 @@ const MiJornada = () => {
               Actividades Registradas
             </h2>
 
-            {jornadaActual.registros && jornadaActual.registros.length > 0 ? (
-              <div className="overflow-x-auto bg-white shadow-md rounded-lg border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-300">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Proceso</th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tiempo (min)</th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">OTI</th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Área</th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Máquina</th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Insumos</th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tipo Tiempo</th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Inicio</th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Fin</th>
-                      <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Observaciones</th>
-                      <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                        <span className="sr-only">Acciones</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {jornadaActual.registros
-                      .sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio))
-                      .map((actividad) => (
-                        <tr key={actividad._id}>
-                          <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{actividad.procesos?.map(p => p.nombre).join(', ') || "N/A"}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tiempo}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.oti?.numeroOti || "N/A"}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.areaProduccion?.nombre || "N/A"}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.maquina?.nombre || "N/A"}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.insumos?.map(i => i.nombre).join(', ') || "N/A"}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tipoTiempo || "N/A"}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}</td>
-                          <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}</td>
-                          <td className="px-3 py-4 text-sm text-gray-500 max-w-xs whitespace-normal break-words">{actividad.observaciones || "N/A"}</td>
-                          <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                            <button
-                              onClick={() => handleEditarActividad(actividad)}
-                              className="bg-green-200 text-green-700 font-semibold px-3 py-1.5 rounded-md shadow-md hover:bg-green-300 transition-all duration-300 cursor-pointer text-xs"
-                              title="Editar"
-                            >
-                              <Pencil size={14} className="inline mr-1" />
-                              Editar
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (window.confirm("¿Estás seguro de que deseas eliminar esta actividad?")) {
-                                  handleEliminarActividad(actividad._id);
-                                }
-                              }}
-                              className="bg-red-200 text-red-700 font-semibold px-3 py-1.5 rounded-md shadow-md hover:bg-red-300 transition-all duration-300 cursor-pointer ml-2 text-xs"
-                              title="Eliminar"
-                            >
-                              <Trash2 size={14} className="inline mr-1" />
-                              Eliminar
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-600">No hay actividades registradas.</p>
-            )}
+            <div className="overflow-x-auto bg-white shadow-md rounded-lg border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Proceso</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tiempo (min)</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">OTI</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Área</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Máquina</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Insumos</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tipo Tiempo</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Inicio</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Fin</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Observaciones</th>
+                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                      <span className="sr-only">Acciones</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {jornadaActual.registros
+                    .sort((a, b) => new Date(a.horaInicio) - new Date(b.horaInicio))
+                    .map((actividad) => (
+                      <tr key={actividad._id}>
+                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                          {actividad.procesos && actividad.procesos.length > 0 ? (
+                            actividad.procesos.map(p => <div key={p._id || p.nombre}>{p.nombre}</div>)
+                          ) : (
+                            "N/A"
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tiempo}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.oti?.numeroOti || "N/A"}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.areaProduccion?.nombre || "N/A"}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.maquina?.nombre || "N/A"}</td>
+                        <td className="px-3 py-4 text-sm text-gray-500">
+                          {actividad.insumos && actividad.insumos.length > 0 ? (
+                            actividad.insumos.map(i => <div key={i._id || i.nombre}>{i.nombre}</div>)
+                          ) : (
+                            "N/A"
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.tipoTiempo || "N/A"}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.horaInicio ? new Date(actividad.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}</td>
+                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.horaFin ? new Date(actividad.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}</td>
+                        <td className="px-3 py-4 text-sm text-gray-500 max-w-xs whitespace-normal break-words">{actividad.observaciones || "N/A"}</td>
+                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                          <button
+                            onClick={() => handleEditarActividad(actividad)}
+                            className="bg-green-200 text-green-700 font-semibold px-3 py-1.5 rounded-md shadow-md hover:bg-green-300 transition-all duration-300 cursor-pointer text-xs"
+                            title="Editar"
+                          >
+                            <Pencil size={14} className="inline mr-1" />
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm("¿Estás seguro de que deseas eliminar esta actividad?")) {
+                                handleEliminarActividad(actividad._id);
+                              }
+                            }}
+                            className="bg-red-200 text-red-700 font-semibold px-3 py-1.5 rounded-md shadow-md hover:bg-red-300 transition-all duration-300 cursor-pointer ml-2 text-xs"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={14} className="inline mr-1" />
+                            Eliminar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </>
         ) : (
           <Card className="flex flex-col items-center justify-center p-8 text-center bg-white shadow-md rounded-lg">

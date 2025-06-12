@@ -1,4 +1,3 @@
-// src/utils/helpers.js
 
 /**
  * Formatea una cadena de fecha ISO a una hora local.

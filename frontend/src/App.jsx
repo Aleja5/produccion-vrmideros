@@ -1,19 +1,20 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import EditarProduccion from './pages/EditarProduccion'; // Componente para editar producción
+import EditarProduccion from './pages/EditarProduccion';
 import Login from './pages/Login';
-import ForgotPassword from './pages/ForgotPassword'; // Componente de recuperación
+import ForgotPassword from './pages/ForgotPassword';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminHome from './pages/AdminHome';
+import ConsultaJornadas from './pages/ConsultaJornadas';
 import ValidateCedula from './pages/ValidateCedula';
 import OperarioDashboard from './pages/OperarioDashboard';
 import RegistroProduccion from './components/RegistroProduccion';
 
 import MiJornada from './pages/MiJornada';
 import HistorialJornadas from './pages/HistorialJornadas';
-import AdminJornadaDetalle from './pages/AdminJornadaDetalle'; // <--- Importar AdminJornadaDetalle
+import AdminJornadaDetalle from './pages/AdminJornadaDetalle';
 
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute from './components/ProtectedRoute'; // Asegúrate de que esta ruta sea correcta
 import MaquinasPage from './pages/Maquinas';
 import InsumosPage from './pages/Insumos';
 import ProcesosPage from './pages/Procesos';
@@ -32,8 +33,10 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />        {/* ADMIN */}
-        {/* Ruta protegida: Admin Home (Nueva página de inicio) */}
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+        {/* --- INICIO DE RUTAS PROTEGIDAS: ADMIN --- */}
+        {/* Cada ruta envuelta individualmente */}
         <Route
           path="/admin-home"
           element={
@@ -42,12 +45,21 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Ruta protegida: Admin Dashboard */}
         <Route
           path="/admin-dashboard"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Ruta protegida: Admin/Jornadas */}
+        <Route
+          path="/admin/jornadas"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <ConsultaJornadas />
             </ProtectedRoute>
           }
         />                
@@ -67,9 +79,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* --- FIN DE RUTAS PROTEGIDAS: ADMIN --- */}
 
-        {/* PRODUCCIÓN */}
-        {/* Ruta protegida: Validar Cédula */}
+        {/* --- INICIO DE RUTAS PROTEGIDAS: PRODUCCIÓN (Operario) --- */}
         <Route
           path="/validate-cedula"
           element={
@@ -78,8 +90,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Ruta protegida: Operario Dashboard */}
         <Route
           path="/operario-dashboard"
           element={
@@ -88,8 +98,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Ruta protegida: Registrar Producción */}
         <Route
           path="/registro-produccion"
           element={
@@ -98,8 +106,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Ruta protegida: Editar Producción */}
         <Route
           path="/produccion/actualizar/:id"
           element={
@@ -109,18 +115,11 @@ function App() {
           }
         />
 
-        {/* Nueva ruta protegida: Registrar Producción con jornadaId */}
-        <Route
-          path="/registro-produccion/:jornadaId"
-          element={
-            <ProtectedRoute allowedRoles={['production']}>
-              <RegistroProduccion />
-            </ProtectedRoute>
-          }
-        />
-
         <Route path="/mi-jornada" element={<MiJornada />} />
-        <Route path="*" element={<NotFound />} />
+        <Route path="/historial-jornadas" element={<HistorialJornadas />} />
+
+        {/* Rutas protegidas para operario */}
+
       </Routes>
     </Router>
   );

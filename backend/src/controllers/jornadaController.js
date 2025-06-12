@@ -66,20 +66,20 @@ exports.obtenerJornadas = async (req, res) => {
         // Popular el campo operario de la Jornada
         query = query.populate('operario', 'name');
 
-        const jornadas = await query.
-        populate({
-            path: 'registros',
-            populate: [
-                { path: 'operario', select: 'name' },
-                { path: 'oti', select: 'numeroOti' },
-                { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Ensured model is specified for clarity
-                { path: 'areaProduccion', select: 'nombre' },
-                { path: 'maquina', select: 'nombre' },
-                { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model is specified for clarity
-            ],
-
-        });
-
+        const jornadas = await query
+            .populate('operario', 'name')
+            .populate({
+                path: 'registros',
+                populate: [
+                    { path: 'operario', select: 'name' },
+                    { path: 'oti', select: '_id numeroOti' },
+                    { path: 'procesos', model: 'Proceso', select: 'nombre' },
+                    { path: 'areaProduccion', select: 'nombre' },
+                    { path: 'maquina', select: 'nombre' },
+                    { path: 'insumos', model: 'Insumo', select: 'nombre' }
+                ],
+            });
+        
         const jornadasConTiempo = jornadas.map(jornada => {
             return {
                 ...jornada.toObject(),
@@ -112,11 +112,11 @@ exports.obtenerJornada = async (req, res) => {
             .populate({
             path: 'registros',
             populate: [
-                { path: 'oti', model: 'Oti', select: 'numeroOti' },
-                { path: 'procesos', model: 'Proceso', select: 'nombre' }, // Corrected path and ensured model
+                { path: 'oti', model: 'Oti', select: '_id numeroOti' },
+                { path: 'procesos', model: 'Proceso', select: 'nombre' }, 
                 { path: 'areaProduccion', model: 'AreaProduccion', select: 'nombre' },
                 { path: 'maquina', model: 'Maquina', select: 'nombre' },
-                { path: 'insumos', model: 'Insumo', select: 'nombre' } // Ensured model
+                { path: 'insumos', model: 'Insumo', select: 'nombre' }
             ]
         });
 
