@@ -97,7 +97,8 @@ const MiJornada = () => {
       <div className="container mx-auto px-4 py-6">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-800">Mi Jornada Actual</h1>
+            <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight drop-shadow-sm">
+              Mi Jornada Actual</h1>
             <p className="text-md text-gray-500">
               Bienvenido, <span className="font-semibold">{operarioName}</span>
             </p>
@@ -116,10 +117,10 @@ const MiJornada = () => {
           </div>
         ) : jornadaActual && jornadaActual.registros && jornadaActual.registros.length > 0 ? (
           <>
-            <Card className="mb-6 bg-white shadow-xl rounded-2xl border border-gray-100">
-              <div className="p-6 space-y-4">
-                <h2 className="text-2xl font-semibold text-gray-800 border-b pb-2 border-gray-300">Detalles de la Jornada</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-gray-700">
+            <Card className="mb-6 bg-gray shadow-xl rounded-2xl border border-gray-400">
+              <div className="bg-gradient-to-r from-gray-600 to-gray-800 text-white p-4 rounded-lg shadow-md mb-6 flex justify-between items-center">
+                <h2 className="text-2xl font-semibold text-white border-b pb-2 border-gray-300">Detalles de la Jornada</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-white-700">
                   <div><strong>Fecha:</strong> {ajustarFechaLocal(jornadaActual.fecha).toLocaleDateString()}</div>                  
                   <div><strong>Tiempo Total:</strong> {jornadaActual.totalTiempoActividades && typeof jornadaActual.totalTiempoActividades.horas === 'number' && typeof jornadaActual.totalTiempoActividades.minutos === 'number' ? `${jornadaActual.totalTiempoActividades.horas}h ${jornadaActual.totalTiempoActividades.minutos}m` : (jornadaActual.totalTiempoActividades || 'N/A')}</div>
                   <div><strong>Inicio de Jornada:</strong> {jornadaActual.horaInicio ? new Date(jornadaActual.horaInicio).toLocaleTimeString() : 'N/A'}</div>
@@ -139,8 +140,8 @@ const MiJornada = () => {
                     <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Proceso</th>                    
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">OTI</th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Área</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Máquina</th>
-                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Insumos</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-75">Máquina</th>
+                    <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-75">Insumos</th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tipo Tiempo</th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Inicio</th>
                     <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Fin</th>
@@ -165,8 +166,8 @@ const MiJornada = () => {
                         </td>                        
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.oti?.numeroOti || "N/A"}</td>
                         <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.areaProduccion?.nombre || "N/A"}</td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{actividad.maquina?.nombre || "N/A"}</td>
-                        <td className="px-3 py-4 text-sm text-gray-500">
+                        <td className="px-3 py-4 text-sm text-gray-500 w-75 break-words">{actividad.maquina?.nombre || "N/A"}</td>
+                        <td className="px-3 py-4 text-sm text-gray-500 w-75">
                           {actividad.insumos && actividad.insumos.length > 0 ? (
                             actividad.insumos.map(i => <div key={i._id || i.nombre}>{i.nombre}</div>)
                           ) : (

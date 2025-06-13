@@ -57,7 +57,8 @@ const AreasList = ({ areas, onEditar, onEliminar }) => {
                 </tbody>
             </table>
         </div>
-    );
+    );       
+
 };
 
 export default AreasList;
