@@ -1,32 +1,32 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import axiosInstance from '../utils/axiosInstance';
 import UsuarioList from '../components/UsuarioList';
 import UsuarioForm from '../components/UsuarioForm';
 import Pagination from '../components/Pagination';
 import { useNavigate } from 'react-router-dom';
 import { SidebarAdmin } from '../components/SidebarAdmin';
+import { toast } from 'react-toastify';
 
 const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10 }) => {
-    const navigate = useNavigate();
-    const [usuarios, setUsuarios] = useState([]);
+    const navigate = useNavigate();    const [usuarios, setUsuarios] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
     const [usuarioAEditar, setUsuarioAEditar] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [savingUser, setSavingUser] = useState(false); // Estado para operaciones de guardar
     const [totalPages, setTotalPages] = useState(0);
     const [searchText, setSearchText] = useState(''); // Para la búsqueda de usuarios
     const [filteredUsuarios, setFilteredUsuarios] = useState([]); 
     const [currentPage, setCurrentPage] = useState(propCurrentPage || 1);
-    const [totalResults, setTotalResults] = useState(propTotalResults || 0);
-
-    const cargarUsuarios = useCallback(async (page = 1, search = '') => {
+    const [totalResults, setTotalResults] = useState(propTotalResults || 0);    const cargarUsuarios = useCallback(async (page = 1, search = '') => {
         setLoading(true);
         try {
-            const response = await axios.get(`http://localhost:5000/api/usuarios?page=${page}&limit=${itemsPerPage}&search=${search}`);
+            const response = await axiosInstance.get(`/usuarios?page=${page}&limit=${itemsPerPage}&search=${search}`);
             setUsuarios(response.data.usuarios);
             setTotalPages(response.data.totalPages);
             setTotalResults(response.data.totalResults);
         } catch (error) {
             console.error('Error al cargar los usuarios:', error);
+            toast.error('Error al cargar los usuarios. Por favor, intenta de nuevo.');
         } finally {
             setLoading(false);
         }
@@ -62,38 +62,41 @@ const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
 
     const handleCrear = () => {
         setModo('crear');    
-    };
-
-    const handleEditar = (usuario) => {
+    };    const handleEditar = (usuario) => {
+        console.log('Usuario a editar:', usuario); // Debug log
         setModo('editar');
         setUsuarioAEditar(usuario);
-    };
-
-    const handleGuardar = async (usuario) => {
+    };const handleGuardar = async (usuario) => {
+        setSavingUser(true);
         try {
             if (usuarioAEditar) {
                 // Actualizar usuario
-                await axios.put(`http://localhost:5000/api/usuarios/${usuarioAEditar._id}`, usuario);
-            }else {
+                await axiosInstance.put(`/usuarios/${usuarioAEditar._id}`, usuario);
+                toast.success('Usuario actualizado exitosamente');
+            } else {
                 // Crear nuevo usuario
-                await axios.post('http://localhost:5000/api/usuarios', usuario);
+                await axiosInstance.post('/usuarios', usuario);
+                toast.success('Usuario creado exitosamente');
             }
             cargarUsuarios(currentPage, searchText); // Recargar usuarios después de crear/editar
             setModo('listar'); // Volver al modo listar
             setUsuarioAEditar(null);
         } catch (error) {
             console.error('Error al guardar el usuario:', error);
+            const message = error.response?.data?.message || 'Error al guardar el usuario';
+            toast.error(message);
+        } finally {
+            setSavingUser(false);
         }
-    };
-
-    const handleEliminar = async (id) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
-            try {
-                await axios.delete(`http://localhost:5000/api/usuarios/${id}`);
-                cargarUsuarios(currentPage, searchText); // Recargar usuarios después de eliminar
-            } catch (error) {
-                console.error('Error al eliminar el usuario:', error);
-            }
+    };const handleEliminar = async (id) => {
+        try {
+            await axiosInstance.delete(`/usuarios/${id}`);
+            toast.success('Usuario eliminado exitosamente');
+            cargarUsuarios(currentPage, searchText); // Recargar usuarios después de eliminar
+        } catch (error) {
+            console.error('Error al eliminar el usuario:', error);
+            const message = error.response?.data?.message || 'Error al eliminar el usuario';
+            toast.error(message);
         }
     };
 
@@ -246,12 +249,14 @@ const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
                                                             </button>
                                                         )}
                                                     </div>
-                                                </div>
-                                                <div className="p-6">
+                                                </div>                                                <div className="p-6">
                                                     <UsuarioForm 
-                                                        usuario={modo === 'editar' ? usuarioAEditar : undefined} 
+                                                        usuarioInicial={modo === 'editar' ? usuarioAEditar : undefined} 
                                                         onGuardar={handleGuardar} 
                                                         onCancelar={handleCancelar} 
+                                                        isLoading={savingUser}
+                                                        showSuccessMessage={false}
+                                                        savedUserData={null}
                                                     />
                                                 </div>
                                             </div>

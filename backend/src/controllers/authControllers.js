@@ -83,11 +83,9 @@ exports.forgotPassword = async (req, res) => {
     // Generar token y hash para almacenar en DB
     const resetToken = crypto.randomBytes(32).toString('hex');
     console.log('Token de recuperación generado:', resetToken);
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-
-    user.resetPasswordToken = hashedToken;
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');    user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hora
-    await user.save();
+    await user.save({ validateBeforeSave: false }); // Evitar validación de campos requeridos
 
     const resetLink = `http://localhost:5173/reset-password/${resetToken}`;
     console.log('Enlace de recuperación:', resetLink);
@@ -143,23 +141,20 @@ exports.resetPassword = async (req, res) => {
       resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: Date.now() }, // Verificar si el token no ha expirado
     });
-    console.log('Usuario encontrado para restablecer contraseña:', user);
-
-    if (!user) {
+    console.log('Usuario encontrado para restablecer contraseña:', user);    if (!user) {
       return res.status(400).json({ message: 'Token inválido o expirado' });
     }
 
-    // Hashear la nueva contraseña antes de guardarla en la base de datos
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
+    // Solo asignar la nueva contraseña, el middleware pre('save') se encarga del hash
+    user.password = newPassword;
 
-    console.log('Nueva contraseña hasheada:', user.password);
+    console.log('Nueva contraseña asignada (será hasheada por el middleware):', newPassword);
 
     // Limpiar los campos de token
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
 
-    await user.save();
+    await user.save({ validateBeforeSave: false }); // El middleware pre('save') hasheará la contraseña automáticamente
 
     res.status(200).json({ message: 'Contraseña actualizada correctamente' });
   } catch (error) {

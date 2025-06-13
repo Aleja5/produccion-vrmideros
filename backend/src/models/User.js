@@ -16,11 +16,10 @@ const userSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       match: [/^\S+@\S+\.\S+$/, 'Por favor ingresa un correo válido'],
-    },
-    password: {
+    },    password: {
       type: String,
       required: [true, 'La contraseña es obligatoria'],
-      minlength: [8, 'La contraseña debe tener al menos 8 caracteres'],
+      minlength: [6, 'La contraseña debe tener al menos 6 caracteres'],
     },
     role: {
       type: String,
@@ -59,10 +58,21 @@ userSchema.pre('save', async function (next) {
 
 // Método para comparar contraseñas
 userSchema.methods.comparePassword = async function (password) {
-  console.log('Comparando contraseña ingresada:', password);
-  const isMatch = await bcrypt.compare(password, this.password);
-  console.log('¿Las contraseñas coinciden?', isMatch);
-  return isMatch;
+  try {
+    console.log('Iniciando comparación de contraseñas...');
+    if (!password || !this.password) {
+      console.error('ERROR: Contraseña o hash faltante');
+      return false;
+    }
+
+    // Comparar directamente usando bcrypt
+    const isMatch = await bcrypt.compare(password, this.password);
+    console.log('Resultado de bcrypt.compare:', isMatch);
+    return isMatch;
+  } catch (error) {
+    console.error('Error en la comparación de contraseñas:', error);
+    return false;
+  }
 };
 
 module.exports = mongoose.model('User', userSchema);
