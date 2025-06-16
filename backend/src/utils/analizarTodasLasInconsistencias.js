@@ -23,25 +23,25 @@ require('../models/Insumos');
 
 async function analizarTodasLasInconsistencias() {
     try {
-        console.log('🔄 Conectando a la base de datos...');
+        // REMOVED: console.log('🔄 Conectando a la base de datos...');
         await connectDB();
         
         // Verificar que los modelos estén registrados
-        console.log('📋 Verificando modelos registrados...');
+        // REMOVED: console.log('📋 Verificando modelos registrados...');
         const modelNames = mongoose.modelNames();
-        console.log(`Modelos disponibles: ${modelNames.join(', ')}`);
+        // REMOVED: console.log(`Modelos disponibles: ${modelNames.join(', ')}`);
         
         // Asegurar que todos los modelos estén cargados
         if (!modelNames.includes('Operario')) {
-            console.log('⚠️ Modelo Operario no encontrado, forzando carga...');
+            // REMOVED: console.log('⚠️ Modelo Operario no encontrado, forzando carga...');
             require('../models/Operario');
         }
         if (!modelNames.includes('Oti')) {
-            console.log('⚠️ Modelo Oti no encontrado, forzando carga...');
+            // REMOVED: console.log('⚠️ Modelo Oti no encontrado, forzando carga...');
             require('../models/Oti');
         }
         
-        console.log('🔍 Analizando TODOS los registros para detectar inconsistencias de fechas...');
+        // REMOVED: console.log('🔍 Analizando TODOS los registros para detectar inconsistencias de fechas...');
         
         // Obtener TODOS los registros de producción
         const todosLosRegistros = await Produccion.find({})
@@ -49,7 +49,7 @@ async function analizarTodasLasInconsistencias() {
             .populate('oti', 'numeroOti')
             .sort({ fecha: 1, horaInicio: 1 });
             
-        console.log(`📊 Total de registros a analizar: ${todosLosRegistros.length}`);
+        // REMOVED: console.log(`📊 Total de registros a analizar: ${todosLosRegistros.length}`);
         
         const inconsistencias = [];
         const registrosPorOperario = {};
@@ -100,31 +100,31 @@ async function analizarTodasLasInconsistencias() {
             }
         }
         
-        console.log(`\n❌ Inconsistencias encontradas: ${inconsistencias.length}`);
+        // REMOVED: console.log(`\n❌ Inconsistencias encontradas: ${inconsistencias.length}`);
         
         if (inconsistencias.length === 0) {
-            console.log('✅ No se encontraron inconsistencias de fechas');
+            // REMOVED: console.log('✅ No se encontraron inconsistencias de fechas');
             return;
         }
         
         // Mostrar resumen por operario
-        console.log('\n📊 RESUMEN POR OPERARIO:');
-        console.log('='.repeat(80));
+        // REMOVED: console.log('\n📊 RESUMEN POR OPERARIO:');
+        // REMOVED: console.log('='.repeat(80));
         Object.entries(registrosPorOperario)
             .filter(([_, datos]) => datos.inconsistentes > 0)
             .sort(([_, a], [__, b]) => b.inconsistentes - a.inconsistentes)
             .forEach(([operario, datos]) => {
                 const porcentaje = ((datos.inconsistentes / datos.total) * 100).toFixed(1);
-                console.log(`👤 ${operario}:`);
-                console.log(`   📊 Total registros: ${datos.total}`);
-                console.log(`   ❌ Inconsistentes: ${datos.inconsistentes} (${porcentaje}%)`);
-                console.log(`   📅 Fechas trabajadas: ${Array.from(datos.fechas).sort().join(', ')}`);
-                console.log('');
+                // REMOVED: console.log(`👤 ${operario}:`);
+                // REMOVED: console.log(`   📊 Total registros: ${datos.total}`);
+                // REMOVED: console.log(`   ❌ Inconsistentes: ${datos.inconsistentes} (${porcentaje}%)`);
+                // REMOVED: console.log(`   📅 Fechas trabajadas: ${Array.from(datos.fechas).sort().join(', ')}`);
+                // REMOVED: console.log('');
             });
         
         // Agrupar inconsistencias por tipo de problema
-        console.log('\n🔍 ANÁLISIS DETALLADO DE INCONSISTENCIAS:');
-        console.log('='.repeat(80));
+        // REMOVED: console.log('\n🔍 ANÁLISIS DETALLADO DE INCONSISTENCIAS:');
+        // REMOVED: console.log('='.repeat(80));
         
         const problemasAgrupados = {};
         inconsistencias.forEach(inc => {
@@ -138,27 +138,27 @@ async function analizarTodasLasInconsistencias() {
         Object.entries(problemasAgrupados)
             .sort(([_, a], [__, b]) => b.length - a.length)
             .forEach(([problema, registros]) => {
-                console.log(`\n📅 ${problema} (${registros.length} registros):`);
+                // REMOVED: console.log(`\n📅 ${problema} (${registros.length} registros):`);
                 
                 // Mostrar primeros 5 ejemplos
                 registros.slice(0, 5).forEach((reg, idx) => {
-                    console.log(`   ${idx + 1}. ${reg.operario} - OTI: ${reg.oti}`);
-                    console.log(`      Registro: ${reg.fechaRegistro} | Trabajo: ${reg.fechaHoraInicio}`);
-                    console.log(`      Horas: ${reg.horaInicio} - ${reg.horaFin} (${reg.tiempo}min)`);
+                    // REMOVED: console.log(`   ${idx + 1}. ${reg.operario} - OTI: ${reg.oti}`);
+                    // REMOVED: console.log(`      Registro: ${reg.fechaRegistro} | Trabajo: ${reg.fechaHoraInicio}`);
+                    // REMOVED: console.log(`      Horas: ${reg.horaInicio} - ${reg.horaFin} (${reg.tiempo}min)`);
                 });
                 
                 if (registros.length > 5) {
-                    console.log(`   ... y ${registros.length - 5} más`);
+                    // REMOVED: console.log(`   ... y ${registros.length - 5} más`);
                 }
             });
         
         // Generar sugerencias de corrección
-        console.log('\n💡 SUGERENCIAS DE CORRECCIÓN:');
-        console.log('='.repeat(80));
+        // REMOVED: console.log('\n💡 SUGERENCIAS DE CORRECCIÓN:');
+        // REMOVED: console.log('='.repeat(80));
         
         Object.entries(problemasAgrupados).forEach(([problema, registros]) => {
             const [fechaRegistro, fechaReal] = problema.split(' → ');
-            console.log(`\n📝 Para corregir ${registros.length} registros de ${fechaRegistro} a ${fechaReal}:`);
+            // REMOVED: console.log(`\n📝 Para corregir ${registros.length} registros de ${fechaRegistro} a ${fechaReal}:`);
             
             // Agrupar por operario
             const porOperario = {};
@@ -170,8 +170,8 @@ async function analizarTodasLasInconsistencias() {
             });
             
             Object.entries(porOperario).forEach(([operario, ids]) => {
-                console.log(`   👤 ${operario}: ${ids.length} registros`);
-                console.log(`      IDs: ${ids.slice(0, 3).join(', ')}${ids.length > 3 ? '...' : ''}`);
+                // REMOVED: console.log(`   👤 ${operario}: ${ids.length} registros`);
+                // REMOVED: console.log(`      IDs: ${ids.slice(0, 3).join(', ')}${ids.length > 3 ? '...' : ''}`);
             });
         });
         
@@ -185,8 +185,8 @@ async function analizarTodasLasInconsistencias() {
             problemas_agrupados: problemasAgrupados
         };
         
-        console.log('\n📄 Reporte completo generado con todos los detalles');
-        console.log(`📊 ${inconsistencias.length} inconsistencias encontradas en ${reporte.operarios_afectados} operarios`);
+        // REMOVED: console.log('\n📄 Reporte completo generado con todos los detalles');
+        // REMOVED: console.log(`📊 ${inconsistencias.length} inconsistencias encontradas en ${reporte.operarios_afectados} operarios`);
         
         return reporte;
         
@@ -194,13 +194,13 @@ async function analizarTodasLasInconsistencias() {
         console.error('❌ Error durante el análisis:', error);
     } finally {
         mongoose.connection.close();
-        console.log('🔌 Conexión a base de datos cerrada');
+        // REMOVED: console.log('🔌 Conexión a base de datos cerrada');
     }
 }
 
 // Ejecutar el script solo si es llamado directamente
 if (require.main === module) {
-    console.log('🚀 Iniciando análisis completo de inconsistencias de fechas...');
+    // REMOVED: console.log('🚀 Iniciando análisis completo de inconsistencias de fechas...');
     analizarTodasLasInconsistencias();
 }
 

@@ -11,8 +11,39 @@ const Operario = require('../models/Operario');
 
 const router = express.Router();
 
-// Ruta para validar cédula
-router.post('/validate-cedula', validateCedula);
+// Simple rate limiting para validación de cédula
+const rateLimit = {};
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minuto
+const MAX_REQUESTS = 50; // máximo 50 solicitudes por minuto por IP (aumentado para desarrollo)
+
+const rateLimitMiddleware = (req, res, next) => {
+    const clientIP = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    
+    if (!rateLimit[clientIP]) {
+        rateLimit[clientIP] = { count: 1, resetTime: now + RATE_LIMIT_WINDOW };
+        return next();
+    }
+    
+    if (now > rateLimit[clientIP].resetTime) {
+        rateLimit[clientIP] = { count: 1, resetTime: now + RATE_LIMIT_WINDOW };
+        return next();
+    }
+    
+    if (rateLimit[clientIP].count >= MAX_REQUESTS) {
+        const retryAfter = Math.ceil((rateLimit[clientIP].resetTime - now) / 1000);
+        return res.status(429).json({
+            error: 'Demasiadas solicitudes. Intenta nuevamente más tarde.',
+            retryAfter: `${retryAfter} segundos`
+        });
+    }
+    
+    rateLimit[clientIP].count++;
+    next();
+};
+
+// Ruta para validar cédula con rate limiting
+router.post('/validate-cedula', rateLimitMiddleware, validateCedula);
 
 // Ruta para buscar operarios por nombre
 router.get('/buscar/operario', async (req, res) => {

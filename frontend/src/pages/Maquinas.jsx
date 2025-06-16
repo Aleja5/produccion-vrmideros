@@ -104,7 +104,6 @@ const MaquinasPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
         <>       
             <div className="flex bg-gradient-to-br from-gray-50 to-gray-100 h-screen">
                 <SidebarAdmin />
-
                 <div className="flex-1 overflow-auto">
                     <div className="container mx-auto px-4 py-6">
                         {/* Header Card Mejorado */}

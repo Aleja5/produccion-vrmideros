@@ -7,6 +7,96 @@ const Operario = require('../models/Operario');
 const { recalcularTiempoTotal } = require('../utils/recalcularTiempo');
 const { recalcularHorasJornada } = require('../utils/recalcularHoras');
 const { recalcularTiemposJornadas } = require('../utils/recalcularTiemposEfectivos');
+const { normalizarFecha } = require('../utils/manejoFechas');
+
+/**
+ * Consolida jornadas duplicadas del mismo día para un operario
+ */
+async function consolidarJornadasDuplicadas(operarioId, jornadas) {
+    if (!jornadas || jornadas.length <= 1) return jornadas;
+    
+    // Agrupar jornadas por fecha normalizada
+    const jornadasPorFecha = {};
+    
+    for (const jornada of jornadas) {
+        const fechaNormalizada = normalizarFecha(jornada.fecha);
+        const claveDate = fechaNormalizada.toDateString();
+        
+        if (!jornadasPorFecha[claveDate]) {
+            jornadasPorFecha[claveDate] = [];
+        }
+        jornadasPorFecha[claveDate].push(jornada);
+    }
+    
+    const jornadasConsolidadas = [];
+    
+    // Procesar cada grupo de jornadas del mismo día
+    for (const [fechaStr, jornadasDelDia] of Object.entries(jornadasPorFecha)) {
+        if (jornadasDelDia.length > 1) {
+            console.log(`🔧 Consolidando ${jornadasDelDia.length} jornadas duplicadas del ${new Date(fechaStr).toLocaleDateString('es-ES')}`);
+            
+            // Combinar todos los registros únicos
+            const registrosCombinados = new Set();
+            const fechaNormalizada = normalizarFecha(jornadasDelDia[0].fecha);
+            
+            for (const jornada of jornadasDelDia) {
+                if (jornada.registros) {
+                    jornada.registros.forEach(registro => {
+                        if (typeof registro === 'object' && registro._id) {
+                            registrosCombinados.add(registro._id.toString());
+                        } else {
+                            registrosCombinados.add(registro.toString());
+                        }
+                    });
+                }
+            }
+            
+            // Eliminar todas las jornadas duplicadas de la base de datos
+            for (const jornada of jornadasDelDia) {
+                await Jornada.findByIdAndDelete(jornada._id);
+            }
+            
+            // Crear una nueva jornada consolidada
+            const nuevaJornada = new Jornada({
+                operario: operarioId,
+                fecha: fechaNormalizada,
+                registros: Array.from(registrosCombinados),
+                totalTiempoActividades: { horas: 0, minutos: 0 }
+            });
+            
+            await nuevaJornada.save();
+            
+            // Hacer populate para devolver al frontend
+            const jornadaPopulada = await Jornada.findById(nuevaJornada._id).populate({
+                path: 'registros',
+                populate: [
+                    { path: 'procesos', model: 'Proceso', select: 'nombre' },
+                    { path: 'oti', select: 'numeroOti' },
+                    { path: 'areaProduccion', select: 'nombre' },
+                    { path: 'maquina', select: 'nombre' },
+                    { path: 'insumos', model: 'Insumo', select: 'nombre' }
+                ]
+            });
+            
+            jornadasConsolidadas.push(jornadaPopulada);
+            console.log(`✅ Jornada consolidada con ${registrosCombinados.size} actividades`);
+        } else {
+            // Si solo hay una jornada, normalizarla y agregarla
+            const jornada = jornadasDelDia[0];
+            const fechaNormalizada = normalizarFecha(jornada.fecha);
+            
+            if (jornada.fecha.getTime() !== fechaNormalizada.getTime()) {
+                console.log(`🔧 Normalizando fecha de jornada: ${jornada.fecha} -> ${fechaNormalizada}`);
+                jornada.fecha = fechaNormalizada;
+                await jornada.save();
+            }
+            
+            jornadasConsolidadas.push(jornada);
+        }
+    }
+    
+    return jornadasConsolidadas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+}
 
 exports.crearJornada = async (req, res) => {
     try {
@@ -139,7 +229,7 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
     const { fecha } = req.query; // Optional date filter
 
     try {
-        console.log(`🔎 Buscando jornadas para el operario con ID: ${id}${fecha ? ` con filtro de fecha: ${fecha}` : ''}`);
+        // REMOVED: console.log(`🔎 Buscando jornadas para el operario con ID: ${id}${fecha ? ` con filtro de fecha: ${fecha}` : ''}`);
 
         // Verificar si el operario existe
         const operarioExiste = await Operario.findById(id);
@@ -147,37 +237,39 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
             console.error(`❌ Operario con ID ${id} no encontrado`);
             return res.status(404).json({ msg: 'Operario no encontrado' });
         }
-        console.log(`✅ Operario encontrado:`, operarioExiste.name);
+        // REMOVED: console.log(`✅ Operario encontrado:`, operarioExiste.name);
 
         // Construir el filtro de búsqueda
-        let filtro = { operario: id };
-
-        // Si se proporciona una fecha, agregar filtro de fecha
+        let filtro = { operario: id };        // Si se proporciona una fecha, agregar filtro de fecha usando normalización correcta
         if (fecha) {
-            const targetDate = new Date(fecha);
-            const startOfDay = new Date(targetDate);
-            startOfDay.setUTCHours(0, 0, 0, 0);
-
-            const endOfDay = new Date(targetDate);
-            endOfDay.setUTCHours(23, 59, 59, 999);
-
+            const { obtenerRangoDia } = require('../utils/manejoFechas');
+            const rango = obtenerRangoDia(fecha);
             filtro.fecha = {
-                $gte: startOfDay,
-                $lte: endOfDay
+                $gte: rango.inicio,
+                $lte: rango.fin
             };
-        }
-
-        // Obtener las jornadas con el filtro aplicado
+        }// Obtener las jornadas con el filtro aplicado
         const jornadas = await Jornada.find(filtro).sort({ fecha: -1 });
 
         // Si no hay jornadas, devolver un array vacío inmediatamente
-        if (!jornadas || jornadas.length === 0) { // Añadimos .length === 0 para claridad
-            console.log(`ℹ️ No se encontraron jornadas para el operario ${id} con los filtros aplicados.`);
-            return res.json([]); // Devuelve un array vacío si no hay jornadas
+        if (!jornadas || jornadas.length === 0) {
+            return res.json([]);
         }
 
-        // Recalcular tiempo y hacer populate completo para cada jornada
-        const jornadasConTiempo = await Promise.all(jornadas.map(async (jornada) => {
+        // NUEVA LÓGICA: Consolidar jornadas duplicadas antes de procesarlas
+        console.log(`🔍 Encontradas ${jornadas.length} jornadas antes de consolidación`);
+        const jornadasConsolidadas = await consolidarJornadasDuplicadas(id, jornadas);
+        console.log(`✅ ${jornadasConsolidadas.length} jornadas después de consolidación`);
+
+        // Hacer populate completo para cada jornada consolidada
+        const jornadasConTiempo = await Promise.all(jornadasConsolidadas.map(async (jornada) => {
+            // Si ya está populada (viene de consolidación), devolverla directamente
+            if (jornada.registros && jornada.registros.length > 0 && 
+                typeof jornada.registros[0] === 'object' && jornada.registros[0].oti) {
+                return jornada;
+            }
+            
+            // Si no está populada, hacer populate
             const populatedJornada = await Jornada.findById(jornada._id).populate({
                 path: 'registros',
                 populate: [
@@ -188,11 +280,11 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
                     { path: 'insumos', model: 'Insumo', select: 'nombre' }
                 ]
             });
-            return populatedJornada; // Asegúrate de retornar la jornada populada aquí
-        })); // <--- Cierre correcto del map y Promise.all
+            return populatedJornada;
+        }));
 
 
-        console.log(`✅ Jornadas encontradas para ${operarioExiste.name}: ${jornadasConTiempo.length}`); // Usar jornadasConTiempo
+        // REMOVED: console.log(`✅ Jornadas encontradas para ${operarioExiste.name}: ${jornadasConTiempo.length}`); // Usar jornadasConTiempo
         res.json(jornadasConTiempo); // Asegúrate de enviar jornadasConTiempo, no 'jornadas'
 
     } catch (error) {
@@ -207,37 +299,36 @@ exports.obtenerJornadasPorOperario = async (req, res) => {
 exports.obtenerJornadasPorOperarioYFecha = async (req, res) => {
     try {
         const { operarioId, fecha } = req.params;
-        console.log(`🔎 Buscando jornadas para el operario con ID: ${operarioId} y fecha: ${fecha}`);
+        // REMOVED: console.log(`🔎 Buscando jornadas para el operario con ID: ${operarioId} y fecha: ${fecha}`);
 
         // Opcional: Verificar si el operario existe (solo para logs, no es estrictamente necesario para la query)
         const operario = await Operario.findById(operarioId);
         if (operario) {
-            console.log(`✅ Operario encontrado: ${operario.name}`);
+            // REMOVED: console.log(`✅ Operario encontrado: ${operario.name}`);
         } else {
-            console.log(`⚠️ Operario no encontrado con ID: ${operarioId}`);
-        }
-
-        const targetDate = new Date(fecha);
-        const startOfDay = new Date(targetDate);
-        startOfDay.setUTCHours(0, 0, 0, 0);
-
-        const endOfDay = new Date(targetDate);
-        endOfDay.setUTCHours(23, 59, 59, 999);
+            // REMOVED: console.log(`⚠️ Operario no encontrado con ID: ${operarioId}`);
+        }        const { obtenerRangoDia } = require('../utils/manejoFechas');
+        const rango = obtenerRangoDia(fecha);
 
         const jornadas = await Jornada.find({
             operario: operarioId,
             fecha: {
-                $gte: startOfDay,
-                $lte: endOfDay
+                $gte: rango.inicio,
+                $lte: rango.fin
             }
         });
 
-        console.log(`✅ Jornadas encontradas para ${operario ? operario.name : 'ID ' + operarioId}: ${jornadas.length}`);
+        console.log(`🔍 Encontradas ${jornadas.length} jornadas para ${operario ? operario.name : 'ID ' + operarioId} en ${fecha}`);
 
         if (jornadas.length === 0) {
             return res.status(404).json({ message: "No se encontraron jornadas para este operario en esta fecha." });
         }
-        res.status(200).json(jornadas);
+
+        // NUEVA LÓGICA: Consolidar jornadas duplicadas antes de devolverlas
+        const jornadasConsolidadas = await consolidarJornadasDuplicadas(operarioId, jornadas);
+        console.log(`✅ ${jornadasConsolidadas.length} jornadas después de consolidación`);
+
+        res.status(200).json(jornadasConsolidadas);
     } catch (error) {
         console.error("Error al buscar jornada por operario y fecha:", error);
         if (error.name === 'CastError') {
@@ -392,9 +483,6 @@ exports.agregarActividadAJornada = async (req, res) => {
 // @route   POST /api/jornadas/completa (RUTA QUE USAS PARA "GUARDAR JORNADA COMPLETA")
 exports.guardarJornadaCompleta = async (req, res) => {
     try {
-        console.log('🔄 Recibiendo petición para guardar jornada completa');
-        console.log('📋 Datos recibidos:', JSON.stringify(req.body, null, 2));
-
         const { operario, fecha, horaInicio, horaFin, actividades } = req.body;
 
         // Validar ObjectId para operario
@@ -409,16 +497,14 @@ exports.guardarJornadaCompleta = async (req, res) => {
             return res.status(400).json({ error: 'Debe proporcionar al menos una actividad' });
         }
 
-        console.log(`📊 Procesando ${actividades.length} actividad(es)`);
-
-        // Normalizar la fecha de la jornada
-        const fechaNormalizada = new Date(fecha);
-        fechaNormalizada.setUTCHours(0, 0, 0, 0);
+        // REMOVED: console.log(`📊 Procesando ${actividades.length} actividad(es)`);        // Normalizar la fecha de la jornada usando la función correcta
+        const { normalizarFecha } = require('../utils/manejoFechas');
+        const fechaNormalizada = normalizarFecha(fecha);
 
         let jornada = await Jornada.findOne({ operario: operario, fecha: fechaNormalizada });
 
         if (!jornada) {
-            console.log('🆕 Creando nueva jornada');
+            // REMOVED: console.log('🆕 Creando nueva jornada');
             // Crear nueva jornada si no existe
             jornada = new Jornada({
                 operario,
@@ -429,7 +515,7 @@ exports.guardarJornadaCompleta = async (req, res) => {
                 // totalTiempoActividades se calculará con el hook pre-save o recalcularHorasJornada
             });
         } else {
-            console.log('🔄 Actualizando jornada existente');
+            // REMOVED: console.log('🔄 Actualizando jornada existente');
             // Actualizar horas de jornada existente si se proporcionan y son diferentes
             if (horaInicio && jornada.horaInicio !== horaInicio) {
                 jornada.horaInicio = horaInicio;
@@ -503,8 +589,21 @@ exports.guardarJornadaCompleta = async (req, res) => {
                                 return res.status(400).json({ error: `ID de Insumo inválido (${insumoId}) en actividad` });
                             }
                         }
+                    }                }
+
+                // Calcular tiempo en minutos si no se proporciona o es 0
+                let tiempoCalculado = actividad.tiempo || 0;
+                if (!tiempoCalculado || tiempoCalculado === 0) {
+                    const inicio = new Date(actividad.horaInicio);
+                    const fin = new Date(actividad.horaFin);
+                    if (inicio && fin && fin > inicio) {
+                        tiempoCalculado = Math.round((fin - inicio) / (1000 * 60)); // Diferencia en minutos
+                    } else {
+                        tiempoCalculado = 1; // Valor mínimo para evitar error de validación
                     }
-                }                // Crear y guardar cada registro de producción
+                }
+
+                // Crear y guardar cada registro de producción
                 const nuevoRegistro = new Produccion({
                     operario: jornada.operario, // Usar el operario de la jornada
                     fecha: jornada.fecha,       // Usar la fecha de la jornada
@@ -516,7 +615,7 @@ exports.guardarJornadaCompleta = async (req, res) => {
                     tipoTiempo: actividad.tipoTiempo,
                     horaInicio: actividad.horaInicio, // Se espera que sea una fecha ISO completa
                     horaFin: actividad.horaFin,       // Se espera que sea una fecha ISO completa
-                    tiempo: actividad.tiempo || 0,    // Calcular si es necesario o tomar el valor provisto
+                    tiempo: tiempoCalculado,    // Usar tiempo calculado
                     observaciones: actividad.observaciones || null,
                     jornada: jornada._id // Vincular a la jornada actual
                 });
@@ -530,15 +629,15 @@ exports.guardarJornadaCompleta = async (req, res) => {
         const nuevosRegistrosComoStrings = idsNuevosRegistros.map(id => id.toString());
         
         const todosLosRegistrosUnicos = [...new Set([...registrosActualesComoStrings, ...nuevosRegistrosComoStrings])];
-        jornada.registros = todosLosRegistrosUnicos.map(idStr => new mongoose.Types.ObjectId(idStr));        console.log(`✅ Se crearon ${idsNuevosRegistros.length} nuevos registros`);
-        console.log('💾 Guardando jornada con registros actualizados');
+        jornada.registros = todosLosRegistrosUnicos.map(idStr => new mongoose.Types.ObjectId(idStr));        // REMOVED: console.log(`✅ Se crearon ${idsNuevosRegistros.length} nuevos registros`);
+        // REMOVED: console.log('💾 Guardando jornada con registros actualizados');
 
         await jornada.save(); // Esto disparará los hooks pre-save de Jornada para recalcular tiempos y horas
 
         // No es necesario llamar a recalcularHorasJornada explícitamente si el hook pre-save lo hace.
         // await recalcularHorasJornada(jornada._id); // Comentado si el hook pre-save ya lo maneja
 
-        console.log('🔍 Populando jornada final para respuesta');
+        // REMOVED: console.log('🔍 Populando jornada final para respuesta');
         const jornadaFinal = await Jornada.findById(jornada._id)
             .populate('operario', 'name cedula')
             .populate({
@@ -552,7 +651,7 @@ exports.guardarJornadaCompleta = async (req, res) => {
                 ]
             });
 
-        console.log('🎉 Jornada guardada exitosamente');
+        // REMOVED: console.log('🎉 Jornada guardada exitosamente');
         res.status(201).json({ msg: 'Jornada y actividades guardadas con éxito', jornada: jornadaFinal });
 
     } catch (error) {
@@ -570,7 +669,7 @@ exports.guardarJornadaCompleta = async (req, res) => {
 // @access  Admin only
 exports.recalcularTiemposEfectivos = async (req, res) => {
     try {
-        console.log('🔄 Iniciando recálculo de tiempos efectivos...');
+        // REMOVED: console.log('🔄 Iniciando recálculo de tiempos efectivos...');
         
         const jornadas = await Jornada.find({}).populate('registros');
         
@@ -607,7 +706,7 @@ exports.recalcularTiemposEfectivos = async (req, res) => {
                     tiempoTotalRecuperado += tiempoRecuperado;
                 }
                 
-                console.log(`✅ Jornada ${jornada._id} actualizada - Efectivo: ${jornada.totalTiempoActividades?.tiempoEfectivo || 0}min`);
+                // REMOVED: console.log(`✅ Jornada ${jornada._id} actualizada - Efectivo: ${jornada.totalTiempoActividades?.tiempoEfectivo || 0}min`);
                 
             } catch (error) {
                 console.error(`❌ Error procesando jornada ${jornada._id}:`, error.message);
@@ -627,7 +726,7 @@ exports.recalcularTiemposEfectivos = async (req, res) => {
             }
         };
         
-        console.log('📊 Recálculo completado:', estadisticas);
+        // REMOVED: console.log('📊 Recálculo completado:', estadisticas);
         
         res.status(200).json({
             message: 'Recálculo de tiempos efectivos completado',

@@ -22,14 +22,9 @@ async function recalcularHorasJornada(jornadaId) {
 
         jornada.horaInicio = horasInicio.length > 0 ? new Date(Math.min(...horasInicio)) : null;
         jornada.horaFin = horasFin.length > 0 ? new Date(Math.max(...horasFin)) : null;
-        jornada.totalTiempoActividades = totalTiempoAcumulado;
+        jornada.totalTiempoActividades = totalTiempoAcumulado;        await jornada.save({ validateBeforeSave: false });
 
-        await jornada.save({ validateBeforeSave: false });
-
-        console.log(`✅ Jornada ${jornadaId} actualizada:
-            Inicio: ${jornada.horaInicio?.toLocaleTimeString() || 'No definido'}
-            Fin: ${jornada.horaFin?.toLocaleTimeString() || 'No definido'}
-            Total: ${totalTiempoAcumulado} minutos`);
+        // Jornada actualizada exitosamente
 
     } catch (error) {
         console.error(`❌ Error al recalcular horas de jornada ${jornadaId}:`, error);

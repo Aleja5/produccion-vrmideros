@@ -2,19 +2,15 @@ import React, { useState } from "react";
 import { Button, Input, Label } from "../ui";
 import { Calendar } from "../ui/Calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/Popover";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../ui/Card";
-import { CalendarIcon, ChevronDown, ChevronUp, Download, Search, X } from "lucide-react";
+import { Card, CardContent } from "../ui/card";
+import { CalendarIcon, Search, X, Download, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "../../utils/cn";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/Collapsible";
 import { useFiltrosProduccion } from "./useFiltrosProduccion.jsx";
 import { filterFields } from "./fields";
 
-
-
 const FilterPanel = ({ onBuscar, onExportar }) => {
-  const [isOpen, setIsOpen] = useState(true);
   const [filters, setFilters] = useState({
     oti: "",
     operario: "",
@@ -49,99 +45,114 @@ const FilterPanel = ({ onBuscar, onExportar }) => {
     setFilters((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Check if any filters are active
+  const hasActiveFilters = Object.values(filters).some(value => 
+    value !== "" && value !== undefined && value !== null
+  );
+
   return (
-    <Card className="mb-3">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle>Filtros</CardTitle>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="xs" className="w-7 p-0">
-                {isOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              </Button>
-            </CollapsibleTrigger>
+    <Card className="mb-4 border border-gray-200 shadow-sm">
+      <CardContent className="p-4">
+        {/* Header with title and action buttons */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-gray-500" />
+            <h3 className="text-m font-medium text-gray-700">Filtros de Búsqueda</h3>
+            {hasActiveFilters && (
+              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                Activos
+              </span>
+            )}
           </div>
-        </CardHeader>
-
-        <CollapsibleContent className="p-0">
-          <CardContent className="grid gap-4 pb-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 xl:grid-cols-7 gap-4">
-              {filterFields({ oti, operarios, procesos, areasProduccion, maquinas })
-              .sort((a, b) => a.order - b.order)
-              .map(
-                ({ name, label, options, keyField, valueField }) => (
-                  <div key={name} className="space-y-1">
-                    <Label htmlFor={name}>{label}</Label>
-                    <Input
-                      as="select"
-                      id={name}
-                      name={name}
-                      value={filters[name]}
-                      onChange={handleChange}
-                    >
-                      <option value="">Todos</option>
-                      {options
-                      .sort ((a, b) => a[valueField].localeCompare(b[valueField]))
-                      .map((item) => (
-                        <option key={item[keyField]} value={item[keyField]}>
-                          {item[valueField]}
-                        </option>
-                      ))}
-                    </Input>
-                  </div>
-                )
-              )}
-
-              {/* Fechas */}
-              {["fechaInicio", "fechaFin"].map((campo) => (
-                <div key={campo} className="space-y-1">
-                  <Label>{campo === "fechaInicio" ? "Desde" : "Hasta"}</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !filters[campo] && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-3 w-3" />
-                        {filters[campo]
-                          ? format(filters[campo], "d MMM yyyy", { locale: es })
-                          : "Seleccione"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-gray-100">
-                      <Calendar
-                        mode="single"
-                        selected={filters[campo]}
-                        onSelect={(date) =>
-                          setFilters((prev) => ({ ...prev, [campo]: date }))
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex flex-col sm:flex-row sm:justify-between gap-2 border-t px-4 py-2">
-            <Button variant="outline" onClick={handleClearFilters} className="text-xs h-8 px-3 flex items-center gap-1">
-              <X className="mr-2 h-4 w-4" /> Limpiar Filtros
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="m"
+              onClick={handleClearFilters}
+              className="h-8 px-3 text-m"
+              disabled={!hasActiveFilters}
+            >
+              <X className="h-3 w-3 mr-1" />
+              Limpiar
             </Button>
-            <div className="flex gap-2">
-              <Button onClick={handleApplyFilters} className="text-xs h-8 px-3 flex items-center gap-1">
-                <Search className="mr-2 h-4 w-4" /> Aplicar Filtros
-              </Button>
-              <Button variant="outline" onClick={onExportar} className="text-xs h-8 px-3 flex items-center gap-1">
-                <Download className="mr-2 h-4 w-4" /> Exportar
-              </Button>
+            <Button
+              size="m"
+              onClick={handleApplyFilters}
+              className="h-8 px-3 text-m bg-blue-500 hover:bg-blue-600"
+            >
+              <Search className="h-3 w-3 mr-1" />
+              Buscar
+            </Button>
+            
+          </div>
+        </div>
+
+        {/* Compact filter grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-3">
+          {/* Select fields */}
+          {filterFields({ oti, operarios, procesos, areasProduccion, maquinas })
+            .sort((a, b) => a.order - b.order)
+            .map(({ name, label, options, keyField, valueField }) => (
+              <div key={name} className="space-y-1">
+                <Label htmlFor={name} className="text-m font-medium text-gray-600">
+                  {label}
+                </Label>
+                <Input
+                  as="select"
+                  id={name}
+                  name={name}
+                  value={filters[name]}
+                  onChange={handleChange}
+                  className="h-8 text-xs"
+                >
+                  <option value="">Todos</option>
+                  {options
+                    .sort((a, b) => a[valueField].localeCompare(b[valueField]))
+                    .map((item) => (
+                      <option key={item[keyField]} value={item[keyField]}>
+                        {item[valueField]}
+                      </option>
+                    ))}
+                </Input>
+              </div>
+            ))}
+
+          {/* Date fields */}
+          {["fechaInicio", "fechaFin"].map((campo) => (
+            <div key={campo} className="space-y-1">
+              <Label className="text-m font-medium text-gray-600">
+                {campo === "fechaInicio" ? "Desde" : "Hasta"}
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full h-8 justify-start text-left font-normal text-xs",
+                      !filters[campo] && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-1 h-3 w-3" />
+                    {filters[campo]
+                      ? format(filters[campo], "dd/MM/yy", { locale: es })
+                      : "Fecha"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-white" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={filters[campo]}
+                    onSelect={(date) =>
+                      setFilters((prev) => ({ ...prev, [campo]: date }))
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
-          </CardFooter>
-        </CollapsibleContent>
-      </Collapsible>
+          ))}
+        </div>
+      </CardContent>
     </Card>
   );
 };

@@ -239,6 +239,8 @@ const MiJornada = () => {
           setSelectedActividad(null);
           fetchJornadas(); // Re-fetch jornada data to show updated info
         }}
+
+        invokedAsModal={true} 
       />
     )}
   </div>

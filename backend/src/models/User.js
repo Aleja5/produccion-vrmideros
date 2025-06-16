@@ -44,33 +44,29 @@ const userSchema = new mongoose.Schema(
 // Encriptar contraseña antes de guardar (solo si fue modificada)
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
-    console.log('Contraseña no modificada, se salta hash.');
     return next();
   }
 
-  console.log('Contraseña antes de hash:', this.password);
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  console.log('Contraseña después de hash:', this.password);
-
-  next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Método para comparar contraseñas
 userSchema.methods.comparePassword = async function (password) {
   try {
-    console.log('Iniciando comparación de contraseñas...');
     if (!password || !this.password) {
-      console.error('ERROR: Contraseña o hash faltante');
       return false;
     }
-
-    // Comparar directamente usando bcrypt
+    
     const isMatch = await bcrypt.compare(password, this.password);
-    console.log('Resultado de bcrypt.compare:', isMatch);
     return isMatch;
   } catch (error) {
-    console.error('Error en la comparación de contraseñas:', error);
+    console.error('❌ Error en la comparación de contraseñas:', error.message);
     return false;
   }
 };

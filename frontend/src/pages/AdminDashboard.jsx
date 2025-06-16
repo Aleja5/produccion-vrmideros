@@ -277,7 +277,7 @@ const AdminDashboard = () => {
 
   return (
     <>    
-      <div className="flex h-screen bg-gradient-to-br from-gray-100 to-blue-100 overflow-hidden"> {/* Changed min-h-screen to h-screen */}
+      <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden"> {/* Changed min-h-screen to h-screen */}
         
         <div className="flex bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50 h-screen">
           <SidebarAdmin />

@@ -51,48 +51,51 @@ const AdminJornadaDetalle = () => {
         <SidebarAdmin />
         <div className="flex-1 overflow-y-auto">
           <div className="container mx-auto px-4 py-6"> {/* Aumentado el max-w para la tabla */}
-            <button onClick={() => navigate(-1)} className="mb-6 flex items-center text-indigo-600 hover:underline font-medium">
+            <button onClick={() => navigate(-1)} className="mb-6 flex items-center text-gray-600 hover:underline font-medium">
               <ChevronLeft className="w-5 h-5 mr-1" /> Volver
             </button>
             {/* Detalles de la Jornada - Se mantiene el diseño actual */}
-            <Card className="p-8 mb-8 shadow-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+            <Card className="p-8 mb-8 shadow-xl bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-100">
               <div className="flex items-center mb-4">
-                <ClipboardList className="w-8 h-8 text-indigo-500 mr-3" />
-                <h1 className="text-3xl font-bold text-gray-800">Detalle de Jornada</h1>
+                <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 tracking-tight drop-shadow-sm">
+                  Detalle de Jornada
+                </h1>
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div>
-                  <div className="flex items-center mb-2 text-gray-700">
-                    <UserCircle className="w-5 h-5 mr-2 text-blue-400" />
-                    <span className="font-semibold">Operario:</span> {jornada.operario?.name || 'Sin asignar'}
+                {/* Columna 1 */}
+                <div className="space-y-2 text-gray-700">
+                  <div className="flex items-center">                    
+                    <span className="font-semibold">Operario: </span>&nbsp;{jornada.operario?.name || 'Sin asignar'}
                   </div>
-                  <div className="flex items-center mb-2 text-gray-700">
-                    <Calendar className="w-5 h-5 mr-2 text-green-400" />
-                    <span className="font-semibold">Fecha:</span> {ajustarFechaLocal(jornada.fecha).toLocaleDateString()}
+                  <div className="flex items-center">                    
+                    <span className="font-semibold">Fecha: </span>&nbsp;{ajustarFechaLocal(jornada.fecha).toLocaleDateString()}
                   </div>
                 </div>
-                <div>
-                  <div className="flex items-center mb-2 text-gray-700">
-                    <Clock className="w-5 h-5 mr-2 text-indigo-400" />
-                    <span className="font-semibold">Hora Inicio:</span> {jornada.horaInicio ? new Date(jornada.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+
+                {/* Columna 2 */}
+                <div className="space-y-2 text-gray-700">
+                  <div className="flex items-center">                    
+                    <span className="font-semibold">Hora Inicio: </span>&nbsp;
+                    {jornada.horaInicio ? new Date(jornada.horaInicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                   </div>
-                  <div className="flex items-center mb-2 text-gray-700">
-                    <Clock className="w-5 h-5 mr-2 text-indigo-400" />
-                    <span className="font-semibold">Hora Fin:</span> {jornada.horaFin ? new Date(jornada.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                  <div className="flex items-center">                    
+                    <span className="font-semibold">Hora Fin: </span>&nbsp;
+                    {jornada.horaFin ? new Date(jornada.horaFin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                   </div>
-                  <div className="flex items-center mb-2 text-gray-700">
-                    <Clock className="w-5 h-5 mr-2 text-green-500" />
-                    <span className="font-semibold">Tiempo Total:</span> {jornada.totalTiempoActividades?.horas || 0}h {jornada.totalTiempoActividades?.minutos || 0}m
+                  <div className="flex items-center">                    
+                    <span className="font-semibold">Tiempo Total: </span>&nbsp;
+                    {jornada.totalTiempoActividades?.horas || 0}h {jornada.totalTiempoActividades?.minutos || 0}m
                   </div>
                 </div>
               </div>
             </Card>
-            
+
             {/* Actividades Registradas - Nuevo diseño de tabla */}
             <Card className="shadow-lg border border-gray-200 bg-white rounded-lg">
               <div className="p-6 border-b border-gray-200">
                 <h2 className="text-2xl font-bold flex items-center text-gray-700">
-                  <ClipboardList className="w-6 h-6 mr-2 text-blue-600" /> Actividades Registradas
+                  Actividades Registradas
                 </h2>
               </div>
               {jornada.registros && jornada.registros.length > 0 ? (

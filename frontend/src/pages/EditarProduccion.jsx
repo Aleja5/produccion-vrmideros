@@ -107,7 +107,6 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
     return { numeroOti: "" }; // Default fallback
   }
 
-
   useEffect(() => {
     let timeoutId;
 
@@ -336,7 +335,6 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
     }));
   };
 
-
   // Handler para selects de react-select y nativos
   const handleChangeRelacion = (selectedOptions, actionMeta) => {
     if (actionMeta && actionMeta.name) {
@@ -407,11 +405,11 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
       if (validationErrors.length > 0) {
         toast.error(`⚠️ ${validationErrors[0]}`);
         return;
-      }
-
-      confirmAlert({
+      }      confirmAlert({
         title: 'Confirmar Guardado',
         message: '¿Estás seguro de que deseas guardar los cambios?',
+        overlayClassName: 'react-confirm-alert-overlay',
+        className: 'react-confirm-alert',
         buttons: [
           {
             label: 'Sí',
@@ -655,8 +653,8 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
                 </div>
             </Card>
         );
-    }
-    return (      <Card className="w-full max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-2xl p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xl bg-white transform transition-all duration-300 scale-100 opacity-100 translate-y-0 animate-fade-in-up border border-blue-100">
+    }    return (
+      <Card className="w-full p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xl bg-white border border-blue-100 max-h-[calc(100vh-40px)] overflow-y-auto">
         <h2 className="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6 text-blue-700 tracking-tight">Editar Producción</h2>
         
         {/* Required fields note */}
@@ -877,19 +875,25 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
         </form>
       </Card>
     );
-  };
-
-  if (invokedAsModal) {
-    return (
-      <div className="fixed inset-0 z-50 flex justify-center items-start sm:items-center overflow-y-auto p-2 sm:p-4">
-        {/* Backdrop mejorado */}
-        <div className="fixed inset-0 bg-black bg-opacity-60 transition-opacity duration-300" onClick={onClose} />
+  };  if (invokedAsModal) {  return (
+      <>
+        {/* Capa transparente con mínima opacidad */}        <div 
+          className="fixed inset-0 bg-gray-600 bg-opacity-30 z-[9990]"
+          onClick={onClose}
+          style={{
+            backdropFilter: 'blur(3px)',
+            WebkitBackdropFilter: 'blur(3px)',
+            backgroundColor: 'rgba(75, 85, 99, 0.25)'
+          }}
+        ></div>
         
-        {/* Contenedor del modal con scroll seguro */}
-        <div className="relative w-full max-h-screen overflow-y-auto py-4 sm:py-8">
-          {renderContent()}
+        {/* Modal centrado con z-index mayor */}
+        <div className="fixed inset-0 z-[9999] flex justify-center items-center">
+          <div className="relative w-full max-w-2xl mx-auto z-[10000] p-3">
+            {renderContent()}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -901,3 +905,4 @@ function EditarProduccion({ produccion: produccionProp, onClose, onGuardar, invo
 }
 
 export default EditarProduccion;
+

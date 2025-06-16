@@ -15,36 +15,36 @@ const Produccion = require('../models/Produccion');
 
 async function recalcularTiemposJornadas() {
     try {
-        console.log('🔄 Conectando a la base de datos...');
+        // REMOVED: console.log('🔄 Conectando a la base de datos...');
         await connectDB();
         
-        console.log('📊 Obteniendo todas las jornadas...');
+        // REMOVED: console.log('📊 Obteniendo todas las jornadas...');
         const jornadas = await Jornada.find({}).populate('registros');
         
-        console.log(`✅ Encontradas ${jornadas.length} jornadas para procesar`);
+        // REMOVED: console.log(`✅ Encontradas ${jornadas.length} jornadas para procesar`);
         
         let jornadasActualizadas = 0;
         let errores = 0;
         
         for (const jornada of jornadas) {
             try {
-                console.log(`⚙️ Procesando jornada ${jornada._id} (${jornada.registros.length} registros)...`);
+                // REMOVED: console.log(`⚙️ Procesando jornada ${jornada._id} (${jornada.registros.length} registros)...`);
                 
                 // Guardar la jornada para activar el pre-save hook
                 await jornada.save();
                 
                 jornadasActualizadas++;
-                console.log(`✅ Jornada ${jornada._id} actualizada`);
+                // REMOVED: console.log(`✅ Jornada ${jornada._id} actualizada`);
                 
                 // Mostrar información del resultado
                 if (jornada.totalTiempoActividades) {
                     const tiempo = jornada.totalTiempoActividades;
-                    console.log(`   📈 Tiempo efectivo: ${tiempo.tiempoEfectivo || 0}min`);
-                    console.log(`   📊 Tiempo sumado: ${tiempo.tiempoSumado || 0}min`);
-                    console.log(`   ⚠️ Solapamientos: ${tiempo.solapamientos ? 'Sí' : 'No'}`);
+                    // REMOVED: console.log(`   📈 Tiempo efectivo: ${tiempo.tiempoEfectivo || 0}min`);
+                    // REMOVED: console.log(`   📊 Tiempo sumado: ${tiempo.tiempoSumado || 0}min`);
+                    // REMOVED: console.log(`   ⚠️ Solapamientos: ${tiempo.solapamientos ? 'Sí' : 'No'}`);
                     if (tiempo.solapamientos && tiempo.tiempoSumado && tiempo.tiempoEfectivo) {
                         const diferencia = tiempo.tiempoSumado - tiempo.tiempoEfectivo;
-                        console.log(`   🔄 Tiempo solapado: ${diferencia}min`);
+                        // REMOVED: console.log(`   🔄 Tiempo solapado: ${diferencia}min`);
                     }
                 }
                 
@@ -54,18 +54,18 @@ async function recalcularTiemposJornadas() {
             }
         }
         
-        console.log('\n📋 Resumen del proceso:');
-        console.log(`✅ Jornadas actualizadas: ${jornadasActualizadas}`);
-        console.log(`❌ Errores: ${errores}`);
-        console.log(`📊 Total procesadas: ${jornadas.length}`);
+        // REMOVED: console.log('\n📋 Resumen del proceso:');
+        // REMOVED: console.log(`✅ Jornadas actualizadas: ${jornadasActualizadas}`);
+        // REMOVED: console.log(`❌ Errores: ${errores}`);
+        // REMOVED: console.log(`📊 Total procesadas: ${jornadas.length}`);
         
         // Mostrar estadísticas generales
-        console.log('\n📊 Estadísticas de solapamientos:');
+        // REMOVED: console.log('\n📊 Estadísticas de solapamientos:');
         const jornadasConSolapamientos = await Jornada.find({
             'totalTiempoActividades.solapamientos': true
         });
         
-        console.log(`⚠️ Jornadas con solapamientos: ${jornadasConSolapamientos.length}/${jornadas.length}`);
+        // REMOVED: console.log(`⚠️ Jornadas con solapamientos: ${jornadasConSolapamientos.length}/${jornadas.length}`);
         
         if (jornadasConSolapamientos.length > 0) {
             let tiempoTotalSolapado = 0;
@@ -74,22 +74,22 @@ async function recalcularTiemposJornadas() {
                     tiempoTotalSolapado += jornada.totalTiempoActividades.tiempoSumado - jornada.totalTiempoActividades.tiempoEfectivo;
                 }
             }
-            console.log(`🔄 Tiempo total solapado recuperado: ${tiempoTotalSolapado} minutos (${Math.floor(tiempoTotalSolapado / 60)}h ${tiempoTotalSolapado % 60}m)`);
+            // REMOVED: console.log(`🔄 Tiempo total solapado recuperado: ${tiempoTotalSolapado} minutos (${Math.floor(tiempoTotalSolapado / 60)}h ${tiempoTotalSolapado % 60}m)`);
         }
         
-        console.log('\n🎉 Proceso completado exitosamente');
+        // REMOVED: console.log('\n🎉 Proceso completado exitosamente');
         
     } catch (error) {
         console.error('❌ Error fatal durante el proceso:', error);
     } finally {
         mongoose.connection.close();
-        console.log('🔌 Conexión a base de datos cerrada');
+        // REMOVED: console.log('🔌 Conexión a base de datos cerrada');
     }
 }
 
 // Ejecutar el script solo si es llamado directamente
 if (require.main === module) {
-    console.log('🚀 Iniciando recálculo de tiempos efectivos en jornadas...');
+    // REMOVED: console.log('🚀 Iniciando recálculo de tiempos efectivos en jornadas...');
     recalcularTiemposJornadas();
 }
 

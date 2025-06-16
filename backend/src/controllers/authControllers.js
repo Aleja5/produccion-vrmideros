@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
+const { safeLog } = require('../utils/logger');
 require('dotenv').config();
 
 // Configuración del transporte de correo
@@ -24,31 +25,35 @@ exports.login = async (req, res) => {
     }
 
     const emailToSearch = email.toLowerCase().trim();
-    console.log('Email recibido:', email);
-    console.log('Email procesado:', emailToSearch);
+    
+    // Solo log de desarrollo
+    if (process.env.NODE_ENV !== 'production') {
+        console.log('🔍 Intento de login para:', emailToSearch);
+    }
+    
     const user = await User.findOne({ email: emailToSearch });
-    console.log('Usuario encontrado:', user);
 
     if (!user) {
+      console.warn(`⚠️ Intento de login fallido: usuario no encontrado - ${emailToSearch}`);
       return res.status(400).json({ message: 'Usuario no encontrado' });
     }
 
     // Comparar la contraseña recibida con la almacenada en la base de datos
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log('Password ingresado:', password);
-    console.log('Password almacenado (hash):', user.password);
+    
     if (!isMatch) {
+      console.warn(`⚠️ Intento de login fallido: credenciales inválidas - ${emailToSearch}`);
       return res.status(400).json({ message: 'Credenciales inválidas' });
-    }
-
-    // Crear el token JWT para la sesión
+    }    // Crear el token JWT para la sesión
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
     );
 
-    console.log('Token generado:', token);    res.json({
+    console.log(`✅ Login exitoso: ${user.email} (${user.role})`);
+    
+    res.json({
       message: 'Inicio de sesión exitoso',
       token,
       user: {
@@ -59,7 +64,7 @@ exports.login = async (req, res) => {
       redirect: user.role === 'admin' ? '/admin-home' : '/validate-cedula',
     });
   } catch (error) {
-    console.error('Error en el servidor (login):', error);
+    console.error('❌ Error en el servidor (login):', error.message);
     res.status(500).json({ message: 'Error en el servidor' });
   }
 };
@@ -72,23 +77,22 @@ exports.forgotPassword = async (req, res) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: 'Correo electrónico inválido' });
-    }
-
-    const user = await User.findOne({ email });
-    console.log('Usuario encontrado para recuperación:', user);
+    }    const user = await User.findOne({ email });
+    
     if (!user) {
+      console.warn(`⚠️ Intento de recuperación: usuario no encontrado - ${email}`);
       return res.status(400).json({ message: 'Usuario no encontrado' });
     }
 
     // Generar token y hash para almacenar en DB
     const resetToken = crypto.randomBytes(32).toString('hex');
-    console.log('Token de recuperación generado:', resetToken);
-    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');    user.resetPasswordToken = hashedToken;
+    const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    
+    user.resetPasswordToken = hashedToken;
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hora
-    await user.save({ validateBeforeSave: false }); // Evitar validación de campos requeridos
+    await user.save({ validateBeforeSave: false });
 
-    const resetLink = `http://localhost:5173/reset-password/${resetToken}`;
-    console.log('Enlace de recuperación:', resetLink);
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -102,14 +106,13 @@ exports.forgotPassword = async (req, res) => {
       `,
     };
 
-        console.log('Intentando enviar correo con:');
-        console.log('FROM:', process.env.EMAIL_USER);
-        console.log('TO:', email);
-        console.log('Subject:', mailOptions.subject);
-        // No imprimas EMAIL_PASS por seguridad, pero verifica que la variable exista
-        console.log('EMAIL_PASS length:', process.env.EMAIL_PASS ? process.env.EMAIL_PASS.length : 'undefined');
+    if (process.env.NODE_ENV !== 'production') {
+        console.log('📧 Enviando correo de recuperación a:', email);
+    }
 
     await transporter.sendMail(mailOptions);
+    
+    console.log(`✅ Correo de recuperación enviado a: ${email}`);
 
     res.status(200).json({
       message: 'Correo de recuperación de contraseña enviado.',
@@ -125,40 +128,42 @@ exports.resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
 
-    console.log('Token recibido:', token);
-    console.log('Nueva contraseña recibida:', newPassword);
-
     // Validar que el token y la nueva contraseña existan
     if (!token || !newPassword) {
       return res.status(400).json({ message: 'Token y nueva contraseña son obligatorios' });
     }
 
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres' });
+    }
+
     // Hashear el token recibido para buscarlo en la base de datos
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    console.log('Token hasheado:', hashedToken);
 
     const user = await User.findOne({
       resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: Date.now() }, // Verificar si el token no ha expirado
     });
-    console.log('Usuario encontrado para restablecer contraseña:', user);    if (!user) {
+
+    if (!user) {
+      console.warn('⚠️ Intento de reset con token inválido o expirado');
       return res.status(400).json({ message: 'Token inválido o expirado' });
     }
 
     // Solo asignar la nueva contraseña, el middleware pre('save') se encarga del hash
     user.password = newPassword;
 
-    console.log('Nueva contraseña asignada (será hasheada por el middleware):', newPassword);
-
     // Limpiar los campos de token
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
 
-    await user.save({ validateBeforeSave: false }); // El middleware pre('save') hasheará la contraseña automáticamente
+    await user.save({ validateBeforeSave: false });
+    
+    console.log(`✅ Contraseña restablecida exitosamente para: ${user.email}`);
 
     res.status(200).json({ message: 'Contraseña actualizada correctamente' });
   } catch (error) {
-    console.error('Error en resetPassword:', error);
+    console.error('❌ Error en resetPassword:', error.message);
     res.status(500).json({ message: 'Error del servidor al restablecer la contraseña' });
   }
 };

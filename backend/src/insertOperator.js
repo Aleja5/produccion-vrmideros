@@ -8,7 +8,7 @@ async function insertOperators(operarios) {
     await client.connect();
     const db = client.db(dbName);
     const result = await db.collection('operarios').insertMany(operarios);  //insertOne(operarios) para solo un operario 
-    console.log(`${result.insertedCount} operarios insertados correctamente.`);
+    // REMOVED: console.log(`${result.insertedCount} operarios insertados correctamente.`);
   } catch (error) {
     console.error('Error:', error);
   } finally {

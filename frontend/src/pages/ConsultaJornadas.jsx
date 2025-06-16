@@ -142,8 +142,8 @@ const ConsultaJornadas = () => {
 
   return (
     <>    
-      <div className="flex min-h-screen bg-gradient-to-br from-gray-100 to-blue-100 overflow-hidden">
-        <div className="flex bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50 h-screen">
+      <div className="flex min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+        <div className="flex bg-gradient-to-br from-gray-50 to-gray-100 h-screen">
           <SidebarAdmin />
         </div>
         <div className="flex-1 overflow-auto">
@@ -152,9 +152,9 @@ const ConsultaJornadas = () => {
                 <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 tracking-tight drop-shadow-sm">Consulta de Jornadas</h1>
                 <p className="text-base md:text-lg text-gray-500 mt-1">Visualiza, filtra y exporta las jornadas registradas.</p>
             </div>
-            <Card className="p-4 shadow-lg border border-blue-100">
+            <Card className="p-4 shadow-lg border border-gray-100">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
-                <h2 className="text-xl font-bold text-blue-700">Jornadas Registradas</h2>
+                <h2 className="text-xl font-bold text-gray-700">Jornadas Registradas</h2>
                 <Button variant="outline" onClick={exportarJornadasExcel} className="shadow-sm self-start sm:self-center">
                   Exportar Jornadas a Excel
                 </Button>
@@ -164,7 +164,7 @@ const ConsultaJornadas = () => {
                 <input
                   type="text"
                   placeholder="Buscar por operario..."
-                  className="border border-blue-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
                   value={jornadaSearch}
                   onChange={e => {
                     setJornadaSearch(e.target.value);
@@ -174,7 +174,7 @@ const ConsultaJornadas = () => {
                 <input
                   type="date"
                   placeholder="Fecha Inicio"
-                  className="border border-blue-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
                   value={jornadaFechaInicio}
                   onChange={e => {
                     setJornadaFechaInicio(e.target.value);
@@ -185,7 +185,7 @@ const ConsultaJornadas = () => {
                 <input
                   type="date"
                   placeholder="Fecha Fin"
-                  className="border border-blue-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="border border-gray-200 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
                   value={jornadaFechaFin}
                   onChange={e => {
                     setJornadaFechaFin(e.target.value);
@@ -197,22 +197,22 @@ const ConsultaJornadas = () => {
               
               {loading && currentJornadas.length === 0 ? (
                  <div className="flex justify-center items-center py-8">
-                    <span className="loader border-blue-500"></span>
-                    <span className="ml-2 text-blue-500">Cargando jornadas...</span>
+                    <span className="loader border-gray-500"></span>
+                    <span className="ml-2 text-gray-500">Cargando jornadas...</span>
                 </div>
               ) : !loading && currentJornadas.length === 0 ? (
                 <p className="text-center py-4 text-gray-600">No se encontraron jornadas con los filtros aplicados o no hay jornadas con actividades registradas.</p>
               ) : (
                 <div className="overflow-x-auto rounded-lg border border-gray-200">
                   <table className="w-full bg-white rounded text-sm">
-                    <thead className="bg-blue-100">
+                    <thead className="bg-gray-100">
                       <tr>
-                        <th className="p-3 font-semibold text-blue-800 text-left">Fecha</th>
-                        <th className="p-3 font-semibold text-blue-800 text-left">Operario</th>
-                        <th className="p-3 font-semibold text-blue-800 text-center">N.º Actividades</th>
-                        <th className="p-3 font-semibold text-blue-800 text-left">Hora Inicio - Hora Fin</th>
-                        <th className="p-3 font-semibold text-blue-800 text-left">Tiempo Total</th>
-                        <th className="p-3 font-semibold text-blue-800 text-center">Acciones</th>
+                        <th className="p-3 font-semibold text-gray-800 text-left">Fecha</th>
+                        <th className="p-3 font-semibold text-gray-800 text-left">Operario</th>
+                        <th className="p-3 font-semibold text-gray-800 text-center">N.º Actividades</th>
+                        <th className="p-3 font-semibold text-gray-800 text-left">Hora Inicio - Hora Fin</th>
+                        <th className="p-3 font-semibold text-gray-800 text-left">Tiempo Total</th>
+                        <th className="p-3 font-semibold text-gray-800 text-center">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>

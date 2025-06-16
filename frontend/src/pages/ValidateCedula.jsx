@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axiosInstance from '../utils/axiosInstance';
 import { useNavigate } from 'react-router-dom';
 import { IdCard } from 'lucide-react';
@@ -10,6 +10,7 @@ const ValidateCedula = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const debounceRef = useRef(null);
 
   const handleLogout = () => {
     // Eliminar todos los datos relevantes del almacenamiento local
@@ -19,40 +20,65 @@ const ValidateCedula = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Evitar envíos múltiples
+    if (loading) return;
+    
+    // Debouncing: cancelar solicitud anterior si existe
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    
     setMessage('');
     setLoading(true);
 
-    try {
-      const storedToken = localStorage.getItem('token');
-      const config = storedToken ? { headers: { Authorization: `Bearer ${storedToken}` } } : {};
+    // Agregar pequeño delay para evitar múltiples solicitudes
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const storedToken = localStorage.getItem('token');
+        const config = storedToken ? { headers: { Authorization: `Bearer ${storedToken}` } } : {};
 
-      const response = await axiosInstance.post('/operarios/validate-cedula', { cedula }, config);
-      const { operario, token } = response.data;
+        const response = await axiosInstance.post('/operarios/validate-cedula', { cedula }, config);
+        const { operario, token } = response.data;
 
-      if (!operario || (!operario.id && !operario._id)) {
-        setMessage('Datos del operario incompletos');
-        return;
+        if (!operario || (!operario.id && !operario._id)) {
+          setMessage('Datos del operario incompletos');
+          return;
+        }
+
+        localStorage.setItem('operario', JSON.stringify({
+          _id: operario._id || operario.id,
+          name: operario.name,
+          cedula: operario.cedula
+        }));
+
+        if (token) {
+          localStorage.setItem('token', token);
+        }
+
+        setTimeout(() => {
+          navigate('/operario-dashboard');
+        }, 500);
+      } catch (error) {
+        console.error('Error al validar cédula:', error);
+        
+        // Manejo específico para error 429
+        if (error.response?.status === 429) {
+          const retryAfter = error.response?.data?.retryAfter || '15 minutos';
+          setMessage(`Demasiadas solicitudes. Intenta nuevamente en ${retryAfter}.`);
+        } else if (error.message?.includes('Rate limit')) {
+          setMessage('Demasiadas solicitudes. Por favor espera un momento antes de intentar nuevamente.');
+        } else if (error.response?.status === 404) {
+          setMessage('Cédula no encontrada en el sistema');
+        } else if (error.response?.status === 400) {
+          setMessage('Cédula inválida. Verifica el número ingresado.');
+        } else {
+          setMessage('Error al validar cédula. Intenta nuevamente.');
+        }
+      } finally {
+        setLoading(false);
       }
-
-      localStorage.setItem('operario', JSON.stringify({
-        _id: operario._id || operario.id,
-        name: operario.name,
-        cedula: operario.cedula
-      }));
-
-      if (token) {
-        localStorage.setItem('token', token);
-      }
-
-      setTimeout(() => {
-        navigate('/operario-dashboard');
-      }, 500);
-    } catch (error) {
-      console.error('Error al validar cédula:', error.response?.data || error.message);
-      setMessage('Cédula inválida o no encontrada');
-    } finally {
-      setLoading(false);
-    }
+    }, 300); // Esperar 300ms antes de enviar
   };
 
   return (
@@ -91,18 +117,25 @@ const ValidateCedula = () => {
               value={cedula}
               onChange={(e) => setCedula(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={loading}
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition duration-200 flex justify-center"
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold py-2 rounded-lg transition duration-200 flex justify-center"
           >
-            {loading ? 'Cargando...' : 'Validar Cédula'}
+            {loading ? 'Validando...' : 'Validar Cédula'}
           </button>
 
-          {message && <p className="mt-4 text-sm text-red-500 text-center">{message}</p>}
+          {message && (
+            <p className={`mt-4 text-sm text-center ${
+              message.includes('Demasiadas') ? 'text-yellow-500' : 'text-red-500'
+            }`}>
+              {message}
+            </p>
+          )}
         </motion.form>
       </div>
     </div>

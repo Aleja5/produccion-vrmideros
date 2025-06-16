@@ -18,6 +18,9 @@ router.get('/buscar-produccion', productionController.buscarProduccion); // <---
 // Ruta de debug para verificar datos
 router.get('/debug-datos', productionController.debugDatos); // <--- AÑADIDO: Ruta de debug
 
+// Ruta para limpiar inconsistencias de fechas
+router.post('/limpiar-inconsistencias', productionController.limpiarInconsistenciasFechas); // <--- NUEVO: Ruta para limpiar inconsistencias
+
 
 // Rutas para obtener listas
 router.get('/maquinas', async (req, res) => {

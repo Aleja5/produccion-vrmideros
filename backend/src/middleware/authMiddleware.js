@@ -11,11 +11,11 @@ exports.protect = async (req, res, next) => {
     }
 
     try {
-        console.log("Token recibido en middleware:", token);
+        // REMOVED: console.log("Token recibido en middleware:", token);
 
         // Verificar el token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log("Datos decodificados del token:", decoded);
+        // REMOVED: console.log("Datos decodificados del token:", decoded);
 
         // Verificar si es un usuario (admin/production) o un operador (solo cédula)
         let user = await User.findById(decoded.id).select("-password");
@@ -41,8 +41,8 @@ exports.protect = async (req, res, next) => {
 // Middleware para autorización según roles
 exports.authorize = (...roles) => {
     return (req, res, next) => {
-        console.log("Rol del usuario:", req.user?.role);
-        console.log("Roles permitidos:", roles);
+        // REMOVED: console.log("Rol del usuario:", req.user?.role);
+        // REMOVED: console.log("Roles permitidos:", roles);
 
         if (!roles.includes(req.user.role)) {
             return res.status(403).json({ message: 'No tienes permiso para realizar esta acción' });

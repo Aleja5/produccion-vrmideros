@@ -53,7 +53,7 @@ const crearMaquina = async (req, res) => {
     const nuevaMaquina = new Maquina({ nombre });
     try {
         const maquinaGuardada = await nuevaMaquina.save();
-        console.log('Máquina guardada:', maquinaGuardada);
+        // REMOVED: console.log('Máquina guardada:', maquinaGuardada);
         res.status(201).json(maquinaGuardada);
     } catch (error) {
         console.error('Error al guardar máquina:', error);

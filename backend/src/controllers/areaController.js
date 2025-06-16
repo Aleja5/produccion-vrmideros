@@ -53,7 +53,7 @@ const crearArea = async (req, res) => {
     const nuevaArea = new AreaProduccion({ nombre });
     try {
         const areaGuardada = await nuevaArea.save();
-        console.log('Área guardada:', areaGuardada);
+        // REMOVED: console.log('Área guardada:', areaGuardada);
         res.status(201).json(areaGuardada);
     } catch (error) {
         console.error('Error al guardar área:', error);

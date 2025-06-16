@@ -69,7 +69,7 @@ const crearProceso = async (req, res) => {
         const procesoGuardado = await nuevoProceso.save();
         // Poplar las áreas antes de enviar la respuesta
         const procesoConAreas = await Proceso.findById(procesoGuardado._id).populate('areas');
-        console.log('Proceso guardado:', procesoConAreas);
+        // REMOVED: console.log('Proceso guardado:', procesoConAreas);
         res.status(201).json(procesoConAreas);
     } catch (error) {
         console.error('Error al guardar proceso:', error);

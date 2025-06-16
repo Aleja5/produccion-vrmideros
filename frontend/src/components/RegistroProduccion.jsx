@@ -809,14 +809,8 @@ export default function RegistroProduccion() {
         toast.error(`Error al guardar la jornada: ${result.error || result.msg || "Error inesperado"}`);
         setLoading(false);
         return;
-      }
-
-      toast.success("Jornada guardada exitosamente");
-      if (!urlJornadaId) {
-        navigate("/operario-dashboard");
-      } else {
-        navigate("/mi-jornada");
-      }
+      }      toast.success("Jornada guardada exitosamente");
+      navigate("/historial-jornadas");
     } catch (error) {
       console.error('Error en la petición:', error);
       toast.error("No se pudo guardar la jornada. Intenta de nuevo más tarde.");

@@ -16,9 +16,9 @@ const Operario = require('../models/Operario');
 
 async function corregirFechasConDesfase() {
     try {
-        console.log('🔄 Conectando a la base de datos...');
+        // REMOVED: console.log('🔄 Conectando a la base de datos...');
         await connectDB();
-          console.log('📊 Analizando TODOS los registros con posible desfase de zona horaria...');
+          // REMOVED: console.log('📊 Analizando TODOS los registros con posible desfase de zona horaria...');
         
         // Buscar TODOS los registros que tengan fechas en UTC (terminan en .000Z y hora 00:00:00)
         // Estos son candidatos a tener desfase de zona horaria
@@ -34,20 +34,20 @@ async function corregirFechasConDesfase() {
             }
         }).populate('operario', 'name');
         
-        console.log(`❓ Encontrados ${registrosProblematicos.length} registros que podrían tener desfase de zona horaria`);
+        // REMOVED: console.log(`❓ Encontrados ${registrosProblematicos.length} registros que podrían tener desfase de zona horaria`);
         
         if (registrosProblematicos.length === 0) {
-            console.log('✅ No hay registros para corregir');
+            // REMOVED: console.log('✅ No hay registros para corregir');
             return;
         }
           // Mostrar algunos ejemplos
-        console.log('\n📋 Primeros 10 registros encontrados:');
+        // REMOVED: console.log('\n📋 Primeros 10 registros encontrados:');
         registrosProblematicos.slice(0, 10).forEach((registro, idx) => {
-            console.log(`${idx + 1}. Operario: ${registro.operario?.name}, Fecha: ${registro.fecha}, OTI: ${registro.oti}`);
+            // REMOVED: console.log(`${idx + 1}. Operario: ${registro.operario?.name}, Fecha: ${registro.fecha}, OTI: ${registro.oti}`);
         });
         
         // Preguntar si queremos corregir (en un entorno real, esto sería un parámetro)
-        console.log('\n🔧 Procediendo a corregir fechas...');
+        // REMOVED: console.log('\n🔧 Procediendo a corregir fechas...');
         
         let corregidos = 0;
         let errores = 0;
@@ -62,9 +62,9 @@ async function corregirFechasConDesfase() {
             registrosPorFecha[fechaStr]++;
         });
         
-        console.log('\n📅 Fechas a corregir:');
+        // REMOVED: console.log('\n📅 Fechas a corregir:');
         Object.entries(registrosPorFecha).forEach(([fecha, cantidad]) => {
-            console.log(`  ${fecha}: ${cantidad} registros`);
+            // REMOVED: console.log(`  ${fecha}: ${cantidad} registros`);
         });
         
         for (const registro of registrosProblematicos) {
@@ -88,7 +88,7 @@ async function corregirFechasConDesfase() {
                 
                 corregidos++;
                 if (corregidos <= 10 || corregidos % 50 === 0) {
-                    console.log(`✅ Corregido registro ${registro._id}: ${fechaOriginal.toISOString()} → ${fechaLocal.toISOString()}`);
+                    // REMOVED: console.log(`✅ Corregido registro ${registro._id}: ${fechaOriginal.toISOString()} → ${fechaLocal.toISOString()}`);
                 }                
             } catch (error) {
                 console.error(`❌ Error corrigiendo registro ${registro._id}:`, error.message);
@@ -96,33 +96,33 @@ async function corregirFechasConDesfase() {
             }
         }
         
-        console.log('\n📋 Resumen de corrección:');
-        console.log(`✅ Registros corregidos: ${corregidos}`);
-        console.log(`❌ Errores: ${errores}`);
-        console.log(`📊 Total procesados: ${registrosProblematicos.length}`);
+        // REMOVED: console.log('\n📋 Resumen de corrección:');
+        // REMOVED: console.log(`✅ Registros corregidos: ${corregidos}`);
+        // REMOVED: console.log(`❌ Errores: ${errores}`);
+        // REMOVED: console.log(`📊 Total procesados: ${registrosProblematicos.length}`);
         
         // También necesitamos actualizar TODAS las jornadas para que recalculen sus fechas
-        console.log('\n🔄 Actualizando todas las jornadas afectadas...');
+        // REMOVED: console.log('\n🔄 Actualizando todas las jornadas afectadas...');
         const todasLasJornadas = await Jornada.find({});
         
         for (const jornada of todasLasJornadas) {
             await jornada.save(); // Esto activará el pre-save hook para recalcular
-            console.log(`🔄 Jornada ${jornada._id} actualizada`);
+            // REMOVED: console.log(`🔄 Jornada ${jornada._id} actualizada`);
         }
         
-        console.log('\n🎉 Corrección completada exitosamente');
+        // REMOVED: console.log('\n🎉 Corrección completada exitosamente');
         
     } catch (error) {
         console.error('❌ Error fatal durante la corrección:', error);
     } finally {
         mongoose.connection.close();
-        console.log('🔌 Conexión a base de datos cerrada');
+        // REMOVED: console.log('🔌 Conexión a base de datos cerrada');
     }
 }
 
 // Ejecutar el script solo si es llamado directamente
 if (require.main === module) {
-    console.log('🚀 Iniciando corrección de fechas con desfase de zona horaria...');
+    // REMOVED: console.log('🚀 Iniciando corrección de fechas con desfase de zona horaria...');
     corregirFechasConDesfase();
 }
 

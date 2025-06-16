@@ -58,3 +58,16 @@ input[type='password']::-webkit-outer-spin-button {
   display: none;
 }
 
+/* Estilos para react-confirm-alert para que aparezca sobre otros modales */
+.react-confirm-alert-overlay {
+  z-index: 99999 !important;
+}
+
+.react-confirm-alert {
+  z-index: 100000 !important;
+}
+
+.react-confirm-alert-body {
+  font-family: 'Inter', sans-serif !important;
+}
+

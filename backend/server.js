@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./src/db/db');
-const dotenv = require('dotenv');
 const cors = require('cors');
 const authRoutes = require('./src/routes/authRoutes');
 const operatorRoutes = require('./src/routes/operatorRoutes');
@@ -16,17 +16,85 @@ const usuarioRoutes = require('./src/routes/usuarioRoutes');
 const areaRoutes = require('./src/routes/areaRoutes');
 const jornadaRoutes = require('./src/routes/jornadaRoutes');
 
-// Cargar variables de entorno
-dotenv.config();
+// Validar variables de entorno críticas
+const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET', 'EMAIL_USER', 'EMAIL_PASS'];
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+    console.error('❌ Variables de entorno faltantes:', missingVars.join(', '));
+    console.error('💡 Verifica tu archivo .env');
+    process.exit(1);
+}
 
 // Inicializar Express
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Configuración de CORS mejorada para seguridad
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Permitir requests sin origin (mobile apps, postman, etc.)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = process.env.CORS_ORIGIN 
+            ? process.env.CORS_ORIGIN.split(',').map(url => url.trim())
+            : ['http://localhost:5173', 'http://localhost:3000'];
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.warn(`🚫 CORS: Origen no permitido: ${origin}`);
+            callback(new Error('No permitido por CORS'));
+        }
+    },
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+
+// Middleware de seguridad
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' })); // Limitar tamaño de payload
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Configuración de Rate Limiting para seguridad
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 5, // máximo 5 intentos de login por IP cada 15 minutos
+    message: {
+        error: 'Demasiados intentos de inicio de sesión. Intenta nuevamente en 15 minutos.',
+        retryAfter: '15 minutos'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 500, // máximo 500 requests por IP cada 15 minutos (aumentado para desarrollo)
+    message: {
+        error: 'Demasiadas solicitudes. Intenta nuevamente más tarde.',
+        retryAfter: '15 minutos'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+// Aplicar rate limiting general a todas las rutas API
+app.use('/api/', generalLimiter);
+
+// Aplicar rate limiting específico para autenticación
+app.use('/api/auth/', authLimiter);
+
+// Headers de seguridad
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    if (process.env.NODE_ENV === 'production') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+});
 
 // Rutas
 app.use('/api/auth', authRoutes);
@@ -48,12 +116,47 @@ app.use((req, res, next) => {
   res.status(404).json({ error: "Ruta no encontrada", path: req.originalUrl });
 });
 
+// Middleware de manejo de errores global
+app.use((err, req, res, next) => {
+    console.error('🐛 Error global capturado:', err.message);
+    
+    // No exponer stack trace en producción
+    const errorResponse = {
+        error: process.env.NODE_ENV === 'production' 
+            ? 'Error interno del servidor' 
+            : err.message
+    };
+    
+    if (process.env.NODE_ENV !== 'production') {
+        errorResponse.stack = err.stack;
+    }
+    
+    res.status(err.status || 500).json(errorResponse);
+});
 
 //conectar a MongoDB
 connectDB();
 
 // Iniciar el servidor
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔐 CORS habilitado para: ${process.env.CORS_ORIGIN || 'localhost'}`);
+});
 
+// Manejo graceful de cierre del servidor
+process.on('SIGTERM', () => {
+    console.log('🛑 SIGTERM recibido. Cerrando servidor...');
+    server.close(() => {
+        console.log('✅ Servidor cerrado.');
+        process.exit(0);
+    });
+});
+
+process.on('SIGINT', () => {
+    console.log('🛑 SIGINT recibido. Cerrando servidor...');
+    server.close(() => {
+        console.log('✅ Servidor cerrado.');
+        process.exit(0);
+    });
 });

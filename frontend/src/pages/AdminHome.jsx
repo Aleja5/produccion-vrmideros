@@ -73,7 +73,7 @@ const TablaJornadasRecientes = ({ jornadas, loading, navigate }) => {
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-x-auto border border-gray-100">
       <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gradient-to-r from-indigo-50 to-blue-50">
+        <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Operario</th>
             <th className="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Fecha</th>
@@ -160,7 +160,7 @@ const AdminHome = () => {
 
   return (
     <>  
-      <div className="flex bg-gradient-to-br from-gray-100 via-blue-50 to-purple-50 h-screen">
+      <div className="flex h-screen bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
         <SidebarAdmin />
         <div className="flex-1 overflow-auto">
           <div className="container mx-auto px-4 py-6">

@@ -44,16 +44,16 @@ const crearOperario = async (req, res) => {
 // Obtener todos los operarios
 const obtenerOperarios = async (req, res) => {
   const { page = 1, limit = 10, search } = req.query;
-  console.log('Parámetro search recibido:', search);
+  // REMOVED: console.log('Parámetro search recibido:', search);
   const query = search ? { name: { $regex: search, $options: 'i' } } : {};
-  console.log('Consulta construida:', query);
+  // REMOVED: console.log('Consulta construida:', query);
   try {
       const totalResults = await Operario.countDocuments(query);
       const operarios = await Operario.find(query)
           .sort({ name: 1 })
           .skip((page - 1) * limit)
           .limit(Number(limit));
-      console.log('Operarios encontrados:', operarios.length);
+      // REMOVED: console.log('Operarios encontrados:', operarios.length);
       res.json({
           operarios,
           totalPages: Math.ceil(totalResults / limit),

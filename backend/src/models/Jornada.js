@@ -37,30 +37,21 @@ const jornadaSchema = new Schema({
 
 jornadaSchema.pre('save', async function (next) {
     try {
-        console.log('🔄 Ejecutando pre-save hook de Jornada:', this._id);
+        // REMOVED: console.log('🔄 Ejecutando pre-save hook de Jornada:', this._id);
         
         if (this.registros && this.registros.length > 0) {
             const Produccion = mongoose.model('Produccion');
-            const registros = await Produccion.find({ _id: { $in: this.registros } });
-
-            console.log('📋 Registros encontrados en jornada:', registros.length);
-            console.log('📊 Datos de registros:', registros.map(r => ({
-                _id: r._id,
-                tiempo: r.tiempo,
-                horaInicio: r.horaInicio,
-                horaFin: r.horaFin,
-                tipoTiempo: r.tipoTiempo
-            })));
+            const registros = await Produccion.find({ _id: { $in: this.registros } });            // REMOVED: console.log('📋 Registros encontrados en jornada:', registros.length);
 
             // Si no hay registros asociados, buscar por operario y fecha
             if (registros.length === 0 && this.operario && this.fecha) {
-                console.log('🔍 No hay registros en la jornada, buscando por operario y fecha');
+                // REMOVED: console.log('🔍 No hay registros en la jornada, buscando por operario y fecha');
                 const registrosPorFecha = await Produccion.find({
                     operario: this.operario,
                     fecha: this.fecha
                 });
                 
-                console.log('📋 Producciones encontradas por fecha:', registrosPorFecha.length);
+                // REMOVED: console.log('📋 Producciones encontradas por fecha:', registrosPorFecha.length);
                 
                 if (registrosPorFecha.length > 0) {
                     // Actualizar los registros de la jornada
@@ -72,7 +63,7 @@ jornadaSchema.pre('save', async function (next) {
             // Usar la función avanzada para calcular tiempo efectivo
             const calculoTiempo = calcularTiempoEfectivo(registros);
 
-            console.log('📊 Resultado del cálculo de tiempo:', calculoTiempo);
+            // REMOVED: console.log('📊 Resultado del cálculo de tiempo:', calculoTiempo);
 
             // Asignar horas de inicio y fin
             this.horaInicio = calculoTiempo.horaInicio;
@@ -92,10 +83,10 @@ jornadaSchema.pre('save', async function (next) {
                 estadisticas: calculoTiempo.estadisticas // Información adicional
             };
 
-            console.log(`📊 Jornada ${this._id}: Tiempo efectivo ${tiempoEfectivoMinutos}min (${Math.floor(tiempoEfectivoMinutos / 60)}h ${tiempoEfectivoMinutos % 60}m), Tiempo sumado ${calculoTiempo.tiempoSumadoMinutos}min, Solapamientos: ${calculoTiempo.solapamientos}`);
+            // REMOVED: console.log(`📊 Jornada ${this._id}: Tiempo efectivo ${tiempoEfectivoMinutos}min (${Math.floor(tiempoEfectivoMinutos / 60)}h ${tiempoEfectivoMinutos % 60}m), Tiempo sumado ${calculoTiempo.tiempoSumadoMinutos}min, Solapamientos: ${calculoTiempo.solapamientos}`);
 
         } else {
-            console.log('⚠️ Jornada sin registros, inicializando en cero');
+            // REMOVED: console.log('⚠️ Jornada sin registros, inicializando en cero');
             this.totalTiempoActividades = { 
                 horas: 0, 
                 minutos: 0,

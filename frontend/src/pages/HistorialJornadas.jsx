@@ -304,6 +304,7 @@ const handleEliminarActividad = async (jornadaId, actividadId) => {
           produccion={selectedProduccion}
           onClose={handleCloseEditModal}
           onGuardar={handleGuardarEditModal}
+          invokedAsModal={true}
         />
       )}
     </div>

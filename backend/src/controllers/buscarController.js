@@ -4,7 +4,7 @@ const buscarEntidad = async (req, res) => {
     const { coleccion } = req.params;
     const valor = req.query.nombre || req.query.numeroOti;  // Parámetro de búsqueda
 
-    console.log(`🔍 Buscando en ${coleccion} con query:`, req.query); 
+    // REMOVED: console.log(`🔍 Buscando en ${coleccion} con query:`, req.query); 
     
     // Definir el modelo según la colección solicitada
     const modelos = {
@@ -26,13 +26,13 @@ const buscarEntidad = async (req, res) => {
 
         // 📌 Verificar si el valor es un ID válido de MongoDB
         if (mongoose.Types.ObjectId.isValid(valor)) {
-            console.log(`🔍 Buscando por ID en la colección ${coleccion}:`, valor);
+            // REMOVED: console.log(`🔍 Buscando por ID en la colección ${coleccion}:`, valor);
             resultado = await Modelo.findById(valor);
         } 
         
         // 📌 Si no es un ID, buscar por los campos específicos de la colección
         if (!resultado) {
-            console.log(`🔍 Buscando por otros campos en ${coleccion}:`, valor);
+            // REMOVED: console.log(`🔍 Buscando por otros campos en ${coleccion}:`, valor);
             let filtro = {};
             
             // Definir los campos de búsqueda según la colección
