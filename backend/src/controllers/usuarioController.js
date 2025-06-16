@@ -20,9 +20,9 @@ const obtenerUsuarios = async (req, res) => {
     try {
         // Contar el total de documentos que coinciden con la query
         const totalResults = await User.countDocuments(query);
-        
-        // Obtener los usuarios para la página actual, ordenados y con límite
+          // Obtener los usuarios para la página actual, ordenados y con límite
         const usuarios = await User.find(query)
+            .select('-password') // Excluir la contraseña de la respuesta
             .sort({ nombre: 1 }) // Ordena por nombre ascendente
             .skip((Number(page) - 1) * Number(limit)) // Calcula el offset para la paginación
             .limit(Number(limit)); // Limita el número de resultados
@@ -45,14 +45,14 @@ const obtenerUsuarios = async (req, res) => {
 // @access  Public (o según tu autenticación)
 const obtenerUsuario = async (req, res) => {
     try {
-        const usuario = await User.findById(req.params.id);
+        const usuario = await User.findById(req.params.id).select('-password'); // Excluir contraseña
         if (!usuario) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
         res.json(usuario);
     } catch (error) {
         console.error('Error al obtener un usuario por ID:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Error interno del servidor al obtener el usuario.' });
     }
 };
 
@@ -67,19 +67,32 @@ const Registrar = async (req, res) => {
             return res.status(400).json({ message: 'Todos los campos son obligatorios.' });
         }
 
+        // Validar que el nombre tenga una longitud mínima
+        if (nombre.trim().length < 2) {
+            return res.status(400).json({ message: 'El nombre debe tener al menos 2 caracteres.' });
+        }
+
+        // Validar formato de email
         if (!/\S+@\S+\.\S+/.test(email)) {
             return res.status(400).json({ message: 'Formato de correo electrónico inválido.' });
         }
 
+        // Validar longitud de contraseña
         if (password.length < 6) {
             return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres.' });
+        }
+
+        // Validar roles permitidos
+        const rolesPermitidos = ['admin', 'operario', 'supervisor', 'usuario'];
+        if (!rolesPermitidos.includes(role)) {
+            return res.status(400).json({ message: 'Rol no válido. Los roles permitidos son: ' + rolesPermitidos.join(', ') });
         }
 
         // Verificar si el correo electrónico ya está registrado
         let user = await User.findOne({ email });
         if (user) {
             return res.status(400).json({ message: 'El correo electrónico ya está registrado.' });
-        }        // Crear nuevo usuario con la contraseña sin hashear
+        }// Crear nuevo usuario con la contraseña sin hashear
         // El middleware pre('save') en el modelo User se encargará de hashear la contraseña
         user = new User({
             nombre,
@@ -116,22 +129,42 @@ const actualizarUsuario = async (req, res) => {
     // Desestructura los campos que podrían ser actualizados
     const { nombre, email, password, role } = req.body; 
 
-    const { id } = req.params;
-    // Desestructura los campos que podrían ser actualizados
-    const { nombre, email, password, role } = req.body; 
-
     try {
         let user = await User.findById(id);
         if (!user) {
-        let user = await User.findById(id);
-        if (!user) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
+        }        // Validar formato de email si se proporciona
+        if (email && !/\S+@\S+\.\S+/.test(email)) {
+            return res.status(400).json({ message: 'Formato de correo electrónico inválido.' });
+        }
+
+        // Validar que el nombre tenga una longitud mínima si se proporciona
+        if (nombre && nombre.trim().length < 2) {
+            return res.status(400).json({ message: 'El nombre debe tener al menos 2 caracteres.' });
+        }
+
+        // Validar roles permitidos si se proporciona
+        if (role) {
+            const rolesPermitidos = ['admin', 'operario', 'supervisor', 'usuario'];
+            if (!rolesPermitidos.includes(role)) {
+                return res.status(400).json({ message: 'Rol no válido. Los roles permitidos son: ' + rolesPermitidos.join(', ') });
+            }
+        }
+
+        // Verificar si el nuevo email ya está en uso por otro usuario
+        if (email && email !== user.email) {
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                return res.status(400).json({ message: 'El correo electrónico ya está registrado por otro usuario.' });
+            }
         }
 
         // Actualizar campos si se proporcionan en la solicitud
         if (nombre !== undefined) user.nombre = nombre;
         if (email !== undefined) user.email = email;
-        if (role !== undefined) user.role = role;        // Manejar actualización de contraseña solo si se proporciona una nueva contraseña
+        if (role !== undefined) user.role = role;
+        
+        // Manejar actualización de contraseña solo si se proporciona una nueva contraseña
         if (password) { 
             if (password.length < 6) {
                 return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres.' });
@@ -155,7 +188,7 @@ const actualizarUsuario = async (req, res) => {
 
     } catch (error) {
         console.error('Error al actualizar el usuario:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Error interno del servidor al actualizar el usuario.' });
     }
 };
 
@@ -170,12 +203,13 @@ const eliminarUsuario = async (req, res) => {
         if (!usuario) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
         }
-        res.json({ message: 'Usuario eliminado' });
+        res.json({ message: 'Usuario eliminado exitosamente' });
     } catch (error) {
         console.error('Error al eliminar el usuario:', error);
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Error interno del servidor al eliminar el usuario.' });
     }
 };
+
 
 // Exporta todas las funciones del controlador
 module.exports = {
@@ -185,3 +219,4 @@ module.exports = {
     actualizarUsuario,
     eliminarUsuario
 };
+

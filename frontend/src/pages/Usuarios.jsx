@@ -5,28 +5,89 @@ import UsuarioForm from '../components/UsuarioForm';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import { toast } from 'react-toastify';
 
+// Componente de paginación simple
+const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+    const getPageNumbers = () => {
+        const pageNumbers = [];
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbers.push(i);
+        }
+        return pageNumbers;
+    };
+
+    return (
+        <div className="flex items-center justify-center space-x-2">
+            <button
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentPage === 1
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                }`}
+            >
+                Anterior
+            </button>
+
+            {getPageNumbers().map(pageNumber => (
+                <button
+                    key={pageNumber}
+                    onClick={() => onPageChange(pageNumber)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === pageNumber
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                    }`}
+                >
+                    {pageNumber}
+                </button>
+            ))}
+
+            <button
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    currentPage === totalPages
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                }`}
+            >
+                Siguiente
+            </button>
+        </div>
+    );
+};
+
 const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10 }) => {
-    const navigate = useNavigate();    const [usuarios, setUsuarios] = useState([]);
+    const [usuarios, setUsuarios] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
     const [usuarioAEditar, setUsuarioAEditar] = useState(null);
     const [loading, setLoading] = useState(false);
     const [savingUser, setSavingUser] = useState(false); // Estado para operaciones de guardar
     const [totalPages, setTotalPages] = useState(0);
     const [searchText, setSearchText] = useState(''); // Para la búsqueda de usuarios
-    const [filteredUsuarios, setFilteredUsuarios] = useState([]); 
     const [currentPage, setCurrentPage] = useState(propCurrentPage || 1);
-    const [totalResults, setTotalResults] = useState(propTotalResults || 0);    const cargarUsuarios = useCallback(async (page = 1, search = '') => {
+    const [totalResults, setTotalResults] = useState(propTotalResults || 0);
+    const [showFormSuccess, setShowFormSuccess] = useState(false);
+    const [savedUserData, setSavedUserData] = useState(null);const cargarUsuarios = useCallback(async (page = 1, search = '') => {
         setLoading(true);
         try {
             const response = await axiosInstance.get(`/usuarios?page=${page}&limit=${itemsPerPage}&search=${search}`);
             setUsuarios(response.data.usuarios);
             setTotalPages(response.data.totalPages);
-            setTotalResults(response.data.totalResults);
-        } catch (error) {
+            setTotalResults(response.data.totalResults);        } catch (error) {
             console.error('Error al cargar los usuarios:', error);
             toast.error('Error al cargar los usuarios. Por favor, intenta de nuevo.');
         } finally {
-            setIsLoadingUsers(false);
+            setLoading(false);
         }
     }, [itemsPerPage]);
 
@@ -55,15 +116,15 @@ const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
             let res;
             if (usuarioAEditar) {
                 // Actualizar usuario
-                await axiosInstance.put(`/usuarios/${usuarioAEditar._id}`, usuario);
+                res = await axiosInstance.put(`/usuarios/${usuarioAEditar._id}`, usuario);
                 toast.success('Usuario actualizado exitosamente');
             } else {
                 // Crear nuevo usuario
-                await axiosInstance.post('/usuarios', usuario);
+                res = await axiosInstance.post('/usuarios', usuario);
                 toast.success('Usuario creado exitosamente');
             }
 
-            setSavedUserData(res.data.usuario); // Almacenar los datos del usuario guardado
+            setSavedUserData(res.data.user); // Almacenar los datos del usuario guardado
             setShowFormSuccess(true); // Mostrar el mensaje de éxito en el formulario
 
             // Cambiar el modo a 'success' para que UsuarioForm muestre el mensaje
@@ -163,8 +224,7 @@ const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
                                     <span className="ml-4 text-lg text-gray-600 font-medium">Cargando usuarios...</span>
                                 </div>
                             ) : (
-                                <>
-                                    {modo === 'listar' && (
+                                <>                                    {modo === 'listar' && (
                                         <div className="space-y-6">
                                             {/* Estadísticas rápidas */}
                                             {!searchText && (
@@ -189,18 +249,43 @@ const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
                                                 </div>
                                             )}
 
-                                            <UsuarioList usuarios={filteredUsuarios} onEditar={handleEditar} onEliminar={handleEliminar} />
+                                            {usuarios.length > 0 ? (
+                                                <UsuarioList usuarios={usuarios} onEditar={handleEditar} onEliminar={handleEliminar} />
+                                            ) : (
+                                                <div className="text-center py-12">
+                                                    <div className="mx-auto h-24 w-24 text-gray-400 mb-4">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                                                        </svg>
+                                                    </div>
+                                                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                                        {searchText ? 'No se encontraron usuarios' : 'No hay usuarios registrados'}
+                                                    </h3>
+                                                    <p className="text-gray-500 mb-6">
+                                                        {searchText 
+                                                            ? `No se encontraron usuarios que coincidan con "${searchText}"`
+                                                            : 'Comienza creando el primer usuario del sistema'
+                                                        }
+                                                    </p>
+                                                    {!searchText && (
+                                                        <button
+                                                            onClick={handleCrear}
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                                                        >
+                                                            Crear primer usuario
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-
-                                    {filteredUsuarios.length > 0 && modo === 'listar' && searchText && (
+                                    )}{usuarios.length > 0 && modo === 'listar' && searchText && (
                                         <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200">
                                             <div className="flex items-center gap-2">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                 </svg>
                                                 <p className="text-sm font-medium text-green-800">
-                                                    {filteredUsuarios.length} resultado{filteredUsuarios.length !== 1 ? 's' : ''} encontrado{filteredUsuarios.length !== 1 ? 's' : ''} para "{searchText}"
+                                                    {usuarios.length} resultado{usuarios.length !== 1 ? 's' : ''} encontrado{usuarios.length !== 1 ? 's' : ''} para "{searchText}"
                                                 </p>
                                             </div>
                                         </div>
@@ -247,14 +332,13 @@ const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
                                                             </button>
                                                         )}
                                                     </div>
-                                                </div>                                                <div className="p-6">
-                                                    <UsuarioForm 
+                                                </div>                                                <div className="p-6">                                                    <UsuarioForm 
                                                         usuarioInicial={modo === 'editar' ? usuarioAEditar : undefined} 
                                                         onGuardar={handleGuardar} 
                                                         onCancelar={handleCancelar} 
                                                         isLoading={savingUser}
-                                                        showSuccessMessage={false}
-                                                        savedUserData={null}
+                                                        showSuccessMessage={showFormSuccess}
+                                                        savedUserData={savedUserData}
                                                     />
                                                 </div>
                                             </div>

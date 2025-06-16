@@ -365,7 +365,8 @@ const OperarioDashboard = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </>
+    
     );
 };
 
