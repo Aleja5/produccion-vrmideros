@@ -1,37 +1,48 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 
-// Obtener todos los usuarios
+// @desc    Obtener todos los usuarios con paginación y búsqueda
+// @route   GET /api/usuarios
+// @access  Public (o según tu autenticación)
 const obtenerUsuarios = async (req, res) => {
+    // Parámetros de paginación y búsqueda desde la query string
     const { page = 1, limit = 10, search } = req.query;
-    const query = {};
+    const query = {}; // Objeto de consulta para MongoDB
 
+    // Si hay un término de búsqueda, construye la query con expresiones regulares case-insensitive
     if (search) {
         query.$or = [
-            { nombre: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } }
+            { nombre: { $regex: search, $options: 'i' } }, // Busca por nombre
+            { email: { $regex: search, $options: 'i' } }   // Busca por email
         ];
     }
 
     try {
+        // Contar el total de documentos que coinciden con la query
         const totalResults = await User.countDocuments(query);
+        
+        // Obtener los usuarios para la página actual, ordenados y con límite
         const usuarios = await User.find(query)
-            .sort({ nombre: 1 })
-            .skip((page - 1) * limit)
-            .limit(Number(limit));
+            .sort({ nombre: 1 }) // Ordena por nombre ascendente
+            .skip((Number(page) - 1) * Number(limit)) // Calcula el offset para la paginación
+            .limit(Number(limit)); // Limita el número de resultados
 
+        // Envía la respuesta JSON con los usuarios, total de páginas, página actual y total de resultados
         res.json({
             usuarios,
-            totalPages: Math.ceil(totalResults / limit),
+            totalPages: Math.ceil(totalResults / Number(limit)),
             currentPage: Number(page),
             totalResults: totalResults,
         });
     } catch (error) {
+        console.error('Error al obtener usuarios:', error);
         res.status(500).json({ message: error.message });
     }
 };
 
-// Obtener un usuario por ID
+// @desc    Obtener un usuario por ID
+// @route   GET /api/usuarios/:id
+// @access  Public (o según tu autenticación)
 const obtenerUsuario = async (req, res) => {
     try {
         const usuario = await User.findById(req.params.id);
@@ -40,6 +51,7 @@ const obtenerUsuario = async (req, res) => {
         }
         res.json(usuario);
     } catch (error) {
+        console.error('Error al obtener un usuario por ID:', error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -104,7 +116,13 @@ const actualizarUsuario = async (req, res) => {
     // Desestructura los campos que podrían ser actualizados
     const { nombre, email, password, role } = req.body; 
 
+    const { id } = req.params;
+    // Desestructura los campos que podrían ser actualizados
+    const { nombre, email, password, role } = req.body; 
+
     try {
+        let user = await User.findById(id);
+        if (!user) {
         let user = await User.findById(id);
         if (!user) {
             return res.status(404).json({ message: 'Usuario no encontrado' });
@@ -154,10 +172,12 @@ const eliminarUsuario = async (req, res) => {
         }
         res.json({ message: 'Usuario eliminado' });
     } catch (error) {
+        console.error('Error al eliminar el usuario:', error);
         res.status(500).json({ message: error.message });
     }
 };
 
+// Exporta todas las funciones del controlador
 module.exports = {
     obtenerUsuarios,
     obtenerUsuario,
@@ -165,5 +185,3 @@ module.exports = {
     actualizarUsuario,
     eliminarUsuario
 };
-
-

@@ -1,4 +1,3 @@
-// src/pages/OperarioDashboard.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import axiosInstance from '../utils/axiosInstance';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +9,7 @@ import { Sidebar } from '../components/Sidebar';
 import { Button, Card, Input } from '../components/ui/index';
 import EditarProduccion from './EditarProduccion';
 import DetalleJornadaModal from '../components/DetalleJornadaModal';
-import { ClipboardList, Hammer, Eye, Pencil, UserCircle2, CheckCircleIcon} from 'lucide-react';
+import { ClipboardList, UserCircle2 } from 'lucide-react'; // Asumo que CheckCircleIcon no es necesario aquí o viene de otro lugar
 import { motion } from 'framer-motion';
 
 // --- NUEVAS IMPORTACIONES ---
@@ -57,15 +56,16 @@ const LoadingSkeleton = () => (
 );
 
 // ---
+// OperarioDashboard Functional Component
 const OperarioDashboard = () => {
-    console.log(' OperarioDashboard se esta re-renderizando...');
+    console.log('OperarioDashboard se está re-renderizando...');
     // --- State Variables ---
     const [jornadas, setJornadas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actualizarKey, setActualizarKey] = useState(Date.now()); // Using timestamp for force updates
     const [jornadaDetalleId, setJornadaDetalleId] = useState(null);
-    const [filtro, setFiltro] = useState('');
-    const [actividadAEditar, setActividadAEditar] = useState(null); // Define this state as well
+    const [filtro, setFiltro] = useState(''); // No se está usando en el render, considera si es necesario
+    const [actividadAEditar, setActividadAEditar] = useState(null);
 
     const navigate = useNavigate();
 
@@ -91,7 +91,7 @@ const OperarioDashboard = () => {
         }
     }, [operarioId, navigate]);
 
-    // Función memorizada para obtener jornadas con mejor manejo de errores
+    // Función memoizada para obtener jornadas con mejor manejo de errores
     const fetchJornadas = useCallback(async () => {
         if (!operarioId) {
             setLoading(false);
@@ -101,6 +101,7 @@ const OperarioDashboard = () => {
             setLoading(true);
             console.log('🔄 Obteniendo jornadas para operario:', operarioId);
 
+            // Uso de template literals para la URL
             const res = await axiosInstance.get(`/jornadas/operario/${operarioId}`);
 
             console.log('✅ Respuesta del servidor (jornadas):', res.data);
@@ -165,18 +166,17 @@ const OperarioDashboard = () => {
         };
     }, [navigate]);
 
-    const hoyISO = (() => {
-        const hoy = new Date();
-        const year = hoy.getFullYear();
-        const month = String(hoy.getMonth() + 1).padStart(2, '0');
-        const day = String(hoy.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    })();
+    // --- Date and Filtering Logic ---
 
+    // Gets today's date in YYYY-MM-DD format for comparison.
+    // Usando getFechaISOForComparison del helper, esto es más robusto
+    const hoyISO = getFechaISOForComparison(new Date().toISOString());
+
+    // Filter jornadas with at least one activity
     const jornadasFiltradas = jornadas.filter((jornada) =>
         jornada.registros && jornada.registros.length > 0
     );
-
+    // Find today's jornada
     const jornadaActual = jornadasFiltradas.find(jornada => {
         const fechaJornada = getFechaISOForComparison(jornada.fecha);
         return fechaJornada === hoyISO;
@@ -365,7 +365,7 @@ const OperarioDashboard = () => {
                     </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 };
 

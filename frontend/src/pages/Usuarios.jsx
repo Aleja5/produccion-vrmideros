@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axiosInstance from '../utils/axiosInstance';
 import UsuarioList from '../components/UsuarioList';
 import UsuarioForm from '../components/UsuarioForm';
-import Pagination from '../components/Pagination';
-import { useNavigate } from 'react-router-dom';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import { toast } from 'react-toastify';
 
@@ -28,32 +26,17 @@ const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
             console.error('Error al cargar los usuarios:', error);
             toast.error('Error al cargar los usuarios. Por favor, intenta de nuevo.');
         } finally {
-            setLoading(false);
+            setIsLoadingUsers(false);
         }
     }, [itemsPerPage]);
 
     useEffect(() => {
-        cargarUsuarios(currentPage, searchText); // Llama a cargarUsuarios con los valores correctos
+        cargarUsuarios(currentPage, searchText);
     }, [currentPage, cargarUsuarios, searchText]);
-
-    useEffect(() => {
-      if (usuarios && Array.isArray(usuarios)) { 
-          if (searchText) {
-              const filtered = usuarios.filter(usuario =>
-                  usuario.nombre.toLowerCase().includes(searchText.toLowerCase())
-              );
-              setFilteredUsuarios(filtered);
-          } else {
-              setFilteredUsuarios(usuarios);
-          }
-      } else {
-          setFilteredUsuarios([]); // O algún otro valor por defecto seguro
-      }
-    }, [searchText, usuarios]);
 
     const handleSearchTextChange = (event) => {
         setSearchText(event.target.value);
-        setCurrentPage(1); // Resetear la página al buscar
+        setCurrentPage(1);
     };
 
     const handlePageChange = (newPage) => {
@@ -69,6 +52,7 @@ const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
     };const handleGuardar = async (usuario) => {
         setSavingUser(true);
         try {
+            let res;
             if (usuarioAEditar) {
                 // Actualizar usuario
                 await axiosInstance.put(`/usuarios/${usuarioAEditar._id}`, usuario);
@@ -78,9 +62,23 @@ const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
                 await axiosInstance.post('/usuarios', usuario);
                 toast.success('Usuario creado exitosamente');
             }
-            cargarUsuarios(currentPage, searchText); // Recargar usuarios después de crear/editar
-            setModo('listar'); // Volver al modo listar
-            setUsuarioAEditar(null);
+
+            setSavedUserData(res.data.usuario); // Almacenar los datos del usuario guardado
+            setShowFormSuccess(true); // Mostrar el mensaje de éxito en el formulario
+
+            // Cambiar el modo a 'success' para que UsuarioForm muestre el mensaje
+            setModo('success'); 
+
+            // Después de 3 segundos, redirigir a la lista de usuarios
+            setTimeout(() => {
+                cargarUsuarios(currentPage, searchText); // Recargar la lista de usuarios
+                setModo('listar'); // Volver a la vista de lista
+                setUsuarioAEditar(null); // Limpiar usuario a editar
+                setShowFormSuccess(false); // Ocultar el mensaje de éxito
+                setSavedUserData(null); // Limpiar los datos guardados
+            }, 3000); // 3 segundos
+            
+            return res.data;
         } catch (error) {
             console.error('Error al guardar el usuario:', error);
             const message = error.response?.data?.message || 'Error al guardar el usuario';

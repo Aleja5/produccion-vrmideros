@@ -8,21 +8,21 @@ require('dotenv').config();
 
 // Configuración del transporte de correo
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
 });
 
 // ------------------ LOGIN ------------------
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+    const { email, password } = req.body;
 
-  try {
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Correo electrónico y contraseña son obligatorios' });
-    }
+    try {
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Correo electrónico y contraseña son obligatorios' });
+        }
 
     const emailToSearch = email.toLowerCase().trim();
     
@@ -71,7 +71,7 @@ exports.login = async (req, res) => {
 
 // ------------------ FORGOT PASSWORD ------------------
 exports.forgotPassword = async (req, res) => {
-  const { email } = req.body;
+    const { email } = req.body;
 
   try {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -94,17 +94,17 @@ exports.forgotPassword = async (req, res) => {
 
     const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: 'Recuperación de contraseña',
-      html: `
-        <p>Hola,</p>
-        <p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>
-        <p><a href="${resetLink}">${resetLink}</a></p>
-        <p>Si no solicitaste este correo, puedes ignorarlo.</p>
-      `,
-    };
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Recuperación de contraseña',
+            html: `
+                <p>Hola,</p>
+                <p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>
+                <p><a href="${resetLink}">${resetLink}</a></p>
+                <p>Si no solicitaste este correo, puedes ignorarlo.</p>
+            `,
+        };
 
     if (process.env.NODE_ENV !== 'production') {
         console.log('📧 Enviando correo de recuperación a:', email);
@@ -114,13 +114,13 @@ exports.forgotPassword = async (req, res) => {
     
     console.log(`✅ Correo de recuperación enviado a: ${email}`);
 
-    res.status(200).json({
-      message: 'Correo de recuperación de contraseña enviado.',
-    });
-  } catch (error) {
-    console.error('Error en forgotPassword:', error);
-    res.status(500).json({ message: 'Error en el servidor' });
-  }
+        res.status(200).json({
+            message: 'Correo de recuperación de contraseña enviado.',
+        });
+    } catch (error) {
+        console.error('Error en forgotPassword:', error);
+        res.status(500).json({ message: 'Error en el servidor' });
+    }
 };
 
 // ------------------ RESET PASSWORD ------------------
@@ -167,3 +167,5 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ message: 'Error del servidor al restablecer la contraseña' });
   }
 };
+// No es necesario un module.exports al final si usas "exports.nombreFuncion"
+// para cada función individualmente. Esto evita el ReferenceError.
