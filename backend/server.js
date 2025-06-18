@@ -55,12 +55,12 @@ const corsOptions = {
         console.log('- CORS_ORIGIN env:', process.env.CORS_ORIGIN);
         console.log('- Allowed origins:', allowedOrigins);
         console.log('- Origin found:', allowedOrigins.includes(origin));
-        
-        // Permitir cualquier subdominio de vercel.app temporalmente
-        const isVercelDomain = origin.includes('.vercel.app');
+          // Permitir cualquier subdominio de vercel.app temporalmente
+        const isVercelDomain = origin && origin.includes('.vercel.app');
+        const isLocalhost = origin && origin.includes('localhost');
         const isAllowedOrigin = allowedOrigins.includes(origin);
         
-        if (isAllowedOrigin || isVercelDomain) {
+        if (isAllowedOrigin || isVercelDomain || isLocalhost) {
             console.log('✅ CORS: Origen permitido:', origin);
             callback(null, true);
         } else {
