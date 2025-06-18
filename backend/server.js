@@ -137,7 +137,7 @@ app.use('/api/areas', areaRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/jornadas', jornadaRoutes);
 
-
+// Middleware de ruta no encontrada (DEBE IR DESPUÉS de las rutas)
 app.use((req, res, next) => {
   console.error(`❌ Ruta no encontrada: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ error: "Ruta no encontrada", path: req.originalUrl });
