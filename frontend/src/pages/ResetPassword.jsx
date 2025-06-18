@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { buildApiUrl } from '../config/api';
 
 function ResetPassword() {
   const { token } = useParams(); // Obtenemos el token de la URL
@@ -32,10 +33,8 @@ function ResetPassword() {
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const res = await axios.post('http://localhost:5000/api/auth/reset-password', {
+    setLoading(true);    try {
+      const res = await axios.post(buildApiUrl('api/auth/reset-password'), {
         token,
         newPassword,
       });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import { buildApiUrl } from '../config/api';
 import OperarioList from '../components/OperarioList';
 import OperarioForm from '../components/OperarioForm';
 import Pagination from '../components/Pagination';

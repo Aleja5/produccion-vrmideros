@@ -5,6 +5,7 @@ import AreasList from '../components/AreasList';
 import Pagination from '../components/Pagination';
 import { useNavigate } from 'react-router-dom';
 import { SidebarAdmin } from '../components/SidebarAdmin';
+import { buildApiUrl } from '../config/api';
 
 const AreasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 5 }) => {
     const navigate = useNavigate();
@@ -21,7 +22,7 @@ const AreasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResult
     const cargarAreas = useCallback(async (page = 1, search = '') => {
         setLoading(true);
         try {
-            const response = await axios.get(`http://localhost:5000/api/areas?page=${page}&limit=${itemsPerPage}&search=${search}`);
+            const response = await axios.get(buildApiUrl(`api/areas?page=${page}&limit=${itemsPerPage}&search=${search}`));
             setAreas(response.data.areas);
             setTotalPages(response.data.totalPages);
             setTotalResults(response.data.totalResults);
@@ -67,14 +68,12 @@ const AreasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResult
     const handleEditar = (area) => {
         setAreaAEditar(area);
         setModo('editar');
-    };
-
-    const handleGuardar = async (area) => {
+    };    const handleGuardar = async (area) => {
         try {
             if (areaAEditar) {
-                await axios.put(`http://localhost:5000/api/areas/${areaAEditar._id}`, area);
+                await axios.put(buildApiUrl(`api/areas/${areaAEditar._id}`), area);
             } else {
-                await axios.post('http://localhost:5000/api/areas', area);
+                await axios.post(buildApiUrl('api/areas'), area);
             }
             cargarAreas(currentPage, searchText); // Recarga con la página y búsqueda actuales
             setModo('listar');
@@ -82,9 +81,11 @@ const AreasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResult
         } catch (error) {
             console.error('Error al guardar el área:', error);
         }
-    };    const handleEliminar = async (id) => {
+    };
+
+    const handleEliminar = async (id) => {
         try {
-            await axios.delete(`http://localhost:5000/api/areas/${id}`);
+            await axios.delete(buildApiUrl(`api/areas/${id}`));
             cargarAreas(currentPage, searchText); // Recarga con la página y búsqueda actuales
         } catch (error) {
             console.error('Error al eliminar el área:', error);

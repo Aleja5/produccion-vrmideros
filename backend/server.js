@@ -164,30 +164,8 @@ app.use((err, req, res, next) => {
 //conectar a MongoDB
 connectDB();
 
-// Iniciar el servidor
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔐 CORS habilitado para: ${process.env.CORS_ORIGIN || 'localhost'}`);
-  console.log(`📅 Iniciado: ${new Date().toLocaleString()}`);
-});
-
-// Manejo graceful de cierre del servidor
-process.on('SIGTERM', () => {
-    console.log('🛑 SIGTERM recibido. Cerrando servidor...');
-    server.close(() => {
-        console.log('✅ Servidor cerrado.');
-        process.exit(0);
-    });
-});
-
-process.on('SIGINT', () => {
-    console.log('🛑 SIGINT recibido. Cerrando servidor...');
-    server.close(() => {
-        console.log('✅ Servidor cerrado.');
-        process.exit(0);
-    });
-});
+// Solo exportar la app, NO iniciar el servidor aquí
+// El servidor se inicia en start.js para producción
 
 // Exportar para poder usar en otros archivos
 module.exports = app;
