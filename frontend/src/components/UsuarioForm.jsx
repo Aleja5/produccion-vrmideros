@@ -2,10 +2,10 @@ import PropTypes from 'prop-types'; // Asegúrate de tenerlo importado
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 
-// Importa tus componentes de UI
-import { Input } from './ui/input';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+// Importa tus componentes de UI (corrigiendo case sensitivity)
+import { Input } from './ui/Input';
+import { Button } from './ui/Button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/Card';
 import { User, Mail, Lock, Save, XCircle, Loader2, Info, CheckCircle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 

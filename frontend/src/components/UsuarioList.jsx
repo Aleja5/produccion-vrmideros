@@ -6,8 +6,8 @@ import { Pencil, Trash2, Users } from 'lucide-react'; // Asegúrate de tener 'lu
 
 // Asegúrate de que las rutas de importación de tus componentes de UI sean correctas
 // Por ejemplo, si tus componentes de UI están en 'src/components/ui', estas rutas estarían bien:
-import { Button } from './ui/button';
-import { Card } from './ui/card';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
 import { toast } from 'react-toastify'; // Para las notificaciones de éxito/error
 import { confirmAlert } from 'react-confirm-alert'; // Para la ventana de confirmación de eliminación
 import 'react-confirm-alert/src/react-confirm-alert.css'; // Estilos para react-confirm-alert
