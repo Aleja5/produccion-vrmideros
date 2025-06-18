@@ -45,11 +45,23 @@ const corsOptions = {
     origin: function (origin, callback) {
         // Permitir requests sin origin (mobile apps, postman, etc.)
         if (!origin) return callback(null, true);
-          const allowedOrigins = process.env.CORS_ORIGIN 
+        
+        const allowedOrigins = process.env.CORS_ORIGIN 
             ? process.env.CORS_ORIGIN.split(',').map(url => url.trim())
             : ['http://localhost:5173', 'http://localhost:3000'];
+          // Debug logging
+        console.log('🔍 CORS Debug:');
+        console.log('- Request origin:', origin);
+        console.log('- CORS_ORIGIN env:', process.env.CORS_ORIGIN);
+        console.log('- Allowed origins:', allowedOrigins);
+        console.log('- Origin found:', allowedOrigins.includes(origin));
         
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        // Permitir cualquier subdominio de vercel.app temporalmente
+        const isVercelDomain = origin.includes('.vercel.app');
+        const isAllowedOrigin = allowedOrigins.includes(origin);
+        
+        if (isAllowedOrigin || isVercelDomain) {
+            console.log('✅ CORS: Origen permitido:', origin);
             callback(null, true);
         } else {
             console.warn(`🚫 CORS: Origen no permitido: ${origin}`);
