@@ -6,7 +6,7 @@ import Pagination from '../components/Pagination';
 import { useNavigate } from "react-router-dom";
 import { SidebarAdmin } from '../components/SidebarAdmin';
 
-const MaquinasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 8 }) => {
+const MaquinasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 5 }) => {
     const navigate = useNavigate();
     const [maquinas, setMaquinas] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
@@ -84,16 +84,12 @@ const MaquinasPage = ({ currentPage: propCurrentPage, totalResults: propTotalRes
         } catch (error) {
             console.error('Error al guardar la máquina:', error);
         }
-    };
-
-    const handleEliminar = async (id) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar esta máquina?')) {
-            try {
-                await axios.delete(`http://localhost:5000/api/maquinas/${id}`);
-                cargarMaquinas(currentPage, searchText); // Recarga con la página y búsqueda actuales
-            } catch (error) {
-                console.error('Error al eliminar la máquina:', error);
-            }
+    };    const handleEliminar = async (id) => {
+        try {
+            await axios.delete(`http://localhost:5000/api/maquinas/${id}`);
+            cargarMaquinas(currentPage, searchText); // Recarga con la página y búsqueda actuales
+        } catch (error) {
+            console.error('Error al eliminar la máquina:', error);
         }
     };
 

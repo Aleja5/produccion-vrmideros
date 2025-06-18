@@ -92,6 +92,8 @@ const ProcesoForm = ({ procesoInicial, onGuardar, onCancelar }) => {
                     className="basic-multi-select"
                     classNamePrefix="select"
                     placeholder="Seleccione las áreas donde aplica este proceso"
+                    menuPortalTarget={document.body}
+                    menuPosition="fixed"
                     styles={{
                         control: (provided, state) => ({
                             ...provided,
@@ -100,6 +102,10 @@ const ProcesoForm = ({ procesoInicial, onGuardar, onCancelar }) => {
                             '&:hover': {
                                 borderColor: '#6366f1',
                             },
+                        }),
+                        menuPortal: (provided) => ({
+                            ...provided,
+                            zIndex: 9999,
                         }),
                     }}
                 />

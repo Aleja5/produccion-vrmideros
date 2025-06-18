@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing de Protección de Rutas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            color: #333;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        .section {
+            margin: 25px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .button.danger {
+            background-color: #dc3545;
+        }
+        .button.danger:hover {
+            background-color: #c82333;
+        }
+        .button.success {
+            background-color: #28a745;
+        }
+        .button.success:hover {
+            background-color: #218838;
+        }
+        .log {
+            background-color: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            height: 300px;
+            overflow-y: scroll;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+        .user-info {
+            background-color: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .route-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .route-button {
+            padding: 8px 12px;
+            font-size: 12px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .route-button:hover {
+            background-color: #5a6268;
+        }
+        .status {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status.warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header">🧪 Testing de Protección de Rutas</h1>
+        
+        <div class="section">
+            <h2>👤 Control de Usuario</h2>
+            <div class="user-info">
+                <strong>Usuario Actual:</strong> <span id="currentUser">No autenticado</span><br>
+                <strong>Rol:</strong> <span id="currentRole">-</span><br>
+                <strong>Token:</strong> <span id="currentToken">No presente</span>
+            </div>
+            
+            <button class="button" onclick="setAdmin()">🔑 Configurar como Admin</button>
+            <button class="button" onclick="setOperario()">👷 Configurar como Operario</button>
+            <button class="button danger" onclick="clearAuth()">🚫 Limpiar Autenticación</button>
+            <button class="button success" onclick="updateUserInfo()">🔄 Actualizar Info</button>
+        </div>
+
+        <div class="section">
+            <h2>🧪 Pruebas Rápidas</h2>
+            
+            <h3>Rutas de Administrador</h3>
+            <div class="route-list">
+                <button class="route-button" onclick="testRoute('/admin-home', true)">Admin Home</button>
+                <button class="route-button" onclick="testRoute('/admin-dashboard', true)">Admin Dashboard</button>
+                <button class="route-button" onclick="testRoute('/admin/usuarios', true)">Usuarios</button>
+                <button class="route-button" onclick="testRoute('/admin/jornadas', true)">Jornadas</button>
+                <button class="route-button" onclick="testRoute('/admin/maquinas', true)">Máquinas</button>
+                <button class="route-button" onclick="testRoute('/admin/insumos', true)">Insumos</button>
+                <button class="route-button" onclick="testRoute('/admin/procesos', true)">Procesos</button>
+                <button class="route-button" onclick="testRoute('/admin/areas', true)">Áreas</button>
+                <button class="route-button" onclick="testRoute('/admin/operarios', true)">Operarios</button>
+            </div>
+
+            <h3>Rutas de Operarios</h3>
+            <div class="route-list">
+                <button class="route-button" onclick="testRoute('/operario-dashboard', true)">Operario Dashboard</button>
+                <button class="route-button" onclick="testRoute('/registro-produccion', true)">Registro Producción</button>
+                <button class="route-button" onclick="testRoute('/mi-jornada', true)">Mi Jornada</button>
+                <button class="route-button" onclick="testRoute('/historial-jornadas', true)">Historial</button>
+            </div>
+
+            <h3>Rutas Públicas</h3>
+            <div class="route-list">
+                <button class="route-button" onclick="testRoute('/', true)">Home</button>
+                <button class="route-button" onclick="testRoute('/login', true)">Login</button>
+                <button class="route-button" onclick="testRoute('/validate-cedula', true)">Validar Cédula</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🚀 Pruebas Automatizadas</h2>
+            <button class="button success" onclick="runAdminTests()">🔑 Probar Rutas Admin</button>
+            <button class="button success" onclick="runOperarioTests()">👷 Probar Rutas Operario</button>
+            <button class="button success" onclick="runUnauthTests()">🚫 Probar Sin Auth</button>
+            <button class="button" onclick="runAllTests()">🎯 Ejecutar Todas las Pruebas</button>
+        </div>
+
+        <div class="section">
+            <h2>📊 Resultados</h2>
+            <div id="results">
+                <p>Los resultados aparecerán aquí...</p>
+            </div>
+            <div class="log" id="logOutput"></div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Herramientas de Debug</h2>
+            <button class="button" onclick="checkCurrentState()">🔍 Verificar Estado</button>
+            <button class="button" onclick="clearLogs()">🧹 Limpiar Logs</button>
+            <button class="button" onclick="exportResults()">💾 Exportar Resultados</button>
+            <button class="button danger" onclick="resetAll()">🔄 Reset Completo</button>
+        </div>
+    </div>
+
+    <script>
+        // Cargar el script de testing
+        const script = document.createElement('script');
+        script.src = '../scripts/browser-route-tester.js';
+        document.head.appendChild(script);
+
+        let testResults = [];
+        let logContainer = document.getElementById('logOutput');
+
+        // Override console.log para mostrar en la UI
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logToUI(args.join(' '));
+        };
+
+        function logToUI(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            logContainer.innerHTML += logEntry + '\n';
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function setAdmin() {
+            if (window.routeTester) {
+                window.routeTester.setUser('admin');
+                updateUserInfo();
+            } else {
+                logToUI('❌ Cargando tester...');
+                setTimeout(() => setAdmin(), 1000);
+            }
+        }
+
+        function setOperario() {
+            if (window.routeTester) {
+                window.routeTester.setUser('production');
+                updateUserInfo();
+            } else {
+                logToUI('❌ Cargando tester...');
+                setTimeout(() => setOperario(), 1000);
+            }
+        }
+
+        function clearAuth() {
+            if (window.routeTester) {
+                window.routeTester.clearUser();
+                updateUserInfo();
+            }
+        }
+
+        function updateUserInfo() {
+            if (window.routeTester) {
+                const { user, token } = window.routeTester.checkCurrentUser();
+                
+                document.getElementById('currentUser').textContent = user ? user.email || user.nombre : 'No autenticado';
+                document.getElementById('currentRole').textContent = user ? user.role : '-';
+                document.getElementById('currentToken').textContent = token ? 'Presente' : 'No presente';
+            }
+        }
+
+        async function testRoute(path, expectedAccess) {
+            if (window.routeTester) {
+                logToUI(`🧪 Probando ruta: ${path}`);
+                const result = await window.routeTester.testRoute(path, expectedAccess);
+                testResults.push(result);
+                updateResultsDisplay();
+            }
+        }
+
+        async function runAdminTests() {
+            if (window.routeTester) {
+                logToUI('🔑 Iniciando pruebas de administrador...');
+                await window.routeTester.testAdminRoutes();
+                updateResultsDisplay();
+            }
+        }
+
+        async function runOperarioTests() {
+            if (window.routeTester) {
+                logToUI('👷 Iniciando pruebas de operario...');
+                await window.routeTester.testProductionRoutes();
+                updateResultsDisplay();
+            }
+        }
+
+        async function runUnauthTests() {
+            if (window.routeTester) {
+                logToUI('🚫 Iniciando pruebas sin autenticación...');
+                await window.routeTester.testUnauthenticatedAccess();
+                updateResultsDisplay();
+            }
+        }
+
+        async function runAllTests() {
+            if (window.routeTester) {
+                logToUI('🎯 Iniciando todas las pruebas...');
+                await window.routeTester.runAllTests();
+                testResults = window.routeTestResults || [];
+                updateResultsDisplay();
+            }
+        }
+
+        function updateResultsDisplay() {
+            const resultsContainer = document.getElementById('results');
+            
+            if (window.routeTestResults && window.routeTestResults.length > 0) {
+                const results = window.routeTestResults;
+                const total = results.length;
+                const passed = results.filter(r => r.success).length;
+                const failed = total - passed;
+                
+                let html = `
+                    <h3>📊 Resumen de Resultados</h3>
+                    <p><strong>Total:</strong> ${total} | <strong>Exitosas:</strong> ${passed} | <strong>Fallidas:</strong> ${failed}</p>
+                    <div style="margin: 15px 0;">
+                `;
+                
+                results.forEach(result => {
+                    const status = result.success ? 'success' : 'error';
+                    const icon = result.success ? '✅' : '❌';
+                    html += `
+                        <div style="margin: 5px 0; padding: 8px; border-left: 3px solid ${result.success ? '#28a745' : '#dc3545'}; background-color: ${result.success ? '#d4edda' : '#f8d7da'};">
+                            ${icon} <strong>${result.path}</strong> 
+                            <span class="status ${status}">${result.success ? 'CORRECTO' : 'INCORRECTO'}</span>
+                            ${result.error ? `<br><small>Error: ${result.error}</small>` : ''}
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                resultsContainer.innerHTML = html;
+            }
+        }
+
+        function checkCurrentState() {
+            if (window.routeTester) {
+                window.routeTester.checkCurrentUser();
+                updateUserInfo();
+            }
+            
+            logToUI('🔍 Estado actual:');
+            logToUI(`  URL: ${window.location.href}`);
+            logToUI(`  LocalStorage: ${JSON.stringify(localStorage)}`);
+        }
+
+        function clearLogs() {
+            logContainer.innerHTML = '';
+            logToUI('🧹 Logs limpiados');
+        }
+
+        function exportResults() {
+            if (window.routeTestResults) {
+                const data = {
+                    timestamp: new Date().toISOString(),
+                    results: window.routeTestResults,
+                    summary: {
+                        total: window.routeTestResults.length,
+                        passed: window.routeTestResults.filter(r => r.success).length,
+                        failed: window.routeTestResults.filter(r => !r.success).length
+                    }
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `route-test-results-${new Date().toISOString().slice(0,10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                logToUI('💾 Resultados exportados');
+            } else {
+                logToUI('❌ No hay resultados para exportar');
+            }
+        }
+
+        function resetAll() {
+            clearAuth();
+            clearLogs();
+            testResults = [];
+            window.routeTestResults = [];
+            document.getElementById('results').innerHTML = '<p>Los resultados aparecerán aquí...</p>';
+            logToUI('🔄 Reset completo realizado');
+        }
+
+        // Inicializar cuando la página carga
+        window.addEventListener('load', () => {
+            logToUI('🚀 Testing UI cargado');
+            setTimeout(() => {
+                updateUserInfo();
+                if (window.routeTester) {
+                    logToUI('✅ Route Tester disponible');
+                    logToUI('💡 Usa los botones para probar rutas o ejecuta: routeTester.debug()');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

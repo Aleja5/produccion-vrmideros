@@ -1,4 +1,21 @@
-{
+{  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev", 
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm run build && npm run preview",
+    "build": "cd frontend && npm run build",
+    "test": "npm run test:routes && npm run test:security",
+    "test:routes": "node scripts/verify-route-protection.js",
+    "test:routes:auto": "node scripts/automated-route-tests.js",
+    "test:security": "node scripts/security-audit.js",
+    "audit:security": "npm run test:security",
+    "audit:dependencies": "npm audit --recursive",
+    "setup:testing": "npm install puppeteer --save-dev",
+    "lint": "cd frontend && npm run lint",
+    "setup": "npm install && cd backend && npm install && cd ../frontend && npm install"
+  },
   "dependencies": {
     "@headlessui/react": "^2.2.2",
     "@heroicons/react": "^1.0.6",
@@ -15,6 +32,7 @@
     "chart.js": "^4.4.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "concurrently": "^8.2.2",
     "lucide-react": "^0.487.0",
     "mongoose": "^8.14.2",
     "next": "^15.3.0",
@@ -28,5 +46,8 @@
     "tailwind-merge": "^3.2.0",
     "tailwindcss": "^4.0.9",
     "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "puppeteer": "^21.0.0"
   }
 }

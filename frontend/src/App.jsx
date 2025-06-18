@@ -1,5 +1,5 @@
 // App.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import EditarProduccion from './pages/EditarProduccion';
 import Login from './pages/Login';
@@ -16,6 +16,7 @@ import HistorialJornadas from './pages/HistorialJornadas';
 import AdminJornadaDetalle from './pages/AdminJornadaDetalle';
 
 import ProtectedRoute from './components/ProtectedRoute'; // Asegúrate de que esta ruta sea correcta
+import TokenExpirationMonitor from './components/TokenExpirationMonitor'; // Monitor de expiración de tokens
 import MaquinasPage from './pages/Maquinas';
 import InsumosPage from './pages/Insumos';
 import ProcesosPage from './pages/Procesos';
@@ -28,8 +29,13 @@ import NotFound from './pages/NotFound';
 
 
 function App() {
+  
+
   return (
     <Router>
+      {/* Monitor de expiración de tokens - activo en toda la aplicación */}
+      <TokenExpirationMonitor />
+      
       <Routes>
         {/* Rutas públicas */}
         <Route path="/login" element={<Login />} />
@@ -65,11 +71,48 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/admin/maquinas" element={<MaquinasPage />} />
-        <Route path="/admin/insumos" element={<InsumosPage />} />
-        <Route path="/admin/procesos" element={<ProcesosPage />} />
-        <Route path="/admin/areas" element={<AreasPage />} />
-        <Route path="/admin/operarios" element={<OperariosPage />} />
+        <Route 
+          path="/admin/maquinas" 
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'production']}>
+          <MaquinasPage />
+          </ProtectedRoute>
+        } 
+        />
+
+        <Route 
+          path="/admin/insumos" 
+          element={
+          <ProtectedRoute allowedRoles={['admin', 'production']}>
+          <InsumosPage />
+          </ProtectedRoute>
+          } 
+          />
+
+        <Route 
+          path="/admin/procesos" 
+          element={
+          <ProtectedRoute allowedRoles={['admin', 'production']}>
+          <ProcesosPage />
+          </ProtectedRoute>
+        } 
+        />
+        <Route 
+          path="/admin/areas" 
+          element={
+          <ProtectedRoute allowedRoles={['admin', 'production']}>
+          <AreasPage />
+          </ProtectedRoute>
+          }
+          />          
+        <Route 
+          path="/admin/operarios" 
+          element={
+          <ProtectedRoute allowedRoles={['admin']}>
+          <OperariosPage />
+          </ProtectedRoute>          
+          } 
+          />
 
         {/* Rutas de Usuarios */}
         <Route
@@ -99,23 +142,23 @@ function App() {
           }
         />
 
-
-        {/* Nueva ruta para el detalle de la jornada del admin */}
+        {/* detalle de la jornada del admin */}
         <Route
           path="/admin/jornada/:id"
           element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute allowedRoles={['admin', 'production']}>
               <AdminJornadaDetalle />
             </ProtectedRoute>
           }
         />
         {/* --- FIN DE RUTAS PROTEGIDAS: ADMIN --- */}
 
+
         {/* --- INICIO DE RUTAS PROTEGIDAS: PRODUCCIÓN (Operario) --- */}
         <Route
           path="/validate-cedula"
           element={
-            <ProtectedRoute allowedRoles={['admin', 'production']}>
+            <ProtectedRoute allowedRoles={['production']}>
               <ValidateCedula />
             </ProtectedRoute>
           }
@@ -124,7 +167,7 @@ function App() {
           path="/operario-dashboard"
           element={
             <ProtectedRoute allowedRoles={['production']}>
-              <OperarioDashboard />
+            <OperarioDashboard />
             </ProtectedRoute>
           }
         />
@@ -145,8 +188,20 @@ function App() {
           }
         />
 
-        <Route path="/mi-jornada" element={<MiJornada />} />
-        <Route path="/historial-jornadas" element={<HistorialJornadas />} />
+        <Route 
+          path="/mi-jornada" 
+          element={
+          <ProtectedRoute allowedRoles={['production']}>
+          <MiJornada />
+          </ProtectedRoute>
+        } />
+        <Route 
+          path="/historial-jornadas" 
+          element={
+          <ProtectedRoute allowedRoles={['production']}>
+          <HistorialJornadas />
+          </ProtectedRoute>
+          } />
 
         <Route path="/*" element={<NotFound />} /> 
         

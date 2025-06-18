@@ -595,7 +595,14 @@ exports.guardarJornadaCompleta = async (req, res) => {
                 let tiempoCalculado = actividad.tiempo || 0;
                 if (!tiempoCalculado || tiempoCalculado === 0) {
                     const inicio = new Date(actividad.horaInicio);
-                    const fin = new Date(actividad.horaFin);
+                    let fin = new Date(actividad.horaFin);
+                    
+                    // Manejar cruce de medianoche: si fin <= inicio, asumir que fin es del día siguiente
+                    if (fin <= inicio) {
+                        // Agregar 24 horas (86400000 ms) a la hora de fin
+                        fin = new Date(fin.getTime() + 24 * 60 * 60 * 1000);
+                    }
+                    
                     if (inicio && fin && fin > inicio) {
                         tiempoCalculado = Math.round((fin - inicio) / (1000 * 60)); // Diferencia en minutos
                     } else {

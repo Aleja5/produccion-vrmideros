@@ -6,7 +6,7 @@ import Pagination from '../components/Pagination';
 import { useNavigate } from 'react-router-dom';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 
-const AreasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 8 }) => {
+const AreasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 5 }) => {
     const navigate = useNavigate();
     const [areas, setAreas] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
@@ -82,16 +82,12 @@ const AreasPage = ({ currentPage: propCurrentPage, totalResults: propTotalResult
         } catch (error) {
             console.error('Error al guardar el área:', error);
         }
-    };
-
-    const handleEliminar = async (id) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar esta área?')) {
-            try {
-                await axios.delete(`http://localhost:5000/api/areas/${id}`);
-                cargarAreas(currentPage, searchText); // Recarga con la página y búsqueda actuales
-            } catch (error) {
-                console.error('Error al eliminar el área:', error);
-            }
+    };    const handleEliminar = async (id) => {
+        try {
+            await axios.delete(`http://localhost:5000/api/areas/${id}`);
+            cargarAreas(currentPage, searchText); // Recarga con la página y búsqueda actuales
+        } catch (error) {
+            console.error('Error al eliminar el área:', error);
         }
     };
 

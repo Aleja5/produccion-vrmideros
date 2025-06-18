@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axiosInstance from '../utils/axiosInstance';
+import axiosInstance from '../utils/axiosInstance-simple';
 import { useNavigate } from 'react-router-dom';
 import { BeatLoader } from 'react-spinners';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
@@ -23,34 +23,42 @@ const Login = () => {
       setError('Todos los campos son obligatorios');
       setLoading(false);
       return;
-    }
-
-    try {
-      // Hacemos la petición POST al backend para el login
+    }    try {
+      console.log('🔍 Intentando login con:', { email, password: '***' });
+      
+      // Hacemos la petición POST al backend para el login      
       const response = await axiosInstance.post('/auth/login', { email, password });
+      
+      console.log('✅ Respuesta recibida:', response);
 
       // Si la respuesta tiene un token y usuario, lo guardamos en el localStorage
-      const { token, user, redirect } = response.data;
+      const { token, refreshToken, user, redirect } = response.data;
 
       if (token && user) {
         localStorage.setItem('token', token);
+        localStorage.setItem('refreshToken', refreshToken); // Nuevo: guardar refresh token
         localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('idOperario', user._id);
+        
+        console.log('✅ Login exitoso, tokens guardados');
         
         // Redirigimos al usuario a la página correspondiente
         setTimeout(() => navigate(redirect), 100);
       } else {
         setError('No se pudieron recuperar las credenciales');
-      }
-
-    } catch (err) {
+      }    } catch (err) {
+      console.error('❌ Error en login:', err);
+      
       // Gestionamos errores y mostramos un mensaje
       if (err.response) {
+        console.error('Error response:', err.response.status, err.response.data);
         setError(err.response.data.message || 'Credenciales inválidas');
       } else if (err.request) {
+        console.error('Error request:', err.request);
         setError('No se pudo conectar con el servidor');
       } else {
-        setError('Ocurrió un error inesperado');
+        console.error('Error message:', err.message);
+        setError('Ocurrió un error inesperado: ' + err.message);
       }
     } finally {
       setLoading(false);

@@ -106,8 +106,8 @@ const AdminJornadaDetalle = () => {
                         <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Proceso</th>                        
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">OTI</th>
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Área</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Máquina</th>
-                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Insumos</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-75">Máquina</th>
+                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-75">Insumos</th>
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tipo Tiempo</th>
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Inicio</th>
                         <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">H. Fin</th>
@@ -123,8 +123,8 @@ const AdminJornadaDetalle = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.oti?.numeroOti || 'N/A'}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.areaProduccion?.nombre || 'N/A'}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{actividad.maquina?.nombre || 'N/A'}</td>
-                          <td className="px-3 py-4 text-sm text-gray-500">
+                          <td className="px-3 py-4 text-sm text-gray-500 w-75 break-words">{actividad.maquina?.nombre || 'N/A'}</td>
+                          <td className="px-3 py-4 text-sm text-gray-500 w-75">
                             {actividad.insumos && actividad.insumos.length > 0 ? (
                               actividad.insumos.map(i => <div key={i._id || i.nombre}>{i.nombre}</div>)
                             ) : (

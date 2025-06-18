@@ -66,7 +66,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     );
 };
 
-const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 10 }) => {
+const UsuariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 5 }) => {
     const [usuarios, setUsuarios] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
     const [usuarioAEditar, setUsuarioAEditar] = useState(null);

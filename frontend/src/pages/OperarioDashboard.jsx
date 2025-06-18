@@ -14,7 +14,7 @@ import { motion } from 'framer-motion';
 
 // --- NUEVAS IMPORTACIONES ---
 import ActivityCard from '../components/ActivityCard';
-import { getFormattedLocalDateDisplay, getFechaISOForComparison, getCurrentLocalDateDisplay } from '../utils/helpers'; // Importa de helpers
+import { getFormattedLocalDateDisplay, getFechaISOForComparison, getFechaLocalHoy, getFechaLocalForComparison, getCurrentLocalDateDisplay } from '../utils/helpers'; // Importa de helpers
 
 // ---
 // Loading Skeleton Component
@@ -164,23 +164,33 @@ const OperarioDashboard = () => {
             window.removeEventListener("click", handleActivity);
             window.removeEventListener("scroll", handleActivity);
         };
-    }, [navigate]);
-
-    // --- Date and Filtering Logic ---
+    }, [navigate]);    // --- Date and Filtering Logic ---
 
     // Gets today's date in YYYY-MM-DD format for comparison.
-    // Usando getFechaISOForComparison del helper, esto es más robusto
-    const hoyISO = getFechaISOForComparison(new Date().toISOString());
+    // Usando getFechaLocalHoy para evitar problemas de zona horaria
+    const hoyISO = getFechaLocalHoy();
 
     // Filter jornadas with at least one activity
     const jornadasFiltradas = jornadas.filter((jornada) =>
         jornada.registros && jornada.registros.length > 0
-    );
-    // Find today's jornada
+    );    // Find today's jornada
     const jornadaActual = jornadasFiltradas.find(jornada => {
-        const fechaJornada = getFechaISOForComparison(jornada.fecha);
+        const fechaJornada = getFechaLocalForComparison(jornada.fecha);
         return fechaJornada === hoyISO;
-    });    const calcularTotalTiempo = (jornada) => {
+    });
+
+    // Debug: Log para verificar comparaciones de fecha
+    console.log('=== DEBUG FECHA ZONA HORARIA ===');
+    console.log('Fecha de hoy (local):', hoyISO);
+    if (jornadasFiltradas.length > 0) {
+        console.log('Fechas de jornadas disponibles:');
+        jornadasFiltradas.forEach((jornada, index) => {
+            const fechaJornada = getFechaLocalForComparison(jornada.fecha);
+            console.log(`  Jornada ${index + 1}: ${fechaJornada} (original: ${jornada.fecha})`);
+        });
+    }
+    console.log('Jornada actual encontrada:', jornadaActual ? 'SÍ' : 'NO');
+    console.log('================================');const calcularTotalTiempo = (jornada) => {
         if (!jornada?.totalTiempoActividades) {
             return 'N/A';
         }

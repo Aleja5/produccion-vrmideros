@@ -5,7 +5,7 @@ import InsumoForm from '../components/InsumoForm';
 import Pagination from '../components/Pagination';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 
-const InsumosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 8 }) => {
+const InsumosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 5 }) => {
     const [insumos, setInsumos] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
     const [insumoAEditar, setInsumoAEditar] = useState(null);
@@ -81,16 +81,12 @@ const InsumosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResu
         } catch (error) {
             console.error('Error al guardar el insumo:', error);
         }
-    };
-
-    const handleEliminar = async (id) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar este insumo?')) {
-            try {
-                await axios.delete(`http://localhost:5000/api/insumos/${id}`);
-                cargarInsumos(currentPage, searchText); // Recarga con la página y búsqueda actuales
-            } catch (error) {
-                console.error('Error al eliminar el insumo:', error);
-            }
+    };    const handleEliminar = async (id) => {
+        try {
+            await axios.delete(`http://localhost:5000/api/insumos/${id}`);
+            cargarInsumos(currentPage, searchText); // Recarga con la página y búsqueda actuales
+        } catch (error) {
+            console.error('Error al eliminar el insumo:', error);
         }
     };
 

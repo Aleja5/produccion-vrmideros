@@ -5,7 +5,7 @@ import ProcesosList from '../components/ProcesosList';
 import Pagination from '../components/Pagination';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 
-const ProcesoPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 8 }) => {
+const ProcesoPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 5 }) => {
     const [procesos, setProcesos] = useState([]);
     const [modo, setModo] = useState('listar'); // 'listar', 'crear', 'editar'
     const [procesoAEditar, setProcesoAEditar] = useState(null);
@@ -81,16 +81,12 @@ const ProcesoPage = ({ currentPage: propCurrentPage, totalResults: propTotalResu
         } catch (error) {
             console.error('Error al guardar el proceso:', error);
         }
-    };
-
-    const handleEliminar = async (id) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar este proceso?')) {
-            try {
-                await axios.delete(`http://localhost:5000/api/procesos/${id}`);
-                cargarProcesos(currentPage, searchText); // Recarga con la página y búsqueda actuales
-            } catch (error) {
-                console.error('Error al eliminar el proceso:', error);
-            }
+    };    const handleEliminar = async (id) => {
+        try {
+            await axios.delete(`http://localhost:5000/api/procesos/${id}`);
+            cargarProcesos(currentPage, searchText); // Recarga con la página y búsqueda actuales
+        } catch (error) {
+            console.error('Error al eliminar el proceso:', error);
         }
     };
 

@@ -7,6 +7,8 @@ import { Button, Card } from '../components/ui';
 import DetalleJornadaModal from '../components/DetalleJornadaModal';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { REFRESH_CONFIG } from '../utils/refreshConfig';
 
 // Helper function to parse date strings as local dates at midnight
 const parseLocalDate = (dateString) => {
@@ -23,27 +25,40 @@ const ConsultaJornadas = () => {
   const [loading, setLoading] = useState(true); // Combined loading state for this page
   const [jornadaSearch, setJornadaSearch] = useState("");
   const [jornadaFechaInicio, setJornadaFechaInicio] = useState("");
-  const [jornadaFechaFin, setJornadaFechaFin] = useState("");
-  const [selectedJornadaId, setSelectedJornadaId] = useState(null);
+  const [jornadaFechaFin, setJornadaFechaFin] = useState("");  const [selectedJornadaId, setSelectedJornadaId] = useState(null);
   const [jornadasTablePage, setJornadasTablePage] = useState(1);
-  const jornadasTableItemsPerPage = 5; // Or your preferred number
-  useEffect(() => {
-    const fetchJornadas = async () => {
+  const [lastUpdated, setLastUpdated] = useState(null);  const jornadasTableItemsPerPage = 5; // Or your preferred number
+  
+  const fetchJornadas = useCallback(async (showLoadingSpinner = true) => {
+    if (showLoadingSpinner) {
       setLoading(true);
-      try {
-        const response = await axiosInstance.get('/jornadas');
-        setJornadas(response.data);
-      } catch (error) {
-        console.error('Error al cargar jornadas:', error);
+    }
+    try {
+      // Add cache-busting parameter
+      const timestamp = Date.now();      const response = await axiosInstance.get(`/jornadas?t=${timestamp}`);
+      setJornadas(response.data);
+      setLastUpdated(new Date());
+      console.log('🔄 Jornadas actualizadas:', response.data.length);
+    } catch (error) {
+      console.error('Error al cargar jornadas:', error);
+      if (showLoadingSpinner) {
         toast.error('No se pudieron cargar las jornadas. Intenta de nuevo más tarde.');
-        setJornadas([]); // Ensure jornadas is an array on error
-      } finally {
+      }
+      setJornadas([]); // Ensure jornadas is an array on error
+    } finally {
+      if (showLoadingSpinner) {
         setLoading(false);
       }
-    };
-
+    }
+  }, []);  useEffect(() => {
+    // Initial load
     fetchJornadas();
-  }, []);
+  }, [fetchJornadas]);
+
+  // Setup auto-refresh using custom hook
+  useAutoRefresh(() => {
+    fetchJornadas(false); // Don't show loading spinner for auto-refresh
+  }, REFRESH_CONFIG.PAGES.CONSULTA_JORNADAS);
 
   const exportarJornadasExcel = () => {
     const jornadasFiltradasParaExportar = jornadas
@@ -152,12 +167,27 @@ const ConsultaJornadas = () => {
                 <h1 className="text-3xl md:text-4xl font-extrabold text-gray-800 tracking-tight drop-shadow-sm">Consulta de Jornadas</h1>
                 <p className="text-base md:text-lg text-gray-500 mt-1">Visualiza, filtra y exporta las jornadas registradas.</p>
             </div>
-            <Card className="p-4 shadow-lg border border-gray-100">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
-                <h2 className="text-xl font-bold text-gray-700">Jornadas Registradas</h2>
-                <Button variant="outline" onClick={exportarJornadasExcel} className="shadow-sm self-start sm:self-center">
-                  Exportar Jornadas a Excel
-                </Button>
+            <Card className="p-4 shadow-lg border border-gray-100">              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
+                <div className="flex flex-col">
+                  <h2 className="text-xl font-bold text-gray-700">Jornadas Registradas</h2>
+                  {lastUpdated && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Última actualización: {lastUpdated.toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => fetchJornadas(true)} 
+                    className="shadow-sm self-start sm:self-center text-sm px-3 py-2"
+                    disabled={loading}
+                  >
+                    {loading ? '🔄' : '↻'} Actualizar
+                  </Button>
+                  <Button variant="outline" onClick={exportarJornadasExcel} className="shadow-sm self-start sm:self-center">
+                    Exportar Jornadas a Excel
+                  </Button>
+                </div>
               </div>
               {/* Filtros rápidos */}
               <div className="flex flex-col md:flex-row gap-2 mb-4">

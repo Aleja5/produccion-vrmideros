@@ -6,6 +6,8 @@ import { Card, Button } from "../components/ui/index";
 import { Sidebar } from "../components/Sidebar";
 import { ChevronDownIcon, ChevronUpIcon, Pencil, Trash2 } from "lucide-react";
 import EditarProduccion from "./EditarProduccion";
+import { confirmAlert } from 'react-confirm-alert';
+import 'react-confirm-alert/src/react-confirm-alert.css';
 
 const ajustarFechaLocal = (fechaUTC) => {
   const fecha = new Date(fechaUTC);
@@ -97,18 +99,33 @@ const HistorialJornadas = () => {
   };
 
 const handleEliminarActividad = async (jornadaId, actividadId) => {
-  const confirmarEliminacion = window.confirm("¿Estás seguro de que deseas eliminar esta actividad?");
-  if (!confirmarEliminacion) {
-    return;
-  }
-
-  try {
-    await axiosInstance.delete(`/produccion/eliminar/${actividadId}`);
-    toast.success("Actividad eliminada con éxito");
-    await fetchJornadas();
-  } catch (error) {
-    toast.error("No se pudo eliminar la actividad. Intenta de nuevo más tarde.");
-  }
+  confirmAlert({
+    title: 'Confirmar Eliminación',
+    message: '¿Estás seguro de que quieres eliminar esta actividad? Esta acción es irreversible.',
+    buttons: [
+      {
+        label: 'Sí, eliminar',
+        onClick: async () => {
+          try {
+            await axiosInstance.delete(`/produccion/eliminar/${actividadId}`);
+            toast.success("Actividad eliminada con éxito");
+            await fetchJornadas();
+          } catch (error) {
+            toast.error("No se pudo eliminar la actividad. Intenta de nuevo más tarde.");
+          }
+        },
+        className: 'bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg'
+      },
+      {
+        label: 'Cancelar',
+        onClick: () => toast.info('Eliminación cancelada.'),
+        className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg'
+      }
+    ],
+    closeOnEscape: true,
+    closeOnClickOutside: true,
+    overlayClassName: "custom-overlay-confirm-alert"
+  });
 };
       
   if (loading) return <p>Cargando historial de jornadas...</p>;

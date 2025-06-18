@@ -6,6 +6,8 @@ import { Button, Card } from "../components/ui";
 import { Sidebar } from "../components/Sidebar";
 import EditarProduccion from "./EditarProduccion"; 
 import { Pencil, Trash2 } from "lucide-react"; // Importing icons
+import { confirmAlert } from 'react-confirm-alert';
+import 'react-confirm-alert/src/react-confirm-alert.css';
 
 const ajustarFechaLocal = (fechaUTC) => {
   // Crear una nueva fecha basada en la fecha UTC recibida
@@ -50,10 +52,21 @@ const MiJornada = () => {
         return fechaJornada === fechaHoy;
       });
       console.log("Jornada actual encontrada:", currentJornada); 
-      setJornadaActual(currentJornada);
-    } catch (error) {
+      setJornadaActual(currentJornada);    } catch (error) {
       console.error("Error al obtener la jornada actual:", error);
-      toast.error("No se pudo cargar la jornada actual.");
+      
+      // Mejorar el mensaje de error
+      let errorMessage = "No se pudo cargar la jornada actual.";
+      
+      if (error.message?.includes('sesión ha expirado')) {
+        errorMessage = "Tu sesión ha expirado. Redirigiendo al login...";
+      } else if (error.response?.status === 401) {
+        errorMessage = "Sesión expirada. Por favor, inicia sesión nuevamente.";
+      } else if (error.response?.status === 403) {
+        errorMessage = "No tienes permisos para acceder a esta información.";
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -68,6 +81,31 @@ const MiJornada = () => {
     setSelectedActividad(actividad); 
     setIsEditModalOpen(true);
   };
+  // Función para manejar confirmación de eliminación
+  const handleDeleteConfirmation = (actividadId) => {
+    confirmAlert({
+      title: 'Confirmar Eliminación',
+      message: '¿Estás seguro de que quieres eliminar esta actividad? Esta acción es irreversible.',
+      buttons: [
+        {
+          label: 'Sí, eliminar',
+          onClick: () => {
+            handleEliminarActividad(actividadId);
+          },
+          className: 'bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg'
+        },
+        {
+          label: 'Cancelar',
+          onClick: () => toast.info('Eliminación cancelada.'),
+          className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg'
+        }
+      ],
+      closeOnEscape: true,
+      closeOnClickOutside: true,
+      overlayClassName: "custom-overlay-confirm-alert"
+    });
+  };
+
   const handleEliminarActividad = async (actividadId) => {
     try {
       console.log(`Intentando eliminar actividad con ID: ${actividadId}`);
@@ -187,13 +225,8 @@ const MiJornada = () => {
                           >
                             <Pencil size={14} className="inline mr-1" />
                             Editar
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (window.confirm("¿Estás seguro de que deseas eliminar esta actividad?")) {
-                                handleEliminarActividad(actividad._id);
-                              }
-                            }}
+                          </button>                          <button
+                            onClick={() => handleDeleteConfirmation(actividad._id)}
                             className="bg-red-200 text-red-700 font-semibold px-3 py-1.5 rounded-md shadow-md hover:bg-red-300 transition-all duration-300 cursor-pointer ml-2 text-xs"
                             title="Eliminar"
                           >

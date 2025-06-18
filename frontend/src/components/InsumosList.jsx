@@ -1,7 +1,34 @@
 import React from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { confirmAlert } from 'react-confirm-alert';
+import 'react-confirm-alert/src/react-confirm-alert.css';
 
 const InsumosList = ({ insumos, onEditar, onEliminar }) => {
+    // Función para manejar el clic en eliminar con confirmación elegante
+    const handleDeleteClick = (insumoId, insumoNombre) => {
+        confirmAlert({
+            title: 'Confirmar Eliminación',
+            message: `¿Estás seguro de que quieres eliminar el insumo "${insumoNombre}"? Esta acción es irreversible.`,
+            buttons: [
+                {
+                    label: 'Sí, eliminar',
+                    onClick: () => {
+                        onEliminar(insumoId);
+                    },
+                    className: 'bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg'
+                },
+                {
+                    label: 'Cancelar',
+                    onClick: () => toast.info('Eliminación cancelada.'),
+                    className: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg'
+                }
+            ],
+            closeOnEscape: true,
+            closeOnClickOutside: true,
+            overlayClassName: "custom-overlay-confirm-alert"
+        });
+    };
 
     if (!insumos) {
         return <p className="text-center text-gray-500 py-8">Cargando insumos...</p>;
@@ -41,9 +68,8 @@ return (
                   title="Editar"
                 >
                   <Pencil size={16} />
-                </button>
-                <button
-                  onClick={() => onEliminar(insumo._id)}
+                </button>                <button
+                  onClick={() => handleDeleteClick(insumo._id, insumo.nombre)}
                   className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition"
                   title="Eliminar"
                 >

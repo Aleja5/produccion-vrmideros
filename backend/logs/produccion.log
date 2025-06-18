@@ -3168,3 +3168,27 @@ ${new Date().toISOString()} - ${message}\n${new Date().toISOString()} - ${messag
 {"level":"info","message":"Producción con ID: 684d7f365531edb9a4ef6ab9 eliminada exitosamente."}
 {"level":"info","message":"Jornada 684d74ba1fcb36f3f39190ea actualizada tras eliminación de producción 684d8055d084c8fe4365a988."}
 {"level":"info","message":"Producción con ID: 684d8055d084c8fe4365a988 eliminada exitosamente."}
+{"level":"info","message":"Jornada 6850188f354451274e7bf6ce actualizada tras eliminación de producción 6850188f354451274e7bf6d0."}
+{"level":"info","message":"Producción con ID: 6850188f354451274e7bf6d0 eliminada exitosamente."}
+{"level":"info","message":"Jornada 684d74ba1fcb36f3f39190ea actualizada tras eliminación de producción 684d812fd084c8fe4365ab7e."}
+{"level":"info","message":"Producción con ID: 684d812fd084c8fe4365ab7e eliminada exitosamente."}
+{"level":"warn","message":"No se encontró la jornada con ID 68500cef6f20049faafbff9a para actualizar tras eliminar producción 68500cef6f20049faafbff9c."}
+{"level":"info","message":"Producción con ID: 68500cef6f20049faafbff9c eliminada exitosamente."}
+{"level":"info","message":"Jornada 684c8d8c973de40ec9b8cee6 actualizada tras eliminación de producción 684c8d8d973de40ec9b8ceea."}
+{"level":"info","message":"Producción con ID: 684c8d8d973de40ec9b8ceea eliminada exitosamente."}
+{"level":"warn","message":"No se encontró la jornada con ID 684848091552964be13a7a74 para actualizar tras eliminar producción 684848091552964be13a7a79."}
+{"level":"info","message":"Producción con ID: 684848091552964be13a7a79 eliminada exitosamente."}
+{"level":"warn","message":"No se encontró la jornada con ID 68471dcc55128486aea15b21 para actualizar tras eliminar producción 68471dcd55128486aea15b26."}
+{"level":"info","message":"Producción con ID: 68471dcd55128486aea15b26 eliminada exitosamente."}
+{"level":"warn","message":"No se encontró la jornada con ID 684715eb3e0e4c753398025d para actualizar tras eliminar producción 6847182fd49bb88e0204ad55."}
+{"level":"info","message":"Producción con ID: 6847182fd49bb88e0204ad55 eliminada exitosamente."}
+{"level":"warn","message":"No se encontró la jornada con ID 684715eb3e0e4c753398025d para actualizar tras eliminar producción 68471830d49bb88e0204ad5b."}
+{"level":"info","message":"Producción con ID: 68471830d49bb88e0204ad5b eliminada exitosamente."}
+{"level":"warn","message":"No se encontró la jornada con ID 684848344813e734a5958177 para actualizar tras eliminar producción 684848344813e734a595817a."}
+{"level":"info","message":"Producción con ID: 684848344813e734a595817a eliminada exitosamente."}
+{"level":"warn","message":"No se encontró la jornada con ID 684b356c04c71c430a39ac07 para actualizar tras eliminar producción 684b356c04c71c430a39ac09."}
+{"level":"info","message":"Producción con ID: 684b356c04c71c430a39ac09 eliminada exitosamente."}
+{"level":"warn","message":"No se encontró la jornada con ID 684c7934c3dfe8ad50e40fe7 para actualizar tras eliminar producción 684c7934c3dfe8ad50e40fe9."}
+{"level":"info","message":"Producción con ID: 684c7934c3dfe8ad50e40fe9 eliminada exitosamente."}
+{"level":"info","message":"Jornada 6852b0bd759731f53d9fab8a actualizada tras eliminación de producción 6852b0bd759731f53d9fab8c."}
+{"level":"info","message":"Producción con ID: 6852b0bd759731f53d9fab8c eliminada exitosamente."}

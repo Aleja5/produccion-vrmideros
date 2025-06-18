@@ -3,16 +3,24 @@ import { useState } from 'react';
 import { Menu, MenuItem } from './ui/Menu';
 import logo from '../assets/2.png';
 import { UserCircle2 } from 'lucide-react';
+import { logout } from '../utils/authUtils'; // Importar función de logout mejorada
 
 // Corregido: 'operaraioName' a 'operarioName'
 export default function Navbar({ operarioName }) { 
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const navigate = useNavigate();
 
-    const handleLogout = () => {
-        // Aquí puedes limpiar el token o cualquier dato de sesión
-        localStorage.removeItem('token');
-        navigate('/login');
+    const handleLogout = async () => {
+        try {
+            await logout(); // Usar función de logout mejorada
+        } catch (error) {
+            console.error('Error en logout:', error);
+            // Fallback: limpiar manualmente si falla
+            localStorage.removeItem('token');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            navigate('/login');
+        }
     };
 
     return (

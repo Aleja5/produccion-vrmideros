@@ -56,14 +56,40 @@ export const getCurrentLocalDateDisplay = () => {
 };
 
 /**
- * Extrae la parte YYYY-MM-DD de una cadena de fecha ISO en UTC para comparación de fechas.
+ * Extrae la parte YYYY-MM-DD de una cadena de fecha para comparación usando fecha LOCAL.
  * @param {string} fecha - La cadena de fecha ISO.
  * @returns {string} La fecha en formato YYYY-MM-DD.
  */
 export const getFechaISOForComparison = (fecha) => {
     const date = new Date(fecha);
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
+    // CAMBIO IMPORTANTE: Usar fecha LOCAL en lugar de UTC para evitar problemas de zona horaria
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+/**
+ * Obtiene la fecha actual en formato YYYY-MM-DD usando fecha local
+ * @returns {string} La fecha actual en formato YYYY-MM-DD
+ */
+export const getFechaLocalHoy = () => {
+    const hoy = new Date();
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, '0');
+    const day = String(hoy.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+/**
+ * Convierte una fecha a formato YYYY-MM-DD usando fecha LOCAL (no UTC)
+ * @param {string|Date} fecha - La fecha a convertir
+ * @returns {string} La fecha en formato YYYY-MM-DD
+ */
+export const getFechaLocalForComparison = (fecha) => {
+    const date = new Date(fecha);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 };

@@ -1,13 +1,14 @@
 const jwt = require('jsonwebtoken');
 const User = require("../models/User");
 
-
 // Middleware de protección (verifica el token y extrae el usuario u operador)
 exports.protect = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
-
+   
     if (!token) {
-        return res.status(401).json({ message: 'No autorizado, token no proporcionado' });
+        return res.status(401).json({ 
+            message: 'No autorizado, token no proporcionado',            
+         });
     }
 
     try {
@@ -40,9 +41,7 @@ exports.protect = async (req, res, next) => {
 
 // Middleware para autorización según roles
 exports.authorize = (...roles) => {
-    return (req, res, next) => {
-        // REMOVED: console.log("Rol del usuario:", req.user?.role);
-        // REMOVED: console.log("Roles permitidos:", roles);
+    return (req, res, next) => {       
 
         if (!roles.includes(req.user.role)) {
             return res.status(403).json({ message: 'No tienes permiso para realizar esta acción' });

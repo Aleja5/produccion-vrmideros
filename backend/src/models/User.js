@@ -26,14 +26,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['admin', 'production'],
       default: 'production',
-    },
-    resetPasswordToken: {
+    },    resetPasswordToken: {
       type: String,
       default: null,
     },
     resetPasswordExpires: {
       type: Date,
       default: null,
+    },
+    refreshToken: {
+      type: String,
+      default: null,
+    },
+    lastActivity: {
+      type: Date,
+      default: Date.now,
     },
   },
   {

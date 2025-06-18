@@ -323,7 +323,10 @@ export default function RegistroProduccion() {
   const [showFloatingButton, setShowFloatingButton] = useState(false);
   
   const [jornadaData, setJornadaData] = useState({
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: (() => {
+      const hoy = new Date();
+      return `${hoy.getFullYear()}-${(hoy.getMonth() + 1).toString().padStart(2, '0')}-${hoy.getDate().toString().padStart(2, '0')}`;
+    })(),
     horaInicio: "",
     horaFin: "",
     operario: ""
@@ -928,16 +931,24 @@ export default function RegistroProduccion() {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
-                          {actividadesResumen.map((act, index) => {
-                            // Calcular duración
+                          {actividadesResumen.map((act, index) => {                            // Calcular duración
                             const calcularDuracion = (horaInicio, horaFin) => {
                               if (!horaInicio || !horaFin) return 'N/A';
+                              
                               const inicio = new Date(horaInicio);
-                              const fin = new Date(horaFin);
+                              let fin = new Date(horaFin);
+                              
+                              // Si la hora de fin es menor que la de inicio, significa que cruza medianoche
+                              if (fin < inicio) {
+                                // Agregar un día a la fecha de fin
+                                fin = new Date(fin.getTime() + 24 * 60 * 60 * 1000);
+                              }
+                              
                               const diffMs = fin - inicio;
                               const diffMinutos = Math.floor(diffMs / (1000 * 60));
                               const horas = Math.floor(diffMinutos / 60);
                               const minutos = diffMinutos % 60;
+                              
                               return `${horas}h ${minutos}m`;
                             };
 

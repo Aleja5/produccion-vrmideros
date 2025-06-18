@@ -1,0 +1,19 @@
+{
+  "name": "security-testing-scripts",
+  "version": "1.0.0",
+  "description": "Scripts para testing y auditoría de seguridad",
+  "scripts": {
+    "test:routes": "node scripts/verify-route-protection.js",
+    "test:routes:auto": "node scripts/automated-route-tests.js",
+    "test:security": "node scripts/security-audit.js",
+    "test:all": "npm run test:routes && npm run test:security",
+    "audit:security": "npm run test:security",
+    "audit:dependencies": "npm audit",
+    "setup:puppeteer": "npm install puppeteer --save-dev"
+  },
+  "devDependencies": {
+    "puppeteer": "^21.0.0"
+  },
+  "keywords": ["security", "testing", "routes", "audit"],
+  "author": "Security Team"
+}

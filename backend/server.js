@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./src/db/db');
 const cors = require('cors');
@@ -35,10 +36,9 @@ const corsOptions = {
     origin: function (origin, callback) {
         // Permitir requests sin origin (mobile apps, postman, etc.)
         if (!origin) return callback(null, true);
-        
-        const allowedOrigins = process.env.CORS_ORIGIN 
+          const allowedOrigins = process.env.CORS_ORIGIN 
             ? process.env.CORS_ORIGIN.split(',').map(url => url.trim())
-            : ['http://localhost:5173', 'http://localhost:3000'];
+            : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];
         
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
@@ -52,6 +52,24 @@ const corsOptions = {
 };
 
 // Middleware de seguridad
+// Configurar Helmet para headers de seguridad
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"],
+        },
+    },
+    crossOriginEmbedderPolicy: false // Deshabilitado para compatibilidad
+}));
+
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' })); // Limitar tamaño de payload
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));

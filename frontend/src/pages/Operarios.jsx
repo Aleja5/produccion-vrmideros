@@ -6,7 +6,7 @@ import Pagination from '../components/Pagination';
 import { SidebarAdmin } from '../components/SidebarAdmin';
 import { PlusCircle } from 'lucide-react'; // Importar el icono
 
-const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 8 }) => {
+const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalResults, itemsPerPage = 5 }) => {
     const [operarios, setOperarios] = useState([]);
     const [modo, setModo] = useState('listar');
     const [operarioAEditar, setOperarioAEditar] = useState(null);
@@ -83,15 +83,12 @@ const OperariosPage = ({ currentPage: propCurrentPage, totalResults: propTotalRe
       console.error('Error al guardar operario:', error);
     }
   };
-
   const handleEliminar = async (id) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este operario?')) {
-      try {
-        await axios.delete(`http://localhost:5000/api/operarios/${id}`);
-        cargarOperarios(currentPage, searchText);
-      } catch (error) {
-        console.error('Error al eliminar operario:', error);
-      }
+    try {
+      await axios.delete(`http://localhost:5000/api/operarios/${id}`);
+      cargarOperarios(currentPage, searchText);
+    } catch (error) {
+      console.error('Error al eliminar operario:', error);
     }
   };
 

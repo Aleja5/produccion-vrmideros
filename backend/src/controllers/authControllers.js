@@ -44,18 +44,31 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       console.warn(`⚠️ Intento de login fallido: credenciales inválidas - ${emailToSearch}`);
       return res.status(400).json({ message: 'Credenciales inválidas' });
-    }    // Crear el token JWT para la sesión
+    }    // Crear el token JWT para la sesión (15 minutos)
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
     );
+
+    // Crear refresh token (8 horas - duración de jornada laboral)
+    const refreshToken = jwt.sign(
+      { id: user._id, role: user.role, type: 'refresh' },
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '8h' }
+    );
+
+    // Guardar refresh token en el usuario (para invalidación)
+    user.refreshToken = refreshToken;
+    user.lastActivity = new Date();
+    await user.save();
 
     console.log(`✅ Login exitoso: ${user.email} (${user.role})`);
     
     res.json({
       message: 'Inicio de sesión exitoso',
       token,
+      refreshToken, // Nuevo: enviar refresh token
       user: {
         _id: user._id,
         email: user.email,
@@ -167,5 +180,91 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ message: 'Error del servidor al restablecer la contraseña' });
   }
 };
+
+// ------------------ REFRESH TOKEN ------------------
+exports.refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(401).json({ message: 'Refresh token requerido' });
+    }
+
+    // Verificar refresh token
+    const decoded = jwt.verify(
+      refreshToken, 
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
+    );
+
+    if (decoded.type !== 'refresh') {
+      return res.status(401).json({ message: 'Token inválido' });
+    }
+
+    // Buscar usuario
+    const user = await User.findById(decoded.id);
+    if (!user || user.refreshToken !== refreshToken) {
+      return res.status(401).json({ message: 'Refresh token inválido' });
+    }
+
+    // Crear nuevo access token
+    const newToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
+    );
+
+    // Crear nuevo refresh token (rotación para mayor seguridad)
+    const newRefreshToken = jwt.sign(
+      { id: user._id, role: user.role, type: 'refresh' },
+      process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '8h' }
+    );
+
+    // Actualizar en base de datos
+    user.refreshToken = newRefreshToken;
+    user.lastActivity = new Date();
+    await user.save();
+
+    console.log(`🔄 Token renovado para: ${user.email}`);
+
+    res.json({
+      message: 'Token renovado exitosamente',
+      token: newToken,
+      refreshToken: newRefreshToken
+    });
+
+  } catch (error) {
+    console.error('❌ Error renovando token:', error.message);
+    res.status(401).json({ message: 'Refresh token inválido o expirado' });
+  }
+};
+
+// ------------------ LOGOUT MEJORADO ------------------
+exports.logout = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (refreshToken) {
+      // Invalidar refresh token en base de datos
+      const decoded = jwt.verify(
+        refreshToken, 
+        process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET
+      );
+      
+      const user = await User.findById(decoded.id);
+      if (user) {
+        user.refreshToken = null;
+        await user.save();
+        console.log(`🚪 Logout exitoso para: ${user.email}`);
+      }
+    }
+
+    res.json({ message: 'Logout exitoso' });
+  } catch (error) {
+    console.error('❌ Error en logout:', error.message);
+    res.json({ message: 'Logout completado' }); // Siempre permitir logout
+  }
+};
+
 // No es necesario un module.exports al final si usas "exports.nombreFuncion"
 // para cada función individualmente. Esto evita el ReferenceError.

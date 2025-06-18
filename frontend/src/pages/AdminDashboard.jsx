@@ -7,6 +7,8 @@ import axiosInstance from '../utils/axiosInstance';
 import Pagination from '../components/Pagination'; 
 import { toast } from 'react-toastify';
 import { Button, Card } from '../components/ui';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { REFRESH_CONFIG } from '../utils/refreshConfig';
 
 // Helper function to parse date strings as local dates at midnight
 const parseLocalDate = (dateString) => {
@@ -37,6 +39,7 @@ const AdminDashboard = () => {
   const [totalResults, setTotalResults] = useState(0); // Para saber cuántos resultados totales hay
   const [error, setError] = useState(null);
   const [currentFilters, setCurrentFilters] = useState(null); // New state for active filters
+  const [lastUpdated, setLastUpdated] = useState(null);
  
   // State for individual column visibility
   const [columnVisibility, setColumnVisibility] = useState(
@@ -120,11 +123,10 @@ const AdminDashboard = () => {
                     procesada: fechaLocal,
                     local: date.toLocaleDateString()
                 });
-            }
-
-            const params = {
+            }            const params = {
                 page: 1, 
                 limit: itemsPerPage,
+                t: Date.now(), // Cache-busting parameter
                 ...filtrosAjustados,
             };
 
@@ -136,11 +138,10 @@ const AdminDashboard = () => {
                 // Ordenar por fecha si no hay filtros aplicados (o si es una búsqueda inicial sin filtros específicos)
                 if (!filtrosRecibidos || Object.keys(filtrosRecibidos).length === 0) {
                     resultadosOrdenados = resultadosOrdenados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-                }
-
-                setResultados(resultadosOrdenados);
+                }                setResultados(resultadosOrdenados);
                 calcularTotalHoras(resultadosOrdenados);
                 setTotalResults(response.data.totalResultados || response.data.totalResults || 0);
+                setLastUpdated(new Date());
             } else {
                 setResultados([]);
                 setTotalHoras(0);
@@ -157,10 +158,11 @@ const AdminDashboard = () => {
             setLoading(false);
         }
     };
-
   // 🔄 Cargar producciones (filtered or all)
-  const cargarProducciones = useCallback(async () => {
-    setLoading(true);
+  const cargarProducciones = useCallback(async (showLoadingSpinner = true) => {
+    if (showLoadingSpinner) {
+      setLoading(true);
+    }
     setError(null);
     try {
       let response;      if (currentFilters && Object.keys(currentFilters).length > 0) {
@@ -182,37 +184,63 @@ const AdminDashboard = () => {
         const params = {
           page: currentPage,
           limit: itemsPerPage,
+          t: Date.now(), // Cache-busting parameter
           ...filtrosAjustados,
         };
         response = await axiosInstance.get('/produccion/buscar-produccion', { params });
       } else {
         // Fetch all data (paginated)
-        response = await axiosInstance.get(`/admin/admin-producciones?page=${currentPage}&limit=${itemsPerPage}`);
+        response = await axiosInstance.get(`/admin/admin-producciones?page=${currentPage}&limit=${itemsPerPage}&t=${Date.now()}`);
       }
 
       if (response.data.resultados && Array.isArray(response.data.resultados)) {
         setResultados(response.data.resultados);
         setTotalResults(response.data.totalResultados || response.data.totalResults || 0);
         calcularTotalHoras(response.data.resultados);
+        setLastUpdated(new Date());
+        console.log('🔄 Datos de producción actualizados:', response.data.resultados.length);
       } else {
         setResultados([]);
         setTotalResults(0);
         setTotalHoras(0);
+      }    } catch (error) {
+      console.error('Error al cargar producciones:', error);
+      
+      // Mejorar el mensaje de error basado en el tipo de error
+      let errorMessage = "No se pudieron cargar los registros. Intenta de nuevo más tarde.";
+      
+      if (error.message?.includes('sesión ha expirado')) {
+        errorMessage = "Tu sesión ha expirado. Redirigiendo al login...";
+      } else if (error.response?.status === 401) {
+        errorMessage = "Sesión expirada. Por favor, inicia sesión nuevamente.";
+      } else if (error.response?.status === 403) {
+        errorMessage = "No tienes permisos para acceder a esta información.";
+      } else if (error.response?.status >= 500) {
+        errorMessage = "Error del servidor. Intenta nuevamente más tarde.";
       }
-    } catch (error) {
-      setError("No se pudieron cargar los registros. Intenta de nuevo más tarde.");
+      
+      setError(errorMessage);
       setResultados([]);
       setTotalResults(0);
       setTotalHoras(0);
-      toast.error("No se pudieron cargar los registros. Intenta de nuevo más tarde.");
+      
+      if (showLoadingSpinner) {
+        toast.error(errorMessage);
+      }
     } finally {
-      setLoading(false);
+      if (showLoadingSpinner) {
+        setLoading(false);
+      }
     }
-  }, [currentPage, itemsPerPage, currentFilters]); 
-
-  useEffect(() => {
+  }, [currentPage, itemsPerPage, currentFilters]);  useEffect(() => {
+    // Initial load
     cargarProducciones();
   }, [cargarProducciones]);
+
+  // Setup auto-refresh using custom hook
+  useAutoRefresh(() => {
+    cargarProducciones(false); // Don't show loading spinner for auto-refresh
+  }, REFRESH_CONFIG.PAGES.ADMIN_DASHBOARD);
 
   const exportarExcel = async () => {
     try {
@@ -229,17 +257,16 @@ const AdminDashboard = () => {
           const date = new Date(currentFilters.fechaFin);
           const fechaLocal = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
           filtrosAjustados.fechaFin = fechaLocal;
-        }
-        const params = {
+        }        const params = {
           page: 1,
           limit: 10000, // Asume que nunca habrá más de 10,000 resultados filtrados
+          t: Date.now(), // Cache-busting parameter
           ...filtrosAjustados,
         };
         const response = await axiosInstance.get('/produccion/buscar-produccion', { params });
-        allResults = response.data.resultados || [];
-      } else {
+        allResults = response.data.resultados || [];      } else {
         // Si no hay filtros, pedir todos los resultados (sin paginación)
-        const response = await axiosInstance.get('/admin/admin-producciones?page=1&limit=10000');
+        const response = await axiosInstance.get(`/admin/admin-producciones?page=1&limit=10000&t=${Date.now()}`);
         allResults = response.data.resultados || [];
       }
       if (!allResults.length) {
@@ -312,10 +339,23 @@ const AdminDashboard = () => {
 
             {/* Resultados */}
             {/* Updated Card styling */}
-            <Card className="mb-8 p-4 bg-white shadow-xl rounded-2xl flex flex-col flex-grow overflow-hidden">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3 flex-shrink-0"> {/* Increased mb and gap */}
-                <h2 className="text-2xl font-bold text-blue-700">Resultados</h2> {/* Increased text size */}
+            <Card className="mb-8 p-4 bg-white shadow-xl rounded-2xl flex flex-col flex-grow overflow-hidden">              <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-3 flex-shrink-0"> {/* Increased mb and gap */}
+                <div className="flex flex-col">
+                  <h2 className="text-2xl font-bold text-blue-700">Resultados</h2> {/* Increased text size */}
+                  {lastUpdated && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Última actualización: {lastUpdated.toLocaleTimeString()}
+                    </p>
+                  )}                </div>
                 <div className="flex items-center gap-4"> {/* Grouped button and total */}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => cargarProducciones(true)} 
+                    className="shadow-sm text-sm px-3 py-2"
+                    disabled={loading}
+                  >
+                    {loading ? '🔄' : '↻'} Actualizar
+                  </Button>
                   <div className="relative inline-block text-left">
                     {/* Styled Configurar Columnas button */}
                     <Button
