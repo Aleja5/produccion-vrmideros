@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button, Input, Label } from "../ui";
 import { Calendar } from "../ui/Calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/Popover";
-import { Card, CardContent } from "../ui/card";
+import { Card, CardContent } from "../ui/Card";
 import { CalendarIcon, Search, X, Download, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";

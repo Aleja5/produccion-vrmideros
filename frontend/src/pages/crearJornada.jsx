@@ -4,7 +4,7 @@ import React from 'react';
 import { toast } from 'react-toastify';
 import axiosInstance from '../config/axios';
 import { CalendarPlus } from 'lucide-react';
-import { Button } from '@/components/ui/button'; // Solo si estás usando shadcn/ui
+import { Button } from '../components/ui';
 
 const CrearJornadaButton = ({ operarioId, onSuccess }) => {
   const crearNuevaJornada = async () => {
