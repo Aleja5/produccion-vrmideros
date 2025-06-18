@@ -46,19 +46,29 @@ const corsOptions = {
         // Permitir requests sin origin (mobile apps, postman, etc.)
         if (!origin) return callback(null, true);
         
+        // Orígenes específicos permitidos
+        const defaultOrigins = [
+            'http://localhost:5173', 
+            'http://localhost:3000',
+            'https://vr-mideros.vercel.app'
+        ];
+        
         const allowedOrigins = process.env.CORS_ORIGIN 
             ? process.env.CORS_ORIGIN.split(',').map(url => url.trim())
-            : ['http://localhost:5173', 'http://localhost:3000'];
-          // Debug logging
+            : defaultOrigins;
+          
+        // Debug logging
         console.log('🔍 CORS Debug:');
         console.log('- Request origin:', origin);
         console.log('- CORS_ORIGIN env:', process.env.CORS_ORIGIN);
         console.log('- Allowed origins:', allowedOrigins);
-        console.log('- Origin found:', allowedOrigins.includes(origin));
-          // Permitir cualquier subdominio de vercel.app temporalmente
-        const isVercelDomain = origin && origin.includes('.vercel.app');
-        const isLocalhost = origin && origin.includes('localhost');
+        
+        // Verificaciones de origen
         const isAllowedOrigin = allowedOrigins.includes(origin);
+        const isVercelDomain = origin && origin.endsWith('.vercel.app');
+        const isLocalhost = origin && (origin.includes('localhost') || origin.includes('127.0.0.1'));
+        
+        console.log('- Origin checks:', { isAllowedOrigin, isVercelDomain, isLocalhost });
         
         if (isAllowedOrigin || isVercelDomain || isLocalhost) {
             console.log('✅ CORS: Origen permitido:', origin);
