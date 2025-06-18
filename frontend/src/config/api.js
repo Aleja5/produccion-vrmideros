@@ -2,6 +2,12 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
   (import.meta.env.PROD ? 'https://vrmiderosbackend.onrender.com' : 'http://localhost:5000');
 
+// Debug temporal - remover después
+console.log('🔍 DEBUG API CONFIG:');
+console.log('- VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('- PROD mode:', import.meta.env.PROD);
+console.log('- Final API_BASE_URL:', API_BASE_URL);
+
 export const apiConfig = {
   baseURL: API_BASE_URL,
   timeout: 30000, // 30 segundos para Render (puede tardar en despertar)
