@@ -18,13 +18,22 @@ const areaRoutes = require('./src/routes/areaRoutes');
 const jornadaRoutes = require('./src/routes/jornadaRoutes');
 
 // Validar variables de entorno críticas
-const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET', 'EMAIL_USER', 'EMAIL_PASS'];
+const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET'];
+// EMAIL vars son opcionales para despliegue inicial
+const optionalVars = ['EMAIL_USER', 'EMAIL_PASS'];
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missingVars.length > 0) {
     console.error('❌ Variables de entorno faltantes:', missingVars.join(', '));
     console.error('💡 Verifica tu archivo .env');
     process.exit(1);
+}
+
+// Advertir sobre variables opcionales
+const missingOptional = optionalVars.filter(varName => !process.env[varName]);
+if (missingOptional.length > 0) {
+    console.warn('⚠️ Variables opcionales faltantes:', missingOptional.join(', '));
+    console.warn('📧 Funciones de email pueden no funcionar');
 }
 
 // Inicializar Express
@@ -38,7 +47,7 @@ const corsOptions = {
         if (!origin) return callback(null, true);
           const allowedOrigins = process.env.CORS_ORIGIN 
             ? process.env.CORS_ORIGIN.split(',').map(url => url.trim())
-            : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'];
+            : ['http://localhost:5173', 'http://localhost:3000'];
         
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
@@ -156,10 +165,11 @@ app.use((err, req, res, next) => {
 connectDB();
 
 // Iniciar el servidor
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
   console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔐 CORS habilitado para: ${process.env.CORS_ORIGIN || 'localhost'}`);
+  console.log(`📅 Iniciado: ${new Date().toLocaleString()}`);
 });
 
 // Manejo graceful de cierre del servidor
@@ -178,3 +188,6 @@ process.on('SIGINT', () => {
         process.exit(0);
     });
 });
+
+// Exportar para poder usar en otros archivos
+module.exports = app;
